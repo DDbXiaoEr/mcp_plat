@@ -1,2 +1,2 @@
-postgresql : localhost:5413
+postgresql : localhost:5432
 account : root/123456
