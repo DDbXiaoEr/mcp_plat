@@ -9,11 +9,17 @@ import WelcomeView from './components/WelcomeView.vue'
 import ProfileView from './components/ProfileView.vue'
 import AccessKeyView from './components/AccessKeyView.vue'
 import HistoryView from './components/HistoryView.vue'
+import SettingsView from './components/SettingsView.vue'
+import OverviewView from './components/OverviewView.vue'
+import ServersView from './components/ServersView.vue'
 
 const views = {
   profile: ProfileView,
   accesskey: AccessKeyView,
-  history: HistoryView
+  history: HistoryView,
+  settings: SettingsView,
+  overview: OverviewView,
+  servers: ServersView
 }
 
 const currentView = computed(() => views[nav.active] || WelcomeView)

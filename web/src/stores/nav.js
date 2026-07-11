@@ -7,7 +7,11 @@ const MENUS = {
     { key: 'accesskey', label: 'AccessKey 管理' },
     { key: 'history', label: '使用历史' }
   ],
-  admin: []
+  admin: [
+    { key: 'overview', label: '平台概况' },
+    { key: 'servers', label: 'MCP 服务器管理' },
+    { key: 'settings', label: '系统设置' }
+  ]
 }
 
 const state = reactive({
