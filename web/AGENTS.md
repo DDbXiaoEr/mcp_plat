@@ -2,6 +2,8 @@
 
 某某大学 MCP 服务平台 · 管理控制台（mcp-plat-console）。
 
+> **项目结构速查见 `PROJECT_STRUCTURE.md`**，包含完整目录树、导航说明、常用命令。每次会话开始时优先读取该文件了解项目全貌，无需重新探索整个代码库。
+
 ## 技术栈
 
 - Vue 3（`<script setup>` 组合式 API）
