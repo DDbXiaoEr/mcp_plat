@@ -1,0 +1,20 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+*.log
+
+# Go
+*.exe
+*.test
+*.out
+go.work
+.env
+
+vendor/
+
+# compiled binary
+mcp_plat-console

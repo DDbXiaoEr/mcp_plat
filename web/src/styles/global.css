@@ -1,0 +1,49 @@
+:root {
+  --xauat-blue: #0a3d7a;
+  --xauat-blue-light: #1e5fb0;
+  --xauat-accent: #f2a900;
+  --xauat-cyan: #17b0c4;
+  --bg: #f6f8fb;
+  --surface: #ffffff;
+  --text: #1a2433;
+  --text-muted: #5b6b80;
+  --border: #e3e9f2;
+  --shadow: 0 8px 30px rgba(10, 61, 122, 0.08);
+  --radius: 16px;
+  --header-height: 64px;
+  --sidebar-width: 240px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+}
+
+button {
+  font-family: inherit;
+}
+
+.page__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--xauat-blue);
+}

@@ -1,0 +1,50 @@
+# AGENTS.md
+
+某某大学 MCP 服务平台 · 管理控制台（mcp-plat-console）。
+
+## 技术栈
+
+- Vue 3（`<script setup>` 组合式 API）
+- Vite 6
+- 纯 CSS，无 UI 框架；样式写在组件 `<style scoped>` 内，全局变量在 `src/styles/global.css`
+
+## 常用命令
+
+```bash
+npm install      # 安装依赖
+npm run dev      # 本地开发，端口 5174
+npm run build    # 生产构建（改动后请运行以验证）
+npm run preview  # 预览构建产物
+```
+
+> 项目暂无 lint / 测试脚本；改动后以 `npm run build` 通过为验证标准。
+
+## 目录结构
+
+```
+src/
+  main.js                 # 入口
+  App.vue                 # 根组件，按登录状态条件渲染
+  styles/global.css       # 全局样式与 CSS 变量（设计令牌）
+  stores/auth.js          # 鉴权状态（临时账号、登录/登出、角色）
+  components/
+    LoginView.vue         # 登录页
+    TheHeader.vue         # 顶部栏
+    TheSidebar.vue        # 侧边栏
+    WelcomeView.vue       # 登录后主内容
+```
+
+## 约定
+
+- 组件用 `<script setup>` + 组合式 API；单文件组件命名 PascalCase，布局类组件以 `The` 前缀（如 `TheHeader`）。
+- 颜色、圆角、间距等统一用 `global.css` 里的 CSS 变量（`--xauat-blue`、`--radius`、`--header-height` 等），不要硬编码。
+- 未完成或待接后端的地方用 `// TODO:` 标注。
+- 除非明确要求，不要新增注释。
+
+## 当前状态
+
+- 尚无后端与路由。鉴权为临时实现，见 `src/stores/auth.js` 的 `TEMP_ACCOUNTS`。
+- 临时账号：`admin / admin123`（管理员）、`user / user123`（用户）。
+- 登录状态持久化在 `localStorage`（键 `mcp-console-auth`）。
+- 登录后按角色显示内容，目前仅显示「欢迎，{角色名}登录」。
+- 同级项目 `../mcp_plat_portal` 为对外门户站，本项目沿用其代码风格与设计令牌。

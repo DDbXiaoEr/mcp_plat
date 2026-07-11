@@ -1,0 +1,101 @@
+# 项目结构
+
+```
+mcp_plat-console/
+├── main.go                  # 入口（!embed 标签，纯后端构建）
+├── main_embed.go            # 入口（embed 标签，内嵌前端单二进制构建）
+├── version.go               # Version / BuildTime 变量
+├── Makefile                 # 构建脚本（build / build-server / build-embed / build-web / dev / clean）
+├── go.mod / go.sum
+├── AGENTS.md                # 项目整体规范
+├── PROJECT_STRUCTURE.md     # 本文件 —— 项目结构速查
+│
+├── config/
+│   └── config.go            # 配置加载（DB / JWT / 端口 / 管理员账号）
+│
+├── database/
+│   └── database.go          # GORM 初始化 + AutoMigrate
+│
+├── model/
+│   ├── user.go              # User 模型
+│   ├── access_key.go        # AccessKey 模型
+│   └── usage_history.go     # UsageHistory 模型
+│
+├── handler/
+│   ├── auth.go              # POST /api/auth/login, GET /api/auth/profile
+│   ├── access_key.go        # CRUD /api/access-keys
+│   └── history.go           # GET /api/history
+│
+├── service/
+│   ├── auth.go              # 登录业务逻辑 + JWT 生成
+│   ├── access_key.go        # AccessKey 业务逻辑
+│   └── history.go           # 使用历史业务逻辑
+│
+├── middleware/
+│   └── auth.go              # JWT Bearer Token 鉴权中间件
+│
+├── router/
+│   └── router.go            # Gin 路由注册（仅 main.go 使用，main_embed.go 自行注册）
+│
+├── public/
+│   └── api_doc.md           # API 接口文档（强制维护）
+│
+└── web/                     # Vue 3 前端（SPA）
+    ├── AGENTS.md            # 前端规范
+    ├── index.html           # HTML 入口
+    ├── package.json
+    ├── vite.config.js       # Vite 配置（dev proxy /api → localhost:8080）
+    ├── dist/                # 构建产物（embed 打包用）
+    │   ├── index.html
+    │   ├── favicon.svg
+    │   └── assets/
+    └── src/
+        ├── main.js          # Vue 入口
+        ├── App.vue          # 根组件（按登录状态条件渲染）
+        ├── api.js           # HTTP API 封装
+        ├── styles/
+        │   └── global.css   # 全局 CSS 变量
+        ├── stores/
+        │   ├── auth.js      # 鉴权状态（登录/登出/角色）
+        │   └── nav.js       # 侧边栏导航状态（无 Vue Router）
+        └── components/
+            ├── LoginView.vue
+            ├── TheHeader.vue
+            ├── TheSidebar.vue
+            ├── WelcomeView.vue
+            ├── ProfileView.vue
+            ├── AccessKeyView.vue
+            ├── AccessKeyDrawer.vue
+            └── HistoryView.vue
+```
+
+## 构建模式
+
+| 命令 | 构建标签 | 入口文件 | 说明 |
+|------|---------|---------|------|
+| `make build-server` / `go build .` | `!embed`（默认） | `main.go` | 纯后端，无前端 |
+| `make build-embed` / `go build -tags embed .` | `embed` | `main_embed.go` | 内嵌 `web/dist/` 单二进制 |
+
+## API 路由总览
+
+| Method | Path | 鉴权 | Handler |
+|--------|------|:---:|---------|
+| POST | `/api/auth/login` | 否 | handler/auth.go → Login |
+| GET | `/api/auth/profile` | 是 | handler/auth.go → Profile |
+| GET | `/api/access-keys` | 是 | handler/access_key.go → List |
+| POST | `/api/access-keys` | 是 | handler/access_key.go → Create |
+| PUT | `/api/access-keys/:id` | 是 | handler/access_key.go → Update |
+| DELETE | `/api/access-keys/:id` | 是 | handler/access_key.go → Delete |
+| GET | `/api/history` | 是 | handler/history.go → List |
+
+## 内嵌版本前端路由（重要）
+
+`main_embed.go` 的 `NoRoute` 处理 SPA 回退逻辑：
+- 非 API 路径且对应文件不存在时，回退到 `index.html`
+- 静态资源路径（`/assets/...`、`/favicon.svg`）直接返回对应文件
+
+## 前端导航说明
+
+前端不使用 Vue Router，通过 `stores/nav.js` 的响应式 `active` 状态切换组件：
+- `App.vue` 使用 `<component :is="...">` 动态渲染
+- 导航项按角色定义（admin / user）
