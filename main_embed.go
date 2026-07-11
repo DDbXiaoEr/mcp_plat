@@ -24,7 +24,7 @@ var dist embed.FS
 func main() {
 	config.Load()
 
-	fmt.Printf("mcp_plat-console version %s, built at %s\n", Version, BuildTime)
+	fmt.Printf("mcp_plat-console version %s (commit %s), built at %s\n", Version, GitCommit, BuildTime)
 
 	database.Init()
 

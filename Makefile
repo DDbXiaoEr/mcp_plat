@@ -1,7 +1,9 @@
 .PHONY: build build-server build-embed build-web run clean
 
-VERSION := $(shell date -u '+%Y%m%d%H%M%S')
-LDFLAGS := -s -w -X main.Version=$(VERSION) -X main.BuildTime=$(VERSION)
+VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
+LDFLAGS := -s -w -X main.Version=$(VERSION) -X main.GitCommit=$(GIT_COMMIT) -X main.BuildTime=$(BUILD_TIME)
 
 SERVER_OUT := mcp_plat-console
 WEB_DIR := web
