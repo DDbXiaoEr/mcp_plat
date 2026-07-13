@@ -69,7 +69,7 @@ func genUsers(n int) {
 		hashed, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
 		email := fmt.Sprintf("%s@example.com", username)
 		phone := fmt.Sprintf("138%08d", randomInt(1e8))
-		org := randomChoice([]string{"研发部", "产品部", "测试部", "运维部", "设计部"})
+		org := randomChoice([]string{"计算机学院", "信息中心", "网络中心", "图书馆", "教务处", "学生处", "后勤管理处", "理学院", "文学院"})
 
 		u := model.User{
 			UID:          uid,
@@ -196,7 +196,7 @@ Fields generated:
   password     bcrypt hash of "123456"
   email        {username}@example.com
   phone        138xxxxxxxx
-  organization random: 研发部 / 产品部 / 测试部 / 运维部 / 设计部
+  organization random: 计算机学院 / 信息中心 / 网络中心 / 图书馆 / 教务处 / 学生处 / 后勤管理处 / 理学院 / 文学院
   status       1 (enabled)
 
 Usage:
