@@ -1,4 +1,4 @@
-.PHONY: build build-server build-embed build-embed-windows build-embed-linux-arm64 build-embed-all build-web run clean
+.PHONY: build build-server build-embed build-embed-windows build-embed-linux-arm64 build-embed-all build-web run clean build-tool datagen
 
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -41,6 +41,14 @@ dev:
 	@echo "==> starting dev web on :5174"
 	cd $(WEB_DIR) && npm run dev
 
+build-tool:
+	@echo "==> building tools"
+	@mkdir -p tools
+	go build -o tools/datagen cmd/datagen/main.go
+
+datagen:
+	@go run cmd/datagen/main.go -table $(TABLE) -count $(or $(COUNT),1)
+
 clean:
 	rm -f $(SERVER_OUT) $(SERVER_OUT)-windows-amd64.exe $(SERVER_OUT)-linux-arm64
-	rm -rf $(WEB_DIR)/dist
+	rm -rf $(WEB_DIR)/dist tools/

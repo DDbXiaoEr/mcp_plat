@@ -18,6 +18,7 @@ vendor/
 
 # compiled binary
 mcp_plat-console
+tools/
 
 # web dist archive
 web/dist.zip
