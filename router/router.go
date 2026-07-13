@@ -13,6 +13,7 @@ func Setup() *gin.Engine {
 	authHandler := handler.NewAuthHandler()
 	accessKeyHandler := handler.NewAccessKeyHandler()
 	historyHandler := handler.NewHistoryHandler()
+	serverHandler := handler.NewMCPServerHandler()
 
 	r.POST("/api/auth/login", authHandler.Login)
 
@@ -27,6 +28,11 @@ func Setup() *gin.Engine {
 		auth.DELETE("/access-keys/:id", accessKeyHandler.Delete)
 
 		auth.GET("/history", historyHandler.List)
+
+		auth.GET("/servers", serverHandler.List)
+		auth.POST("/servers", serverHandler.Create)
+		auth.PUT("/servers/:id", serverHandler.Update)
+		auth.DELETE("/servers/:id", serverHandler.Delete)
 	}
 
 	return r

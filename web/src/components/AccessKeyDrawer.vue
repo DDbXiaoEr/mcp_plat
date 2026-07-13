@@ -25,9 +25,13 @@ const form = reactive({
 
 const selectedServer = ref('')
 
+function parseTools(raw) {
+  try { return JSON.parse(raw) || [] } catch { return [] }
+}
+
 const currentTools = computed(() => {
-  const server = props.servers.find((s) => s.key === selectedServer.value)
-  return server ? server.tools : []
+  const server = props.servers.find((s) => String(s.id) === String(selectedServer.value))
+  return server ? parseTools(server.tools) : []
 })
 
 function parseServers(raw) {
@@ -59,7 +63,7 @@ watch(
       } else {
         form.expireDays = -1
       }
-      selectedServer.value = props.servers[0]?.key || ''
+      selectedServer.value = props.servers[0]?.id || ''
     }
   },
   { immediate: true }
@@ -140,18 +144,18 @@ function onSave() {
         <div class="field">
           <span class="field__label">工具使用权限</span>
           <select v-model="selectedServer" class="field__input">
-            <option v-for="s in servers" :key="s.key" :value="s.key">
-              {{ s.label }}
+            <option v-for="s in servers" :key="s.id" :value="s.id">
+              {{ s.name }}
             </option>
           </select>
           <div class="tools">
-            <label v-for="tool in currentTools" :key="tool.key" class="tool">
+            <label v-for="tool in currentTools" :key="tool" class="tool">
               <input
                 type="checkbox"
-                :checked="isChecked(tool.key)"
-                @change="toggleTool(tool.key)"
+                :checked="isChecked(tool)"
+                @change="toggleTool(tool)"
               />
-              <span>{{ tool.label }}</span>
+              <span>{{ tool }}</span>
             </label>
           </div>
         </div>

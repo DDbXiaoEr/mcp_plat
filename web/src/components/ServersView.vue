@@ -1,41 +1,26 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { fetchServers, createServer } from '../api.js'
 
-// TODO: 接入后端后替换为真实数据
-const servers = ref([
-  {
-    id: 'srv-jwc',
-    name: '教务系统 MCP',
-    address: 'https://mcp.xauat.edu.cn/jwc',
-    department: '教务处',
-    protocol: 'SSE',
-    tools: ['查询课表', '成绩查询', '选课信息', '考试安排']
-  },
-  {
-    id: 'srv-lib',
-    name: '图书馆 MCP',
-    address: 'https://mcp.xauat.edu.cn/library',
-    department: '图书馆',
-    protocol: 'Streamable HTTP',
-    tools: ['馆藏检索', '借阅记录', '座位预约']
-  },
-  {
-    id: 'srv-hr',
-    name: '人事系统 MCP',
-    address: 'https://mcp.xauat.edu.cn/hr',
-    department: '人事处',
-    protocol: 'stdio',
-    tools: ['职工信息查询', '考勤统计']
-  },
-  {
-    id: 'srv-fin',
-    name: '财务系统 MCP',
-    address: 'https://mcp.xauat.edu.cn/finance',
-    department: '财务处',
-    protocol: 'SSE',
-    tools: ['报销进度', '工资查询', '经费余额']
+const servers = ref([])
+const loading = ref(true)
+
+onMounted(async () => {
+  try {
+    const data = await fetchServers()
+    servers.value = data.map((s) => ({
+      ...s,
+      tools: parseTools(s.tools)
+    }))
+  } catch {
+    // ignore load error
   }
-])
+  loading.value = false
+})
+
+function parseTools(raw) {
+  try { return JSON.parse(raw) || [] } catch { return [] }
+}
 
 const PROTOCOLS = ['SSE', 'Streamable HTTP', 'stdio']
 
@@ -58,31 +43,34 @@ function openCreate() {
 
 function fetchTools() {
   fetchingTools.value = true
-  // TODO: 接入后端后改为从 MCP 服务器地址实际拉取工具列表
   setTimeout(() => {
     createForm.value.tools = ['校园网账号查询', '网络套餐办理', '在线故障报修', '流量使用统计', '宽带缴费'].join('\n')
     fetchingTools.value = false
   }, 600)
 }
 
-function confirmCreate() {
+async function confirmCreate() {
   const name = createForm.value.name.trim()
   if (!name) return
-  // TODO: 接入后端后改为调用创建接口
-  const server = {
-    id: `srv-${Date.now()}`,
-    name,
-    address: createForm.value.address.trim(),
-    department: createForm.value.department.trim(),
-    protocol: createForm.value.protocol,
-    tools: createForm.value.tools
-      .split(/[,，\n]/)
-      .map((t) => t.trim())
-      .filter(Boolean)
+  const tools = createForm.value.tools
+    .split(/[,，\n]/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+  try {
+    const server = await createServer({
+      name,
+      address: createForm.value.address.trim(),
+      department: createForm.value.department.trim(),
+      protocol: createForm.value.protocol,
+      tools: JSON.stringify(tools)
+    })
+    server.tools = tools
+    servers.value.push(server)
+    showingCreate.value = false
+    select(server)
+  } catch {
+    // ignore
   }
-  servers.value.push(server)
-  showingCreate.value = false
-  select(server)
 }
 </script>
 
@@ -150,7 +138,7 @@ function confirmCreate() {
               />
             </div>
             <div class="dialog__group">
-              <label class="dialog__label">MCP 服务器地址</label>
+              <label class="dialog__label">MCP 服务器路径</label>
               <input
                 v-model="createForm.address"
                 class="dialog__input"

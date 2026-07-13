@@ -1,0 +1,17 @@
+database:
+  type: sqlite
+  sqlite:
+    path: data.db
+  postgres:
+    host: localhost
+    port: 5432
+    user: root
+    password: "123456"
+    dbname: mcp_platform
+
+jwt_secret: mcp-platform-secret-key
+server_port: 8080
+
+admin:
+  username: admin
+  password: admin123

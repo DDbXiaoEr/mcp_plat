@@ -27,14 +27,14 @@ type LoginOutput struct {
 func Login(input LoginInput) (*LoginOutput, error) {
 	cfg := config.AppConfig
 
-	if input.Username == cfg.AdminUsername && input.Password == cfg.AdminPassword {
+	if input.Username == cfg.Admin.Username && input.Password == cfg.Admin.Password {
 		token, err := generateAdminToken()
 		if err != nil {
 			return nil, err
 		}
 		return &LoginOutput{
 			Token:    token,
-			Username: cfg.AdminUsername,
+			Username: cfg.Admin.Username,
 			Role:     "admin",
 		}, nil
 	}
@@ -42,6 +42,10 @@ func Login(input LoginInput) (*LoginOutput, error) {
 	var user model.User
 	if err := database.DB.Where("username = ?", input.Username).First(&user).Error; err != nil {
 		return nil, errors.New("用户名或密码错误")
+	}
+
+	if user.Status == 0 {
+		return nil, errors.New("该用户已被禁用，请联系管理员")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
@@ -71,7 +75,7 @@ func GetProfile(userID uint) (*model.User, error) {
 func generateAdminToken() (string, error) {
 	claims := &middleware.Claims{
 		UserID:   0,
-		Username: config.AppConfig.AdminUsername,
+		Username: config.AppConfig.Admin.Username,
 		Role:     "admin",
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),

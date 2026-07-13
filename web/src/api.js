@@ -39,3 +39,25 @@ export function updateAccessKey(id, body) {
 export function deleteAccessKey(id) {
   return request(`/access-keys/${id}`, { method: 'DELETE' })
 }
+
+export function fetchServers() {
+  return request('/servers')
+}
+
+export function createServer(body) {
+  return request('/servers', {
+    method: 'POST',
+    body: JSON.stringify(body)
+  })
+}
+
+export function updateServer(id, body) {
+  return request(`/servers/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(body)
+  })
+}
+
+export function deleteServer(id) {
+  return request(`/servers/${id}`, { method: 'DELETE' })
+}

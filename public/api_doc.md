@@ -214,3 +214,120 @@ GET /api/history
   }
 }
 ```
+
+---
+
+## 4. MCP 服务器管理
+
+> 所有接口均需认证，在请求头中携带 `Authorization: Bearer <token>`
+
+### 4.1 获取 MCP 服务器列表
+
+```
+GET /api/servers
+```
+
+**请求参数：** 无
+
+**响应示例：**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": 1,
+      "name": "教务系统 MCP",
+      "address": "https://mcp.xauat.edu.cn/jwc",
+      "department": "教务处",
+      "protocol": "SSE",
+      "tools": "[\"查询课表\",\"成绩查询\",\"选课信息\"]",
+      "created_at": "2026-01-01T12:00:00Z",
+      "updated_at": "2026-01-01T12:00:00Z"
+    }
+  ]
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | uint | 服务器 ID |
+| name | string | 服务器名称 |
+| address | string | MCP 服务器地址 |
+| department | string | 负责部门 |
+| protocol | string | 协议类型（SSE / Streamable HTTP / stdio） |
+| tools | string | 工具列表，JSON 字符串数组格式 |
+
+### 4.2 新增 MCP 服务器
+
+```
+POST /api/servers
+```
+
+**请求参数（JSON Body）：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| name | string | 是 | 服务器名称 |
+| address | string | 是 | MCP 服务器地址 |
+| department | string | 否 | 负责部门 |
+| protocol | string | 否 | 协议类型，默认 SSE |
+| tools | string | 否 | 工具列表，JSON 字符串数组格式 |
+
+**响应示例：**
+```json
+{
+  "code": 200,
+  "message": "创建成功",
+  "data": {
+    "id": 1,
+    "name": "教务系统 MCP",
+    "address": "https://mcp.xauat.edu.cn/jwc",
+    "department": "教务处",
+    "protocol": "SSE",
+    "tools": "[\"查询课表\",\"成绩查询\"]",
+    "created_at": "2026-01-01T12:00:00Z",
+    "updated_at": "2026-01-01T12:00:00Z"
+  }
+}
+```
+
+### 4.3 更新 MCP 服务器
+
+```
+PUT /api/servers/:id
+```
+
+**请求参数（JSON Body）：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| name | string | 否 | 服务器名称 |
+| address | string | 否 | MCP 服务器地址 |
+| department | string | 否 | 负责部门 |
+| protocol | string | 否 | 协议类型 |
+| tools | string | 否 | 工具列表，JSON 字符串数组格式 |
+
+**响应示例：**
+```json
+{
+  "code": 200,
+  "message": "更新成功"
+}
+```
+
+### 4.4 删除 MCP 服务器
+
+```
+DELETE /api/servers/:id
+```
+
+**请求参数：** 无（ID 通过 URL 路径传递）
+
+**响应示例：**
+```json
+{
+  "code": 200,
+  "message": "删除成功"
+}
+```

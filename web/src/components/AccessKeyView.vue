@@ -1,54 +1,34 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { setActive } from '../stores/nav.js'
-import { fetchAccessKeys, createAccessKey, updateAccessKey, deleteAccessKey } from '../api.js'
+import { fetchAccessKeys, createAccessKey, updateAccessKey, deleteAccessKey, fetchServers } from '../api.js'
 import AccessKeyDrawer from './AccessKeyDrawer.vue'
 
-const MCP_SERVERS = [
-  {
-    key: 'library',
-    label: '图书馆 MCP',
-    tools: [
-      { key: 'search', label: '文献检索' },
-      { key: 'borrow', label: '借阅查询' },
-      { key: 'recommend', label: '资源推荐' }
-    ]
-  },
-  {
-    key: 'academic',
-    label: '教务 MCP',
-    tools: [
-      { key: 'schedule', label: '课表查询' },
-      { key: 'grade', label: '成绩查询' },
-      { key: 'exam', label: '考试安排' }
-    ]
-  },
-  {
-    key: 'campus',
-    label: '校园服务 MCP',
-    tools: [
-      { key: 'card', label: '一卡通' },
-      { key: 'dorm', label: '宿舍报修' },
-      { key: 'notice', label: '通知公告' }
-    ]
-  },
-  {
-    key: 'ecard',
-    label: '一卡通 MCP',
-    tools: [
-      { key: 'balance', label: '余额查询' },
-      { key: 'transactions', label: '消费记录查询' }
-    ]
-  }
-]
+const servers = ref([])
+
+function parseTools(raw) {
+  try { return JSON.parse(raw) || [] } catch { return [] }
+}
 
 function defaultServersJSON() {
   const obj = {}
-  MCP_SERVERS.forEach((s) => {
-    obj[s.key] = s.tools.map((t) => t.key)
+  servers.value.forEach((s) => {
+    const tools = parseTools(s.tools)
+    if (tools.length) obj[s.id] = tools
   })
   return JSON.stringify(obj)
 }
+
+onMounted(async () => {
+  try {
+    keys.value = await fetchAccessKeys()
+    const data = await fetchServers()
+    servers.value = data
+  } catch {
+    // ignore load error
+  }
+  loading.value = false
+})
 
 const EXPIRATION_OPTIONS = [
   { label: '7 天', value: 7 },
@@ -68,15 +48,6 @@ const showingCreate = ref(false)
 const createForm = ref({ name: '', expireDays: 30 })
 const createdKey = ref(null)
 const dialogCopyId = ref(null)
-
-onMounted(async () => {
-  try {
-    keys.value = await fetchAccessKeys()
-  } catch {
-    // ignore load error
-  }
-  loading.value = false
-})
 
 function openCreate() {
   createForm.value = { name: '', expireDays: 30 }
@@ -297,7 +268,7 @@ function goHistory() {
 
     <AccessKeyDrawer
       :item="editingKey"
-      :servers="MCP_SERVERS"
+      :servers="servers"
       @save="onSave"
       @close="editingKey = null"
     />
