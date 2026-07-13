@@ -1,7 +1,16 @@
 database:
-  type: sqlite
-  sqlite:
-    path: data.db
+  # 二选一，取消对应注释即可
+  # -------- SQLite --------
+  # type: sqlite
+  # sqlite:
+  #   path: data.db
+  #   max_idle_conns: 10
+  #   max_open_conns: 100
+  #   journal_mode: WAL
+  #   busy_timeout: 5000
+
+  # -------- PostgreSQL --------
+  type: postgres
   postgres:
     host: localhost
     port: 5432
