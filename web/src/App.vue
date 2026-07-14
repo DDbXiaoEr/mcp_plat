@@ -10,6 +10,7 @@ import ProfileView from './components/ProfileView.vue'
 import AccessKeyView from './components/AccessKeyView.vue'
 import HistoryView from './components/HistoryView.vue'
 import SettingsView from './components/SettingsView.vue'
+import RbacView from './components/RbacView.vue'
 import OverviewView from './components/OverviewView.vue'
 import ServersView from './components/ServersView.vue'
 
@@ -18,6 +19,7 @@ const views = {
   accesskey: AccessKeyView,
   history: HistoryView,
   settings: SettingsView,
+  rbac: RbacView,
   overview: OverviewView,
   servers: ServersView
 }

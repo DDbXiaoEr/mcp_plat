@@ -10,6 +10,7 @@ const MENUS = {
   admin: [
     { key: 'overview', label: '平台概况' },
     { key: 'servers', label: 'MCP 服务器管理' },
+    { key: 'rbac', label: 'RBAC设置' },
     { key: 'settings', label: '系统设置' }
   ]
 }
