@@ -51,3 +51,15 @@ func AuthRequired() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func AdminRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, exists := c.Get("role")
+		if !exists || role.(string) != "admin" {
+			c.JSON(http.StatusForbidden, gin.H{"code": 403, "message": "仅管理员可操作"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}

@@ -61,3 +61,59 @@ export function updateServer(id, body) {
 export function deleteServer(id) {
   return request(`/servers/${id}`, { method: 'DELETE' })
 }
+
+export function fetchRoles() {
+  return request('/roles')
+}
+
+export function createRole(body) {
+  return request('/roles', {
+    method: 'POST',
+    body: JSON.stringify(body)
+  })
+}
+
+export function updateRole(id, body) {
+  return request(`/roles/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(body)
+  })
+}
+
+export function deleteRole(id) {
+  return request(`/roles/${id}`, { method: 'DELETE' })
+}
+
+export function fetchRoleUsers(id) {
+  return request(`/roles/${id}/users`)
+}
+
+export function assignRoleUsers(id, userIds) {
+  return request(`/roles/${id}/users`, {
+    method: 'PUT',
+    body: JSON.stringify({ user_ids: userIds })
+  })
+}
+
+export function fetchUsers(roleId) {
+  const params = roleId ? `?role_id=${roleId}` : ''
+  return request(`/users${params}`)
+}
+
+export function createUser(body) {
+  return request('/users', {
+    method: 'POST',
+    body: JSON.stringify(body)
+  })
+}
+
+export function updateUser(id, body) {
+  return request(`/users/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(body)
+  })
+}
+
+export function deleteUser(id) {
+  return request(`/users/${id}`, { method: 'DELETE' })
+}

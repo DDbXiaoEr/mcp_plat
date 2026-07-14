@@ -78,6 +78,7 @@ func genUsers(n int) {
 			Email:        email,
 			Phone:        phone,
 			Organization: org,
+			RoleID:       nil,
 			Status:       1,
 		}
 		if err := database.DB.Create(&u).Error; err != nil {
@@ -197,6 +198,7 @@ Fields generated:
   email        {username}@example.com
   phone        138xxxxxxxx
   organization random: 计算机学院 / 信息中心 / 网络中心 / 图书馆 / 教务处 / 学生处 / 后勤管理处 / 理学院 / 文学院
+  role_id      NULL (未分配角色)
   status       1 (enabled)
 
 Usage:

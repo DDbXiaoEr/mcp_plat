@@ -1,361 +1,414 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import {
+  fetchRoles, createRole, updateRole, deleteRole,
+  fetchUsers, createUser, updateUser, deleteUser,
+  fetchRoleUsers, assignRoleUsers, fetchServers
+} from '../api.js'
 
-const roles = ref([
-  { id: 1, name: '超级管理员', description: '拥有全部权限', servers: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
-  { id: 2, name: 'MCP管理员', description: '管理MCP服务器与工具', servers: [1, 2, 7] },
-  { id: 3, name: '普通用户', description: '基础访问权限', servers: [3] }
-])
+const tab = ref('roles')
 
-const allServers = ref([
-  { id: 1, name: '校园网络管理' },
-  { id: 2, name: '教学资源服务' },
-  { id: 3, name: '学生事务服务' },
-  { id: 4, name: '财务管理服务' },
-  { id: 5, name: '人事管理服务' },
-  { id: 6, name: '科研管理系统' },
-  { id: 7, name: '图书馆服务' },
-  { id: 8, name: '一卡通服务' },
-  { id: 9, name: '邮件与消息服务' }
-])
-
-const users = ref([
-  { id: 1, username: 'admin', role: '超级管理员' },
-  { id: 2, username: 'zhangsan', role: 'MCP管理员' },
-  { id: 3, username: 'lisi', role: '普通用户' },
-  { id: 4, username: 'wangwu', role: '普通用户' },
-  { id: 5, username: 'zhaoliu', role: '' },
-  { id: 6, username: 'sunqi', role: '' },
-  { id: 7, username: 'zhouba', role: '' }
-])
-
-const showingRoleCreate = ref(false)
-const showingUserCreate = ref(false)
-const rbacTab = ref('roles')
-
-const roleForm = ref({ name: '', description: '' })
-const userForm = ref({ username: '', role: '' })
-
-const editingRole = ref(null)
-const editingUser = ref(null)
-
-const shuttleLeftSelected = ref([])
-const shuttleRightSelected = ref([])
-
-const shuttleLeft = computed(() => {
-  if (!editingRole.value) return []
-  const selectedIds = editingRole.value.servers
-  return allServers.value.filter((s) => !selectedIds.includes(s.id))
+const servers = ref([])
+const serverMap = computed(() => {
+  const m = {}
+  servers.value.forEach((s) => { m[s.id] = s.name })
+  return m
 })
 
-const shuttleRight = computed(() => {
-  if (!editingRole.value) return []
-  const selectedIds = editingRole.value.servers
-  return allServers.value.filter((s) => selectedIds.includes(s.id))
+const roles = ref([])
+const loadingRoles = ref(true)
+
+const users = ref([])
+const loadingUsers = ref(true)
+const userFilter = ref('all')
+
+const filteredUsers = computed(() => {
+  if (userFilter.value === 'assigned') return users.value.filter((u) => u.role_name)
+  if (userFilter.value === 'unassigned') return users.value.filter((u) => !u.role_name)
+  return users.value
 })
 
-function toggleShuttleLeft(id) {
-  const idx = shuttleLeftSelected.value.indexOf(id)
-  if (idx === -1) {
-    shuttleLeftSelected.value.push(id)
-  } else {
-    shuttleLeftSelected.value.splice(idx, 1)
+async function loadRoles() {
+  try {
+    roles.value = await fetchRoles()
+  } catch {
+    // ignore
   }
+  loadingRoles.value = false
 }
 
-function toggleShuttleRight(id) {
-  const idx = shuttleRightSelected.value.indexOf(id)
-  if (idx === -1) {
-    shuttleRightSelected.value.push(id)
-  } else {
-    shuttleRightSelected.value.splice(idx, 1)
+async function loadUsers() {
+  try {
+    users.value = await fetchUsers()
+  } catch {
+    // ignore
   }
+  loadingUsers.value = false
 }
 
-function moveToRight() {
-  if (shuttleLeftSelected.value.length === 0) return
-  editingRole.value.servers.push(...shuttleLeftSelected.value)
-  shuttleLeftSelected.value = []
-}
-
-function moveToLeft() {
-  if (shuttleRightSelected.value.length === 0) return
-  editingRole.value.servers = editingRole.value.servers.filter(
-    (id) => !shuttleRightSelected.value.includes(id)
-  )
-  shuttleRightSelected.value = []
-}
-
-function moveAllToRight() {
-  shuttleLeft.value.forEach((s) => {
-    if (!editingRole.value.servers.includes(s.id)) {
-      editingRole.value.servers.push(s.id)
-    }
-  })
-  shuttleLeftSelected.value = []
-}
-
-function moveAllToLeft() {
-  editingRole.value.servers = []
-  shuttleRightSelected.value = []
-}
-
-const assigningRole = ref(null)
-const userAssignLeftSel = ref([])
-const userAssignRightSel = ref([])
-
-const userAssignLeft = computed(() => {
-  if (!assigningRole.value) return []
-  return users.value.filter((u) => u.role !== assigningRole.value.name)
+onMounted(async () => {
+  await Promise.all([
+    loadRoles(),
+    loadUsers(),
+    fetchServers().then((d) => { servers.value = d }).catch(() => {})
+  ])
 })
 
-const userAssignRight = computed(() => {
-  if (!assigningRole.value) return []
-  return users.value.filter((u) => u.role === assigningRole.value.name)
-})
-
-function toggleUserAssignLeft(id) {
-  const idx = userAssignLeftSel.value.indexOf(id)
-  if (idx === -1) {
-    userAssignLeftSel.value.push(id)
-  } else {
-    userAssignLeftSel.value.splice(idx, 1)
-  }
+function serverNames(role) {
+  return (role.server_ids || []).map((id) => serverMap.value[id] || id.toString())
 }
 
-function toggleUserAssignRight(id) {
-  const idx = userAssignRightSel.value.indexOf(id)
-  if (idx === -1) {
-    userAssignRightSel.value.push(id)
-  } else {
-    userAssignRightSel.value.splice(idx, 1)
-  }
-}
-
-function userMoveToRight() {
-  if (userAssignLeftSel.value.length === 0) return
-  userAssignLeftSel.value.forEach((id) => {
-    const u = users.value.find((u) => u.id === id)
-    if (u) u.role = assigningRole.value.name
-  })
-  userAssignLeftSel.value = []
-}
-
-function userMoveToLeft() {
-  if (userAssignRightSel.value.length === 0) return
-  userAssignRightSel.value.forEach((id) => {
-    const u = users.value.find((u) => u.id === id)
-    if (u) u.role = ''
-  })
-  userAssignRightSel.value = []
-}
-
-function userMoveAllToRight() {
-  userAssignLeft.value.forEach((u) => {
-    u.role = assigningRole.value.name
-  })
-  userAssignLeftSel.value = []
-}
-
-function userMoveAllToLeft() {
-  userAssignRight.value.forEach((u) => {
-    u.role = ''
-  })
-  userAssignRightSel.value = []
-}
-
-function openAssignUsers(role) {
-  assigningRole.value = role
-  userAssignLeftSel.value = []
-  userAssignRightSel.value = []
-}
+const showingRoleForm = ref(false)
+const roleFormMode = ref('create')
+const roleForm = ref({ name: '', description: '', servers: {} })
 
 function openRoleCreate() {
-  roleForm.value = { name: '', description: '' }
-  showingRoleCreate.value = true
+  roleFormMode.value = 'create'
+  roleForm.value = { name: '', description: '', servers: {} }
+  showingRoleForm.value = true
 }
 
-function confirmRoleCreate() {
-  const name = roleForm.value.name.trim()
-  if (!name) return
-  roles.value.push({
-    id: Date.now(),
-    name,
-    description: roleForm.value.description.trim()
-  })
-  showingRoleCreate.value = false
-}
-
-function startEditRole(role) {
-  editingRole.value = { ...role, servers: [...(role.servers || [])] }
-  shuttleLeftSelected.value = []
-  shuttleRightSelected.value = []
-}
-
-function saveRole() {
-  if (!editingRole.value.name.trim()) return
-  const idx = roles.value.findIndex((r) => r.id === editingRole.value.id)
-  if (idx !== -1) {
-    roles.value[idx] = { ...editingRole.value }
+function openRoleEdit(role) {
+  roleFormMode.value = 'edit'
+  roleForm.value = {
+    id: role.id,
+    name: role.name,
+    description: role.description,
+    servers: {}
   }
-  editingRole.value = null
+  ;(role.server_ids || []).forEach((id) => { roleForm.value.servers[id] = true })
+  showingRoleForm.value = true
 }
 
-function removeRole(role) {
-  const idx = roles.value.findIndex((r) => r.id === role.id)
-  if (idx !== -1) roles.value.splice(idx, 1)
+async function confirmRole() {
+  const body = {
+    name: roleForm.value.name.trim(),
+    description: roleForm.value.description.trim(),
+    server_ids: Object.keys(roleForm.value.servers)
+      .filter((k) => roleForm.value.servers[k])
+      .map(Number)
+  }
+  if (!body.name) return
+  try {
+    if (roleFormMode.value === 'create') {
+      const role = await createRole(body)
+      roles.value.unshift(role)
+    } else {
+      await updateRole(roleForm.value.id, body)
+      await loadRoles()
+    }
+  } catch {
+    // ignore
+  }
+  showingRoleForm.value = false
 }
+
+async function removeRole(role) {
+  try {
+    await deleteRole(role.id)
+    roles.value = roles.value.filter((r) => r.id !== role.id)
+  } catch {
+    // ignore
+  }
+}
+
+const showingAssign = ref(false)
+const assigningRole = ref(null)
+const assignUserIds = ref([])
+
+const assignableUsers = computed(() => users.value.filter((u) => !u.role_name))
+
+const leftUsers = computed(() =>
+  assignableUsers.value.filter((u) => !assignUserIds.value.includes(u.id))
+)
+
+const rightUsers = computed(() =>
+  users.value.filter((u) => assignUserIds.value.includes(u.id))
+)
+
+const isAllLeftChecked = computed(() => {
+  if (leftUsers.value.length === 0) return false
+  return leftUsers.value.every((u) => assignSelectedIds.value.includes(u.id))
+})
+
+const isAllRightChecked = computed(() => {
+  if (rightUsers.value.length === 0) return false
+  return rightUsers.value.every((u) => assignSelectedIds.value.includes(u.id))
+})
+
+const assignSelectedIds = ref([])
+
+function toggleSelect(id) {
+  const idx = assignSelectedIds.value.indexOf(id)
+  if (idx >= 0) {
+    assignSelectedIds.value.splice(idx, 1)
+  } else {
+    assignSelectedIds.value.push(id)
+  }
+}
+
+function toggleSelectAll(list) {
+  const ids = list.map((u) => u.id)
+  if (ids.every((id) => assignSelectedIds.value.includes(id))) {
+    assignSelectedIds.value = assignSelectedIds.value.filter((id) => !ids.includes(id))
+  } else {
+    ids.forEach((id) => {
+      if (!assignSelectedIds.value.includes(id)) assignSelectedIds.value.push(id)
+    })
+  }
+}
+
+function moveRight() {
+  const selected = assignSelectedIds.value.filter((id) =>
+    leftUsers.value.some((u) => u.id === id)
+  )
+  selected.forEach((id) => {
+    if (!assignUserIds.value.includes(id)) assignUserIds.value.push(id)
+  })
+  assignSelectedIds.value = assignSelectedIds.value.filter((id) => !selected.includes(id))
+}
+
+function moveLeft() {
+  const selected = assignSelectedIds.value.filter((id) =>
+    rightUsers.value.some((u) => u.id === id)
+  )
+  assignUserIds.value = assignUserIds.value.filter((id) => !selected.includes(id))
+  assignSelectedIds.value = assignSelectedIds.value.filter((id) => !selected.includes(id))
+}
+
+async function openAssign(role) {
+  assigningRole.value = role
+  try {
+    const assigned = await fetchRoleUsers(role.id)
+    assignUserIds.value = (assigned || []).map((u) => u.id)
+  } catch {
+    assignUserIds.value = []
+  }
+  assignSelectedIds.value = []
+  await loadUsers()
+  showingAssign.value = true
+}
+
+function toggleAssignUser(id) {
+  const idx = assignUserIds.value.indexOf(id)
+  if (idx >= 0) {
+    assignUserIds.value.splice(idx, 1)
+  } else {
+    assignUserIds.value.push(id)
+  }
+}
+
+async function confirmAssign() {
+  try {
+    await assignRoleUsers(assigningRole.value.id, assignUserIds.value)
+    await loadRoles()
+    await loadUsers()
+  } catch {
+    // ignore
+  }
+  showingAssign.value = false
+  assigningRole.value = null
+}
+
+const showingUserForm = ref(false)
+const userFormMode = ref('create')
+const userForm = ref({ username: '', password: '', role_id: 0 })
 
 function openUserCreate() {
-  userForm.value = { username: '', role: '' }
-  showingUserCreate.value = true
+  userFormMode.value = 'create'
+  userForm.value = { username: '', password: '', role_id: 0 }
+  showingUserForm.value = true
 }
 
-function confirmUserCreate() {
-  const username = userForm.value.username.trim()
-  if (!username) return
-  users.value.push({
-    id: Date.now(),
-    username,
-    role: userForm.value.role
-  })
-  showingUserCreate.value = false
-}
-
-function startEditUser(user) {
-  editingUser.value = { ...user }
-}
-
-function saveUser() {
-  if (!editingUser.value.username.trim()) return
-  const idx = users.value.findIndex((u) => u.id === editingUser.value.id)
-  if (idx !== -1) {
-    users.value[idx] = { ...editingUser.value }
+function openUserEdit(user) {
+  userFormMode.value = 'edit'
+  userForm.value = {
+    id: user.id,
+    username: user.username,
+    password: '',
+    role_id: user.role_id || 0
   }
-  editingUser.value = null
+  showingUserForm.value = true
 }
 
-function removeUser(user) {
-  const idx = users.value.findIndex((u) => u.id === user.id)
-  if (idx !== -1) users.value.splice(idx, 1)
+async function confirmUser() {
+  const body = {
+    username: userForm.value.username.trim()
+  }
+  if (!body.username) return
+
+  if (userForm.value.password) {
+    body.password = userForm.value.password.trim()
+  }
+
+  if (userFormMode.value === 'create') {
+    body.password = body.password || userForm.value.password.trim()
+    if (!body.password) return
+    body.role_id = userForm.value.role_id > 0 ? userForm.value.role_id : null
+    try {
+      const user = await createUser(body)
+      users.value.unshift(user)
+    } catch {
+      // ignore
+    }
+  } else {
+    body.role_id = userForm.value.role_id > 0 ? userForm.value.role_id : 0
+    try {
+      await updateUser(userForm.value.id, body)
+      await loadUsers()
+      await loadRoles()
+    } catch {
+      // ignore
+    }
+  }
+  showingUserForm.value = false
+}
+
+async function removeUser(user) {
+  try {
+    await deleteUser(user.id)
+    users.value = users.value.filter((u) => u.id !== user.id)
+    await loadRoles()
+  } catch {
+    // ignore
+  }
 }
 </script>
 
 <template>
   <section class="rbac">
-    <h1 class="page__title">RBAC设置</h1>
+    <div class="rbac__head">
+      <h1 class="page__title">RBAC 设置</h1>
+      <div class="rbac__actions">
+        <button
+          v-if="tab === 'roles'"
+          class="btn btn--primary"
+          type="button"
+          @click="openRoleCreate"
+        >
+          增加角色
+        </button>
+        <button
+          v-if="tab === 'users'"
+          class="btn btn--primary"
+          type="button"
+          @click="openUserCreate"
+        >
+          增加用户
+        </button>
+      </div>
+    </div>
 
     <div class="rbac__tabs">
       <button
         class="rbac__tab"
-        :class="{ 'rbac__tab--active': rbacTab === 'roles' }"
+        :class="{ 'rbac__tab--active': tab === 'roles' }"
         type="button"
-        @click="rbacTab = 'roles'"
-      >角色管理</button>
+        @click="tab = 'roles'"
+      >
+        角色管理
+      </button>
       <button
         class="rbac__tab"
-        :class="{ 'rbac__tab--active': rbacTab === 'users' }"
+        :class="{ 'rbac__tab--active': tab === 'users' }"
         type="button"
-        @click="rbacTab = 'users'"
-      >用户管理</button>
+        @click="tab = 'users'"
+      >
+        用户管理
+      </button>
     </div>
 
-    <!-- 角色管理 -->
-    <div v-if="rbacTab === 'roles'" class="rbac__section">
-      <div class="rbac__head">
-        <h2 class="rbac__subtitle">角色管理</h2>
-        <button class="btn btn--primary" type="button" @click="openRoleCreate">
-          新增角色
-        </button>
-      </div>
-
-      <table class="rbac__table">
-        <thead>
-          <tr>
-            <th>角色名称</th>
-            <th>描述</th>
-            <th>可使用的MCP服务器</th>
-            <th class="rbac__col-action">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="roles.length === 0">
-            <td colspan="4" class="rbac__empty">暂无角色</td>
-          </tr>
-          <tr v-for="role in roles" :key="role.id">
-            <td>{{ role.name }}</td>
-            <td>{{ role.description }}</td>
-            <td>
-              <div v-if="role.servers && role.servers.length" class="rbac__tags">
+    <table v-if="tab === 'roles' && !loadingRoles" class="table">
+      <thead>
+        <tr>
+          <th>名称</th>
+          <th>描述</th>
+          <th>MCP 服务器</th>
+          <th class="table__col-num">用户数</th>
+          <th class="table__col-action">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-if="roles.length === 0">
+          <td colspan="5" class="table__empty">暂无角色</td>
+        </tr>
+        <tr v-for="role in roles" :key="role.id">
+          <td class="table__name">{{ role.name }}</td>
+          <td class="table__desc">{{ role.description || '—' }}</td>
+          <td>
+            <div class="table__tags">
+              <template v-if="serverNames(role).length">
                 <span
-                  v-for="sId in role.servers"
-                  :key="sId"
-                  class="rbac__tag"
-                >{{ allServers.find((s) => s.id === sId)?.name || '' }}</span>
-              </div>
-              <span v-else class="rbac__tag-empty">无</span>
-            </td>
-            <td class="rbac__col-action">
-              <button class="rbac__edit" type="button" @click="startEditRole(role)">
-                编辑
-              </button>
-              <button class="rbac__edit" type="button" @click="openAssignUsers(role)">
-                分配用户
-              </button>
-              <button class="rbac__del" type="button" @click="removeRole(role)">
-                删除
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+                  v-for="name in serverNames(role)"
+                  :key="name"
+                  class="table__tag"
+                >{{ name }}</span>
+              </template>
+              <span v-else class="table__muted">—</span>
+            </div>
+          </td>
+          <td class="table__col-num">{{ role.user_count }}</td>
+          <td class="table__col-action">
+            <button class="table__btn" type="button" @click="openAssign(role)">
+              分配用户
+            </button>
+            <button class="table__btn" type="button" @click="openRoleEdit(role)">
+              编辑
+            </button>
+            <button class="table__btn" type="button" @click="removeRole(role)">
+              删除
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
 
-    <!-- 用户管理 -->
-    <div v-if="rbacTab === 'users'" class="rbac__section">
-      <div class="rbac__head">
-        <h2 class="rbac__subtitle">用户管理</h2>
-        <button class="btn btn--primary" type="button" @click="openUserCreate">
-          新增用户
-        </button>
-      </div>
+    <table v-if="tab === 'users' && !loadingUsers" class="table">
+      <thead>
+        <tr>
+          <th>
+            用户名
+            <select v-model="userFilter" class="table__filter">
+              <option value="all">全部</option>
+              <option value="assigned">已分配角色</option>
+              <option value="unassigned">未分配角色</option>
+            </select>
+          </th>
+          <th>角色</th>
+          <th class="table__col-action">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-if="filteredUsers.length === 0">
+          <td colspan="3" class="table__empty">暂无用户</td>
+        </tr>
+        <tr v-for="user in filteredUsers" :key="user.id">
+          <td class="table__name">{{ user.username }}</td>
+          <td>
+            <span v-if="user.role_name" class="table__tag">{{ user.role_name }}</span>
+            <span v-else class="table__muted">未分配</span>
+          </td>
+          <td class="table__col-action">
+            <button class="table__btn" type="button" @click="openUserEdit(user)">
+              编辑
+            </button>
+            <button class="table__btn" type="button" @click="removeUser(user)">
+              删除
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
 
-      <table class="rbac__table">
-        <thead>
-          <tr>
-            <th>用户名</th>
-            <th>角色</th>
-            <th class="rbac__col-action">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="users.length === 0">
-            <td colspan="3" class="rbac__empty">暂无用户</td>
-          </tr>
-          <tr v-for="user in users" :key="user.id">
-            <td>{{ user.username }}</td>
-            <td>{{ user.role || '未分配' }}</td>
-            <td class="rbac__col-action">
-              <button class="rbac__edit" type="button" @click="startEditUser(user)">
-                编辑
-              </button>
-              <button class="rbac__del" type="button" @click="removeUser(user)">
-                删除
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 新增/编辑角色对话框 -->
     <Teleport to="body">
-      <div v-if="showingRoleCreate" class="dialog-overlay" @click.self="showingRoleCreate = false">
+      <div v-if="showingRoleForm" class="dialog-overlay" @click.self="showingRoleForm = false">
         <div class="dialog">
-          <h2 class="dialog__title">新增角色</h2>
+          <h2 class="dialog__title">
+            {{ roleFormMode === 'create' ? '新增角色' : '编辑角色' }}
+          </h2>
           <div class="dialog__form">
             <div class="dialog__group">
-              <label class="dialog__label">角色名称</label>
+              <label class="dialog__label">名称</label>
               <input
                 v-model="roleForm.name"
                 class="dialog__input"
@@ -372,114 +425,34 @@ function removeUser(user) {
                 placeholder="请输入角色描述"
               />
             </div>
+            <div class="dialog__group">
+              <label class="dialog__label">MCP 服务器权限</label>
+              <div class="dialog__checklist">
+                <label
+                  v-for="s in servers"
+                  :key="s.id"
+                  class="dialog__check"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="!!roleForm.servers[s.id]"
+                    @change="roleForm.servers[s.id] = !roleForm.servers[s.id]"
+                  />
+                  <span>{{ s.name }}</span>
+                </label>
+                <span v-if="servers.length === 0" class="table__muted">暂无 MCP 服务器</span>
+              </div>
+            </div>
           </div>
           <div class="dialog__actions">
-            <button class="btn btn--ghost" type="button" @click="showingRoleCreate = false">
+            <button class="btn btn--ghost" type="button" @click="showingRoleForm = false">
               取消
             </button>
             <button
               class="btn btn--primary"
               type="button"
               :disabled="!roleForm.name.trim()"
-              @click="confirmRoleCreate"
-            >
-              确认新增
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <Teleport to="body">
-      <div v-if="editingRole" class="dialog-overlay" @click.self="editingRole = null">
-        <div class="dialog dialog--shuttle">
-          <h2 class="dialog__title">编辑角色</h2>
-          <div class="dialog__form">
-            <div class="dialog__group">
-              <label class="dialog__label">角色名称</label>
-              <input
-                v-model="editingRole.name"
-                class="dialog__input"
-                type="text"
-              />
-            </div>
-            <div class="dialog__group">
-              <label class="dialog__label">描述</label>
-              <input
-                v-model="editingRole.description"
-                class="dialog__input"
-                type="text"
-              />
-            </div>
-            <div class="dialog__group">
-              <label class="dialog__label">可使用的MCP服务器</label>
-              <div class="shuttle">
-                <div class="shuttle__panel">
-                  <div class="shuttle__head">可选服务器</div>
-                  <div class="shuttle__list">
-                    <div
-                      v-for="srv in shuttleLeft"
-                      :key="srv.id"
-                      class="shuttle__item"
-                      :class="{ 'shuttle__item--sel': shuttleLeftSelected.includes(srv.id) }"
-                      @click="toggleShuttleLeft(srv.id)"
-                    >
-                      {{ srv.name }}
-                    </div>
-                  </div>
-                </div>
-                <div class="shuttle__controls">
-                  <button
-                    class="shuttle__btn"
-                    type="button"
-                    title="添加选中"
-                    @click="moveToRight"
-                  >&gt;</button>
-                  <button
-                    class="shuttle__btn"
-                    type="button"
-                    title="全部添加"
-                    @click="moveAllToRight"
-                  >&gt;&gt;</button>
-                  <button
-                    class="shuttle__btn"
-                    type="button"
-                    title="移除选中"
-                    @click="moveToLeft"
-                  >&lt;</button>
-                  <button
-                    class="shuttle__btn"
-                    type="button"
-                    title="全部移除"
-                    @click="moveAllToLeft"
-                  >&lt;&lt;</button>
-                </div>
-                <div class="shuttle__panel">
-                  <div class="shuttle__head">已选服务器</div>
-                  <div class="shuttle__list">
-                    <div
-                      v-for="srv in shuttleRight"
-                      :key="srv.id"
-                      class="shuttle__item"
-                      :class="{ 'shuttle__item--sel': shuttleRightSelected.includes(srv.id) }"
-                      @click="toggleShuttleRight(srv.id)"
-                    >
-                      {{ srv.name }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="dialog__actions">
-            <button class="btn btn--ghost" type="button" @click="editingRole = null">
-              取消
-            </button>
-            <button
-              class="btn btn--primary"
-              type="button"
-              :disabled="!editingRole.name.trim()"
-              @click="saveRole"
+              @click="confirmRole"
             >
               保存
             </button>
@@ -488,11 +461,110 @@ function removeUser(user) {
       </div>
     </Teleport>
 
-    <!-- 新增/编辑用户对话框 -->
     <Teleport to="body">
-      <div v-if="showingUserCreate" class="dialog-overlay" @click.self="showingUserCreate = false">
+      <div v-if="showingAssign" class="dialog-overlay" @click.self="showingAssign = false">
+        <div class="dialog dialog--wide">
+          <h2 class="dialog__title">分配用户 - {{ assigningRole?.name }}</h2>
+          <div class="shuttle">
+            <div class="shuttle__panel">
+              <div class="shuttle__head">
+                <span class="shuttle__label">可选用户</span>
+                <span class="shuttle__count">{{ leftUsers.length }}</span>
+              </div>
+              <div class="shuttle__list">
+                <label class="shuttle__item shuttle__item--all">
+                  <input
+                    type="checkbox"
+                    :checked="isAllLeftChecked"
+                    @change="toggleSelectAll(leftUsers)"
+                  />
+                  <span>全选</span>
+                </label>
+                <label
+                  v-for="user in leftUsers"
+                  :key="user.id"
+                  class="shuttle__item"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="assignSelectedIds.includes(user.id)"
+                    @change="toggleSelect(user.id)"
+                  />
+                  <span>{{ user.username }}</span>
+                </label>
+                <span v-if="leftUsers.length === 0" class="table__muted shuttle__empty">
+                  暂无可选用户
+                </span>
+              </div>
+            </div>
+            <div class="shuttle__actions">
+              <button
+                class="shuttle__btn"
+                type="button"
+                :disabled="!assignSelectedIds.some((id) => leftUsers.some((u) => u.id === id))"
+                @click="moveRight"
+              >
+                &gt;
+              </button>
+              <button
+                class="shuttle__btn"
+                type="button"
+                :disabled="!assignSelectedIds.some((id) => rightUsers.some((u) => u.id === id))"
+                @click="moveLeft"
+              >
+                &lt;
+              </button>
+            </div>
+            <div class="shuttle__panel">
+              <div class="shuttle__head">
+                <span class="shuttle__label">已选用户</span>
+                <span class="shuttle__count">{{ rightUsers.length }}</span>
+              </div>
+              <div class="shuttle__list">
+                <label class="shuttle__item shuttle__item--all">
+                  <input
+                    type="checkbox"
+                    :checked="isAllRightChecked"
+                    @change="toggleSelectAll(rightUsers)"
+                  />
+                  <span>全选</span>
+                </label>
+                <label
+                  v-for="user in rightUsers"
+                  :key="user.id"
+                  class="shuttle__item"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="assignSelectedIds.includes(user.id)"
+                    @change="toggleSelect(user.id)"
+                  />
+                  <span>{{ user.username }}</span>
+                </label>
+                <span v-if="rightUsers.length === 0" class="table__muted shuttle__empty">
+                  暂未选择
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="dialog__actions">
+            <button class="btn btn--ghost" type="button" @click="showingAssign = false">
+              取消
+            </button>
+            <button class="btn btn--primary" type="button" @click="confirmAssign">
+              保存
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div v-if="showingUserForm" class="dialog-overlay" @click.self="showingUserForm = false">
         <div class="dialog">
-          <h2 class="dialog__title">新增用户</h2>
+          <h2 class="dialog__title">
+            {{ userFormMode === 'create' ? '新增用户' : '编辑用户' }}
+          </h2>
           <div class="dialog__form">
             <div class="dialog__group">
               <label class="dialog__label">用户名</label>
@@ -504,124 +576,35 @@ function removeUser(user) {
               />
             </div>
             <div class="dialog__group">
-              <label class="dialog__label">角色</label>
-              <select v-model="userForm.role" class="dialog__input">
-                <option value="">请选择角色</option>
-                <option v-for="role in roles" :key="role.id" :value="role.name">
-                  {{ role.name }}
-                </option>
-              </select>
-            </div>
-          </div>
-          <div class="dialog__actions">
-            <button class="btn btn--ghost" type="button" @click="showingUserCreate = false">
-              取消
-            </button>
-            <button
-              class="btn btn--primary"
-              type="button"
-              :disabled="!userForm.username.trim()"
-              @click="confirmUserCreate"
-            >
-              确认新增
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <Teleport to="body">
-      <div v-if="editingUser" class="dialog-overlay" @click.self="editingUser = null">
-        <div class="dialog">
-          <h2 class="dialog__title">编辑用户</h2>
-          <div class="dialog__form">
-            <div class="dialog__group">
-              <label class="dialog__label">用户名</label>
+              <label class="dialog__label">{{ userFormMode === 'create' ? '密码' : '新密码（留空不修改）' }}</label>
               <input
-                v-model="editingUser.username"
+                v-model="userForm.password"
                 class="dialog__input"
-                type="text"
+                type="password"
+                placeholder="请输入密码"
               />
             </div>
             <div class="dialog__group">
               <label class="dialog__label">角色</label>
-              <select v-model="editingUser.role" class="dialog__input">
-                <option value="">请选择角色</option>
-                <option v-for="role in roles" :key="role.id" :value="role.name">
+              <select v-model="userForm.role_id" class="dialog__input">
+                <option :value="0">无角色</option>
+                <option v-for="role in roles" :key="role.id" :value="role.id">
                   {{ role.name }}
                 </option>
               </select>
             </div>
           </div>
           <div class="dialog__actions">
-            <button class="btn btn--ghost" type="button" @click="editingUser = null">
+            <button class="btn btn--ghost" type="button" @click="showingUserForm = false">
               取消
             </button>
             <button
               class="btn btn--primary"
               type="button"
-              :disabled="!editingUser.username.trim()"
-              @click="saveUser"
+              :disabled="!userForm.username.trim() || (userFormMode === 'create' && !userForm.password.trim())"
+              @click="confirmUser"
             >
               保存
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <!-- 分配用户对话框 -->
-    <Teleport to="body">
-      <div v-if="assigningRole" class="dialog-overlay" @click.self="assigningRole = null">
-        <div class="dialog dialog--shuttle">
-          <h2 class="dialog__title">分配用户 - {{ assigningRole.name }}</h2>
-          <div class="dialog__form">
-            <div class="dialog__group">
-              <label class="dialog__label">选择用户</label>
-              <div class="shuttle">
-                <div class="shuttle__panel">
-                  <div class="shuttle__head">未分配用户</div>
-                  <div class="shuttle__list">
-                    <div
-                      v-for="u in userAssignLeft"
-                      :key="u.id"
-                      class="shuttle__item"
-                      :class="{ 'shuttle__item--sel': userAssignLeftSel.includes(u.id) }"
-                      @click="toggleUserAssignLeft(u.id)"
-                    >
-                      {{ u.username }}
-                    </div>
-                  </div>
-                </div>
-                <div class="shuttle__controls">
-                  <button class="shuttle__btn" type="button" title="添加选中" @click="userMoveToRight">&gt;</button>
-                  <button class="shuttle__btn" type="button" title="全部添加" @click="userMoveAllToRight">&gt;&gt;</button>
-                  <button class="shuttle__btn" type="button" title="移除选中" @click="userMoveToLeft">&lt;</button>
-                  <button class="shuttle__btn" type="button" title="全部移除" @click="userMoveAllToLeft">&lt;&lt;</button>
-                </div>
-                <div class="shuttle__panel">
-                  <div class="shuttle__head">已分配用户</div>
-                  <div class="shuttle__list">
-                    <div
-                      v-for="u in userAssignRight"
-                      :key="u.id"
-                      class="shuttle__item"
-                      :class="{ 'shuttle__item--sel': userAssignRightSel.includes(u.id) }"
-                      @click="toggleUserAssignRight(u.id)"
-                    >
-                      {{ u.username }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="dialog__actions">
-            <button class="btn btn--ghost" type="button" @click="assigningRole = null">
-              取消
-            </button>
-            <button class="btn btn--primary" type="button" @click="assigningRole = null">
-              完成
             </button>
           </div>
         </div>
@@ -637,56 +620,6 @@ function removeUser(user) {
   gap: 20px;
 }
 
-.rbac__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  align-items: start;
-}
-
-.rbac__tabs {
-  display: flex;
-  gap: 4px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 4px;
-  width: fit-content;
-}
-
-.rbac__tab {
-  padding: 8px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-muted);
-  background: transparent;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-}
-
-.rbac__tab:hover {
-  color: var(--text);
-  background: rgba(10, 61, 122, 0.04);
-}
-
-.rbac__tab--active {
-  color: #fff;
-  background: var(--xauat-blue);
-}
-
-.rbac__tab--active:hover {
-  color: #fff;
-  background: var(--xauat-blue-light);
-}
-
-.rbac__section {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 .rbac__head {
   display: flex;
   align-items: center;
@@ -695,88 +628,32 @@ function removeUser(user) {
   flex-wrap: wrap;
 }
 
-.rbac__subtitle {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
+.rbac__tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
 }
 
-.rbac__table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.rbac__table th,
-.rbac__table td {
-  padding: 14px 20px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-}
-
-.rbac__table thead th {
-  font-size: 13px;
+.rbac__tab {
+  padding: 10px 24px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-muted);
-  background: var(--bg);
-}
-
-.rbac__table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.rbac__empty {
-  text-align: center;
-  color: var(--text-muted);
-  padding: 32px 20px !important;
-}
-
-.rbac__col-action {
-  width: 220px;
-  white-space: nowrap;
-}
-
-.rbac__edit,
-.rbac__del {
-  flex: none;
-  padding: 4px 12px;
-  font-size: 13px;
-  color: var(--xauat-blue);
   background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-  margin-right: 8px;
+  transition: color 0.2s, border-color 0.2s;
 }
 
-.rbac__edit:hover,
-.rbac__del:hover {
-  background: rgba(10, 61, 122, 0.06);
-  border-color: rgba(10, 61, 122, 0.25);
-}
-
-.rbac__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.rbac__tag {
-  padding: 2px 10px;
-  font-size: 12px;
+.rbac__tab:hover {
   color: var(--xauat-blue);
-  background: rgba(30, 95, 176, 0.08);
-  border-radius: 999px;
-  white-space: nowrap;
 }
 
-.rbac__tag-empty {
-  font-size: 12px;
-  color: var(--text-muted);
+.rbac__tab--active {
+  color: var(--xauat-blue);
+  border-bottom-color: var(--xauat-blue);
 }
 
 .btn {
@@ -815,6 +692,111 @@ function removeUser(user) {
   border-color: rgba(10, 61, 122, 0.25);
 }
 
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.table th,
+.table td {
+  padding: 14px 20px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.table thead th {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table__empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 32px 20px !important;
+}
+
+.table__col-num {
+  width: 80px;
+}
+
+.table__col-action {
+  width: 240px;
+}
+
+.table__filter {
+  margin-left: 10px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+}
+
+.table__name {
+  font-weight: 600;
+}
+
+.table__desc {
+  color: var(--text-muted);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.table__tag {
+  padding: 3px 10px;
+  background: rgba(30, 95, 176, 0.1);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--xauat-blue);
+}
+
+.table__muted {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.table__btn {
+  padding: 4px 12px;
+  font-size: 13px;
+  color: var(--xauat-blue);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.table__btn:hover {
+  background: rgba(10, 61, 122, 0.06);
+  border-color: rgba(10, 61, 122, 0.25);
+}
+
+.table__btn + .table__btn {
+  margin-left: 6px;
+}
+
 .dialog-overlay {
   position: fixed;
   inset: 0;
@@ -831,6 +813,10 @@ function removeUser(user) {
   padding: 32px;
   max-width: 520px;
   width: 90%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   box-shadow: var(--shadow);
 }
 
@@ -839,6 +825,7 @@ function removeUser(user) {
   font-weight: 700;
   color: var(--xauat-blue);
   margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .dialog__form {
@@ -875,97 +862,167 @@ function removeUser(user) {
   border-color: var(--xauat-blue);
 }
 
+.dialog__checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.dialog__checklist--scroll {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+.dialog__check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.dialog__check input {
+  accent-color: var(--xauat-blue);
+}
+
+.dialog__check--all {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
 .dialog__actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 24px;
+  flex-shrink: 0;
 }
 
-.dialog--shuttle {
-  max-width: 680px;
+.dialog--wide {
+  max-width: 640px;
 }
 
 .shuttle {
   display: flex;
-  align-items: stretch;
   gap: 12px;
+  flex: 1;
+  min-height: 0;
 }
 
 .shuttle__panel {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .shuttle__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.shuttle__label {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-muted);
-  padding: 8px 12px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px 10px 0 0;
-  border-bottom: none;
+}
+
+.shuttle__count {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--surface);
+  padding: 2px 8px;
+  border-radius: 999px;
 }
 
 .shuttle__list {
   flex: 1;
-  min-height: 180px;
-  max-height: 220px;
+  min-height: 0;
   overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: 0 0 10px 10px;
-  background: var(--surface);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .shuttle__item {
-  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
   font-size: 14px;
   color: var(--text);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  border-radius: 6px;
+  transition: background 0.15s;
 }
 
 .shuttle__item:hover {
-  background: rgba(10, 61, 122, 0.04);
+  background: var(--bg);
 }
 
-.shuttle__item--sel {
-  color: #fff;
-  background: var(--xauat-blue);
+.shuttle__item input {
+  accent-color: var(--xauat-blue);
+  flex-shrink: 0;
 }
 
-.shuttle__item--sel:hover {
-  background: var(--xauat-blue-light);
+.shuttle__item--all {
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
 }
 
-.shuttle__controls {
+.shuttle__empty {
+  padding: 16px 0;
+  text-align: center;
+}
+
+.shuttle__actions {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 8px;
-  padding: 0 4px;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .shuttle__btn {
   width: 32px;
   height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--xauat-blue);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, border-color 0.2s;
 }
 
-.shuttle__btn:hover {
+.shuttle__btn:hover:not(:disabled) {
   background: rgba(10, 61, 122, 0.06);
   border-color: rgba(10, 61, 122, 0.25);
+}
+
+.shuttle__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 </style>

@@ -10,6 +10,7 @@ type User struct {
 	Email        string    `gorm:"size:128" json:"email"`
 	Phone        string    `gorm:"size:32" json:"phone"`
 	Organization string    `gorm:"size:128" json:"organization"`
+	RoleID       *uint     `json:"role_id"`
 	Status       int       `gorm:"default:1" json:"status"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`

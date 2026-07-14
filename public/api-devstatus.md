@@ -17,6 +17,16 @@
 | MCP 服务器 | POST /api/servers | ✅ 已完成 | |
 | MCP 服务器 | PUT /api/servers/:id | ✅ 已完成 | |
 | MCP 服务器 | DELETE /api/servers/:id | ✅ 已完成 | |
+| RBAC | GET /api/roles | ✅ 已完成 | |
+| RBAC | POST /api/roles | ✅ 已完成 | |
+| RBAC | PUT /api/roles/:id | ✅ 已完成 | |
+| RBAC | DELETE /api/roles/:id | ✅ 已完成 | |
+| RBAC | GET /api/roles/:id/users | ✅ 已完成 | |
+| RBAC | PUT /api/roles/:id/users | ✅ 已完成 | |
+| RBAC | GET /api/users | ✅ 已完成 | |
+| RBAC | POST /api/users | ✅ 已完成 | |
+| RBAC | PUT /api/users/:id | ✅ 已完成 | |
+| RBAC | DELETE /api/users/:id | ✅ 已完成 | |
 
 - ✅ 已完成
 - 🚧 开发中

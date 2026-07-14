@@ -34,7 +34,7 @@ func Init() {
 
 	var err error
 	DB, err = gorm.Open(dialector, &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
@@ -45,6 +45,8 @@ func Init() {
 		&model.AccessKey{},
 		&model.UsageHistory{},
 		&model.MCPServer{},
+		&model.Role{},
+		&model.RoleServer{},
 	)
 	if err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
