@@ -367,7 +367,7 @@ async function removeUser(user) {
       <thead>
         <tr>
           <th>
-            用户名
+            学号/工号
             <select v-model="userFilter" class="table__filter">
               <option value="all">全部</option>
               <option value="assigned">已分配角色</option>
@@ -383,7 +383,7 @@ async function removeUser(user) {
           <td colspan="3" class="table__empty">暂无用户</td>
         </tr>
         <tr v-for="user in filteredUsers" :key="user.id">
-          <td class="table__name">{{ user.username }}</td>
+          <td class="table__name">{{ user.uid }}</td>
           <td>
             <span v-if="user.role_name" class="table__tag">{{ user.role_name }}</span>
             <span v-else class="table__muted">未分配</span>
@@ -490,7 +490,7 @@ async function removeUser(user) {
                     :checked="assignSelectedIds.includes(user.id)"
                     @change="toggleSelect(user.id)"
                   />
-                  <span>{{ user.username }}</span>
+                  <span>{{ user.uid }}</span>
                 </label>
                 <span v-if="leftUsers.length === 0" class="table__muted shuttle__empty">
                   暂无可选用户
@@ -539,7 +539,7 @@ async function removeUser(user) {
                     :checked="assignSelectedIds.includes(user.id)"
                     @change="toggleSelect(user.id)"
                   />
-                  <span>{{ user.username }}</span>
+                  <span>{{ user.uid }}</span>
                 </label>
                 <span v-if="rightUsers.length === 0" class="table__muted shuttle__empty">
                   暂未选择

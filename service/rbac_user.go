@@ -26,6 +26,7 @@ type UpdateUserInput struct {
 
 type UserOutput struct {
 	ID        uint      `json:"id"`
+	UID       string    `json:"uid"`
 	Username  string    `json:"username"`
 	RoleID    *uint     `json:"role_id"`
 	RoleName  string    `json:"role_name"`
@@ -60,6 +61,7 @@ func ListUsers(roleID *uint) ([]UserOutput, error) {
 		}
 		result = append(result, UserOutput{
 			ID:        u.ID,
+			UID:       u.UID,
 			Username:  u.Username,
 			RoleID:    u.RoleID,
 			RoleName:  roleName,
@@ -105,6 +107,7 @@ func CreateUser(input CreateUserInput) (*UserOutput, error) {
 
 	return &UserOutput{
 		ID:        user.ID,
+		UID:       user.UID,
 		Username:  user.Username,
 		RoleID:    user.RoleID,
 		RoleName:  roleName,
