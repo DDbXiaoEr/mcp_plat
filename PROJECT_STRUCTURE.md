@@ -10,63 +10,81 @@ mcp_plat-console/
 ├── AGENTS.md                # 项目整体规范
 ├── PROJECT_STRUCTURE.md     # 本文件 —— 项目结构速查
 │
+├── cmd/
+│   └── datagen/
+│       └── main.go           # 测试数据生成工具
+│
 ├── config/
-│   └── config.go            # 配置加载（DB / JWT / 端口 / 管理员账号）
+│   └── config.go             # 配置加载（DB / JWT / 端口 / 管理员账号）
 │
 ├── database/
-│   └── database.go          # GORM 初始化 + AutoMigrate
+│   └── database.go           # GORM 初始化 + AutoMigrate
 │
 ├── model/
-│   ├── user.go              # User 模型
-│   ├── access_key.go        # AccessKey 模型
-│   └── usage_history.go     # UsageHistory 模型
+│   ├── user.go               # User 模型
+│   ├── access_key.go         # AccessKey 模型
+│   ├── usage_history.go      # UsageHistory 模型
+│   ├── mcp_server.go         # MCPServer 模型
+│   ├── role.go               # Role 模型
+│   └── role_server.go        # RoleServer 关联模型
 │
 ├── handler/
-│   ├── auth.go              # POST /api/auth/login, GET /api/auth/profile
-│   ├── access_key.go        # CRUD /api/access-keys
-│   └── history.go           # GET /api/history
+│   ├── auth.go               # POST /api/auth/login, GET /api/auth/profile
+│   ├── access_key.go         # CRUD /api/access-keys
+│   ├── history.go            # GET /api/history
+│   ├── mcp_server.go         # CRUD /api/servers
+│   ├── role.go               # CRUD /api/roles（仅管理员）
+│   └── rbac_user.go          # CRUD /api/users（仅管理员）
 │
 ├── service/
-│   ├── auth.go              # 登录业务逻辑 + JWT 生成
-│   ├── access_key.go        # AccessKey 业务逻辑
-│   └── history.go           # 使用历史业务逻辑
+│   ├── auth.go               # 登录业务逻辑 + JWT 生成
+│   ├── access_key.go         # AccessKey 业务逻辑
+│   ├── history.go            # 使用历史业务逻辑
+│   ├── mcp_server.go         # MCPServer 业务逻辑
+│   ├── role.go               # Role 业务逻辑
+│   └── rbac_user.go          # RBACUser 业务逻辑
 │
 ├── middleware/
-│   └── auth.go              # JWT Bearer Token 鉴权中间件
+│   └── auth.go               # JWT Bearer Token 鉴权中间件 + AdminRequired
 │
 ├── router/
-│   └── router.go            # Gin 路由注册（仅 main.go 使用，main_embed.go 自行注册）
+│   └── router.go             # Gin 路由注册（仅 main.go 使用，main_embed.go 自行注册）
 │
 ├── public/
-│   └── api_doc.md           # API 接口文档（强制维护）
+│   ├── api_doc.md            # API 接口文档（强制维护）
+│   └── api-devstatus.md      # API 开发进度状态（强制维护）
 │
-└── web/                     # Vue 3 前端（SPA）
-    ├── AGENTS.md            # 前端规范
-    ├── index.html           # HTML 入口
+└── web/                      # Vue 3 前端（SPA）
+    ├── AGENTS.md             # 前端规范
+    ├── index.html            # HTML 入口
     ├── package.json
-    ├── vite.config.js       # Vite 配置（dev proxy /api → localhost:8080）
-    ├── dist/                # 构建产物（embed 打包用）
+    ├── vite.config.js        # Vite 配置（dev proxy /api → localhost:8080）
+    ├── dist/                 # 构建产物（embed 打包用）
     │   ├── index.html
     │   ├── favicon.svg
     │   └── assets/
     └── src/
-        ├── main.js          # Vue 入口
-        ├── App.vue          # 根组件（按登录状态条件渲染）
-        ├── api.js           # HTTP API 封装
+        ├── main.js           # Vue 入口
+        ├── App.vue           # 根组件（按登录状态条件渲染）
+        ├── api.js            # HTTP API 封装
         ├── styles/
-        │   └── global.css   # 全局 CSS 变量
+        │   └── global.css    # 全局 CSS 变量
         ├── stores/
-        │   ├── auth.js      # 鉴权状态（登录/登出/角色）
-        │   └── nav.js       # 侧边栏导航状态（无 Vue Router）
+        │   ├── auth.js       # 鉴权状态（登录/登出/角色）
+        │   └── nav.js        # 侧边栏导航状态（无 Vue Router）
         └── components/
             ├── LoginView.vue
             ├── TheHeader.vue
             ├── TheSidebar.vue
             ├── WelcomeView.vue
+            ├── OverviewView.vue
             ├── ProfileView.vue
             ├── AccessKeyView.vue
             ├── AccessKeyDrawer.vue
-            └── HistoryView.vue
+            ├── ServersView.vue
+            ├── HistoryView.vue
+            ├── RbacView.vue
+            └── SettingsView.vue
 ```
 
 ## 构建模式
@@ -78,15 +96,29 @@ mcp_plat-console/
 
 ## API 路由总览
 
-| Method | Path | 鉴权 | Handler |
-|--------|------|:---:|---------|
-| POST | `/api/auth/login` | 否 | handler/auth.go → Login |
-| GET | `/api/auth/profile` | 是 | handler/auth.go → Profile |
-| GET | `/api/access-keys` | 是 | handler/access_key.go → List |
-| POST | `/api/access-keys` | 是 | handler/access_key.go → Create |
-| PUT | `/api/access-keys/:id` | 是 | handler/access_key.go → Update |
-| DELETE | `/api/access-keys/:id` | 是 | handler/access_key.go → Delete |
-| GET | `/api/history` | 是 | handler/history.go → List |
+| Method | Path | 鉴权 | 管理员 | Handler |
+|--------|------|:---:|:---:|---------|
+| POST | `/api/auth/login` | 否 | - | handler/auth.go → Login |
+| GET | `/api/auth/profile` | 是 | - | handler/auth.go → Profile |
+| GET | `/api/access-keys` | 是 | - | handler/access_key.go → List |
+| POST | `/api/access-keys` | 是 | - | handler/access_key.go → Create |
+| PUT | `/api/access-keys/:id` | 是 | - | handler/access_key.go → Update |
+| DELETE | `/api/access-keys/:id` | 是 | - | handler/access_key.go → Delete |
+| GET | `/api/history` | 是 | - | handler/history.go → List（⏳ 计划中） |
+| GET | `/api/servers` | 是 | - | handler/mcp_server.go → List |
+| POST | `/api/servers` | 是 | - | handler/mcp_server.go → Create |
+| PUT | `/api/servers/:id` | 是 | - | handler/mcp_server.go → Update |
+| DELETE | `/api/servers/:id` | 是 | - | handler/mcp_server.go → Delete |
+| GET | `/api/roles` | 是 | 是 | handler/role.go → List |
+| POST | `/api/roles` | 是 | 是 | handler/role.go → Create |
+| PUT | `/api/roles/:id` | 是 | 是 | handler/role.go → Update |
+| DELETE | `/api/roles/:id` | 是 | 是 | handler/role.go → Delete |
+| GET | `/api/roles/:id/users` | 是 | 是 | handler/role.go → GetUsers |
+| PUT | `/api/roles/:id/users` | 是 | 是 | handler/role.go → AssignUsers |
+| GET | `/api/users` | 是 | 是 | handler/rbac_user.go → List |
+| POST | `/api/users` | 是 | 是 | handler/rbac_user.go → Create |
+| PUT | `/api/users/:id` | 是 | 是 | handler/rbac_user.go → Update |
+| DELETE | `/api/users/:id` | 是 | 是 | handler/rbac_user.go → Delete |
 
 ## 内嵌版本前端路由（重要）
 

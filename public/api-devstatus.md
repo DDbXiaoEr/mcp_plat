@@ -12,7 +12,7 @@
 | AccessKey | POST /api/access-keys | ✅ 已完成 | |
 | AccessKey | PUT /api/access-keys/:id | ✅ 已完成 | |
 | AccessKey | DELETE /api/access-keys/:id | ✅ 已完成 | |
-| 使用历史 | GET /api/history | ✅ 已完成 | |
+| 使用历史 | GET /api/history | ⏳ 计划中 | 存储方案未确定 |
 | MCP 服务器 | GET /api/servers | ✅ 已完成 | |
 | MCP 服务器 | POST /api/servers | ✅ 已完成 | |
 | MCP 服务器 | PUT /api/servers/:id | ✅ 已完成 | |
@@ -31,3 +31,4 @@
 - ✅ 已完成
 - 🚧 开发中
 - ⏳ 待开发
+- ⏳ 计划中

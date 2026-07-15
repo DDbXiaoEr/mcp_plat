@@ -38,6 +38,7 @@ src/
 
 ## 约定
 
+- 有文件新增或删除时，必须同步更新仓库根目录的 `PROJECT_STRUCTURE.md`。
 - 组件用 `<script setup>` + 组合式 API；单文件组件命名 PascalCase，布局类组件以 `The` 前缀（如 `TheHeader`）。
 - 颜色、圆角、间距等统一用 `global.css` 里的 CSS 变量（`--xauat-blue`、`--radius`、`--header-height` 等），不要硬编码。
 - 未完成或待接后端的地方用 `// TODO:` 标注。

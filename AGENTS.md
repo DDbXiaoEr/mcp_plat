@@ -11,6 +11,7 @@
 
 - **`public/api_doc.md`** — 保存 API 的请求/响应字段说明，新增或修改接口时必须同步更新
 - **`public/api-devstatus.md`** — 保存 API 开发进度状态，实现或修改接口后必须及时更新
+- **`PROJECT_STRUCTURE.md`** — 有文件新增或删除时，必须同步更新目录树和路由表
 
 ## 后端开发规范
 
