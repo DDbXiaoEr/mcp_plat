@@ -294,6 +294,34 @@ POST /api/servers
 }
 ```
 
+### 4.5 获取 MCP 服务器工具列表
+
+```
+POST /api/servers/fetch-tools
+```
+
+> 所有接口均需认证，在请求头中携带 `Authorization: Bearer <token>`
+
+**请求参数（JSON Body）：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| address | string | 是 | MCP 服务器地址 |
+| protocol | string | 否 | 协议类型（SSE / Streamable HTTP / stdio），默认 Streamable HTTP |
+
+**响应示例：**
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "tools": ["查询课表", "成绩查询", "选课信息"]
+  }
+}
+```
+
+**说明：** 后端根据地址和协议连接目标 MCP 服务器，调用 `tools/list` 协议方法，返回可用工具名称列表。连接失败或地址无效时返回 4xx/5xx。
+
 ### 4.3 更新 MCP 服务器
 
 ```

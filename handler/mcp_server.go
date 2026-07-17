@@ -76,3 +76,19 @@ func (h *MCPServerHandler) Delete(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "删除成功"})
 }
+
+func (h *MCPServerHandler) FetchTools(c *gin.Context) {
+	var input service.FetchToolsInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
+		return
+	}
+
+	tools, err := service.FetchTools(input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "获取成功", "data": gin.H{"tools": tools}})
+}

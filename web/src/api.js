@@ -62,6 +62,13 @@ export function deleteServer(id) {
   return request(`/servers/${id}`, { method: 'DELETE' })
 }
 
+export function fetchServerTools(body) {
+  return request('/servers/fetch-tools', {
+    method: 'POST',
+    body: JSON.stringify(body)
+  })
+}
+
 export function fetchRoles() {
   return request('/roles')
 }

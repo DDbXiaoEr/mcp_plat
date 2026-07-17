@@ -41,6 +41,7 @@ mcp_plat-console/
 │   ├── access_key.go         # AccessKey 业务逻辑
 │   ├── history.go            # 使用历史业务逻辑
 │   ├── mcp_server.go         # MCPServer 业务逻辑
+│   ├── mcp_server_test.go    # FetchTools 单元测试（mock + 可选真实服务器）
 │   ├── role.go               # Role 业务逻辑
 │   └── rbac_user.go          # RBACUser 业务逻辑
 │
@@ -109,6 +110,7 @@ mcp_plat-console/
 | POST | `/api/servers` | 是 | - | handler/mcp_server.go → Create |
 | PUT | `/api/servers/:id` | 是 | - | handler/mcp_server.go → Update |
 | DELETE | `/api/servers/:id` | 是 | - | handler/mcp_server.go → Delete |
+| POST | `/api/servers/fetch-tools` | 是 | - | handler/mcp_server.go → FetchTools |
 | GET | `/api/roles` | 是 | 是 | handler/role.go → List |
 | POST | `/api/roles` | 是 | 是 | handler/role.go → Create |
 | PUT | `/api/roles/:id` | 是 | 是 | handler/role.go → Update |

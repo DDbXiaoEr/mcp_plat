@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { fetchServers, createServer } from '../api.js'
+import { fetchServers, createServer, fetchServerTools } from '../api.js'
 
 const servers = ref([])
 const loading = ref(true)
@@ -22,7 +22,7 @@ function parseTools(raw) {
   try { return JSON.parse(raw) || [] } catch { return [] }
 }
 
-const PROTOCOLS = ['SSE', 'Streamable HTTP', 'stdio']
+const PROTOCOLS = ['SSE', 'Streamable HTTP']
 
 const selectedId = ref('')
 const selected = ref(null)
@@ -35,18 +35,32 @@ function select(server) {
 const showingCreate = ref(false)
 const createForm = ref({ name: '', address: '', department: '', protocol: 'SSE', tools: '' })
 const fetchingTools = ref(false)
+const fetchToolsError = ref('')
 
 function openCreate() {
   createForm.value = { name: '', address: '', department: '', protocol: 'SSE', tools: '' }
+  fetchToolsError.value = ''
   showingCreate.value = true
 }
 
-function fetchTools() {
+async function fetchTools() {
+  const address = createForm.value.address.trim()
+  fetchToolsError.value = ''
+  if (!address) {
+    fetchToolsError.value = '请先填写 MCP 服务器路径'
+    return
+  }
   fetchingTools.value = true
-  setTimeout(() => {
-    createForm.value.tools = ['校园网账号查询', '网络套餐办理', '在线故障报修', '流量使用统计', '宽带缴费'].join('\n')
-    fetchingTools.value = false
-  }, 600)
+  try {
+    const data = await fetchServerTools({
+      address,
+      protocol: createForm.value.protocol
+    })
+    createForm.value.tools = (data.tools || []).join('\n')
+  } catch (err) {
+    fetchToolsError.value = err.message || '获取工具列表失败'
+  }
+  fetchingTools.value = false
 }
 
 async function confirmCreate() {
@@ -138,7 +152,17 @@ async function confirmCreate() {
               />
             </div>
             <div class="dialog__group">
-              <label class="dialog__label">MCP 服务器路径</label>
+              <label class="dialog__label">
+                MCP 服务器地址
+                <span class="dialog__help">
+                  ?
+                  <span class="dialog__tooltip">
+                    在 API 网关统一管理的场景下，地址应填写对应的 URL 路径，例如
+                    <code>/jwc/mcp</code>（由网关转发到实际服务）；独立部署时填写完整地址，例如
+                    <code>https://mcp.xauat.edu.cn/jwc</code>。
+                  </span>
+                </span>
+              </label>
               <input
                 v-model="createForm.address"
                 class="dialog__input"
@@ -178,6 +202,7 @@ async function confirmCreate() {
                 class="dialog__input dialog__textarea"
                 placeholder="多个工具以逗号或换行分隔"
               ></textarea>
+              <p v-if="fetchToolsError" class="dialog__error">{{ fetchToolsError }}</p>
             </div>
           </div>
           <div class="dialog__actions">
@@ -392,6 +417,68 @@ async function confirmCreate() {
   color: var(--text-muted);
 }
 
+.dialog__help {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  margin-left: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: rgba(10, 61, 122, 0.08);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: help;
+  vertical-align: middle;
+}
+
+.dialog__tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  z-index: 10;
+}
+
+.dialog__tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--border);
+}
+
+.dialog__tooltip code {
+  padding: 1px 5px;
+  font-size: 11px;
+  color: var(--xauat-blue);
+  background: rgba(30, 95, 176, 0.1);
+  border-radius: 4px;
+}
+
+.dialog__help:hover .dialog__tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
 .dialog__label-row {
   display: flex;
   align-items: center;
@@ -441,6 +528,11 @@ async function confirmCreate() {
   min-height: 72px;
   resize: vertical;
   font-family: inherit;
+}
+
+.dialog__error {
+  font-size: 12px;
+  color: #c0392b;
 }
 
 .dialog__actions {

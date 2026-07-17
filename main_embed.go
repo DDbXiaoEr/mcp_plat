@@ -38,6 +38,7 @@ func main() {
 	authHandler := handler.NewAuthHandler()
 	accessKeyHandler := handler.NewAccessKeyHandler()
 	historyHandler := handler.NewHistoryHandler()
+	serverHandler := handler.NewMCPServerHandler()
 
 	r.POST("/api/auth/login", authHandler.Login)
 
@@ -50,6 +51,11 @@ func main() {
 		auth.PUT("/access-keys/:id", accessKeyHandler.Update)
 		auth.DELETE("/access-keys/:id", accessKeyHandler.Delete)
 		auth.GET("/history", historyHandler.List)
+		auth.GET("/servers", serverHandler.List)
+		auth.POST("/servers", serverHandler.Create)
+		auth.POST("/servers/fetch-tools", serverHandler.FetchTools)
+		auth.PUT("/servers/:id", serverHandler.Update)
+		auth.DELETE("/servers/:id", serverHandler.Delete)
 	}
 
 	r.GET("/favicon.svg", func(c *gin.Context) {

@@ -33,6 +33,7 @@ func Setup() *gin.Engine {
 
 		auth.GET("/servers", serverHandler.List)
 		auth.POST("/servers", serverHandler.Create)
+		auth.POST("/servers/fetch-tools", serverHandler.FetchTools)
 		auth.PUT("/servers/:id", serverHandler.Update)
 		auth.DELETE("/servers/:id", serverHandler.Delete)
 	}
