@@ -8,6 +8,7 @@ import (
 
 	"mcp_plat-console/config"
 	"mcp_plat-console/database"
+	"mcp_plat-console/logging"
 	"mcp_plat-console/router"
 )
 
@@ -17,6 +18,7 @@ func main() {
 	fmt.Printf("mcp_plat-console version %s (commit %s), built at %s\n", Version, GitCommit, BuildTime)
 
 	database.Init()
+	logging.Setup()
 
 	r := router.Setup()
 

@@ -13,6 +13,7 @@ import (
 	"mcp_plat-console/config"
 	"mcp_plat-console/database"
 	"mcp_plat-console/handler"
+	"mcp_plat-console/logging"
 	"mcp_plat-console/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -27,6 +28,7 @@ func main() {
 	fmt.Printf("mcp_plat-console version %s (commit %s), built at %s\n", Version, GitCommit, BuildTime)
 
 	database.Init()
+	logging.Setup()
 
 	staticFS, err := fs.Sub(dist, "web/dist")
 	if err != nil {
@@ -39,6 +41,9 @@ func main() {
 	accessKeyHandler := handler.NewAccessKeyHandler()
 	historyHandler := handler.NewHistoryHandler()
 	serverHandler := handler.NewMCPServerHandler()
+	roleHandler := handler.NewRoleHandler()
+	userHandler := handler.NewRBACUserHandler()
+	settingHandler := handler.NewSettingHandler()
 
 	r.POST("/api/auth/login", authHandler.Login)
 
@@ -56,6 +61,25 @@ func main() {
 		auth.POST("/servers/fetch-tools", serverHandler.FetchTools)
 		auth.PUT("/servers/:id", serverHandler.Update)
 		auth.DELETE("/servers/:id", serverHandler.Delete)
+	}
+
+	admin := r.Group("/api")
+	admin.Use(middleware.AuthRequired(), middleware.AdminRequired())
+	{
+		admin.GET("/roles", roleHandler.List)
+		admin.POST("/roles", roleHandler.Create)
+		admin.PUT("/roles/:id", roleHandler.Update)
+		admin.DELETE("/roles/:id", roleHandler.Delete)
+		admin.GET("/roles/:id/users", roleHandler.GetUsers)
+		admin.PUT("/roles/:id/users", roleHandler.AssignUsers)
+
+		admin.GET("/users", userHandler.List)
+		admin.POST("/users", userHandler.Create)
+		admin.PUT("/users/:id", userHandler.Update)
+		admin.DELETE("/users/:id", userHandler.Delete)
+
+		admin.GET("/settings", settingHandler.Get)
+		admin.PUT("/settings/:key", settingHandler.Save)
 	}
 
 	r.GET("/favicon.svg", func(c *gin.Context) {

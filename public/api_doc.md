@@ -667,9 +667,97 @@ GET /api/roles/:id/users
 
 ---
 
-## 6. 数据模型说明
+## 6. 系统设置
 
-### 6.1 角色表（roles）
+> 以下接口均需管理员权限（`Authorization: Bearer <token>`，且用户为管理员）。
+
+### 6.1 获取全部设置
+
+```
+GET /api/settings
+```
+
+**成功响应：**
+
+`data` 为按设置项分组的对象，仅包含已保存过的分组；每组内容为保存时的原始 JSON。
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "log": {
+      "syslogEnabled": false,
+      "logPath": "/var/log/mcp-plat",
+      "logLevel": "info",
+      "logPrefix": "mcp-plat",
+      "syslogHost": "",
+      "syslogPort": 514,
+      "syslogProtocol": "tcp"
+    },
+    "smtp": {
+      "enabled": true,
+      "host": "smtp.example.edu.cn",
+      "port": 465,
+      "encryption": "ssl",
+      "username": "noreply",
+      "password": "******",
+      "fromAddress": "noreply@example.edu.cn",
+      "fromName": "MCP 服务平台"
+    },
+    "auth": {
+      "method": "cas",
+      "cas": { "serverUrl": "", "serviceUrl": "", "version": "3.0" },
+      "ldap": { "host": "", "port": 389, "baseDn": "", "bindDn": "", "bindPassword": "", "userFilter": "" },
+      "oauth": { "authorizeUrl": "", "tokenUrl": "", "userinfoUrl": "", "clientId": "", "clientSecret": "", "redirectUrl": "", "scope": "" }
+    },
+    "user_ops": {
+      "defaultRoleId": 1,
+      "maxAccessKeys": 5
+    }
+  }
+}
+```
+
+### 6.2 保存设置
+
+```
+PUT /api/settings/:key
+```
+
+**路径参数：**
+
+| 参数 | 说明 |
+|------|------|
+| key | 设置项分组，仅支持 `log` / `smtp` / `auth` / `user_ops` |
+
+**请求参数（JSON Body）：**
+
+任意合法 JSON 对象，整组覆盖保存（后端原样存储，不校验字段）。
+
+> `log` 分组在服务启动时加载：`syslogEnabled` 为 true 且 `syslogHost` 非空时，日志输出重定向到 Syslog 服务器（`syslogProtocol` 支持 tcp/udp，默认端口 514，`logPrefix` 作为 tag）；未启用或连接失败时输出到标准输出。修改后需重启服务生效。
+
+**成功响应：**
+```json
+{
+  "code": 200,
+  "message": "保存成功"
+}
+```
+
+**失败响应：**
+```json
+{
+  "code": 400,
+  "message": "不支持的设置项"
+}
+```
+
+---
+
+## 7. 数据模型说明
+
+### 7.1 角色表（roles）
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -679,7 +767,7 @@ GET /api/roles/:id/users
 | created_at | datetime | 创建时间 |
 | updated_at | datetime | 更新时间 |
 
-### 6.2 用户表（users）
+### 7.2 用户表（users）
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -690,7 +778,7 @@ GET /api/roles/:id/users
 | created_at | datetime | 创建时间 |
 | updated_at | datetime | 更新时间 |
 
-### 6.3 角色-服务器关联表（role_servers）
+### 7.3 角色-服务器关联表（role_servers）
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -698,3 +786,11 @@ GET /api/roles/:id/users
 | server_id | uint (FK → servers.id) | MCP 服务器 ID |
 
 > 联合主键 (role_id, server_id)
+
+### 7.4 系统设置表（settings）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| key | string (PK) | 设置项分组（log / smtp / auth / user_ops） |
+| value | text | 该分组的 JSON 内容 |
+| updated_at | datetime | 更新时间 |

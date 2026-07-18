@@ -28,6 +28,8 @@
 | RBAC | POST /api/users | ✅ 已完成 | |
 | RBAC | PUT /api/users/:id | ✅ 已完成 | |
 | RBAC | DELETE /api/users/:id | ✅ 已完成 | |
+| 系统设置 | GET /api/settings | ✅ 已完成 | 前端已接入 |
+| 系统设置 | PUT /api/settings/:key | ✅ 已完成 | key: log / smtp / auth / user_ops |
 
 - ✅ 已完成
 - 🚧 开发中

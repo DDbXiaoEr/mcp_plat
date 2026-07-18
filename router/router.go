@@ -16,6 +16,7 @@ func Setup() *gin.Engine {
 	serverHandler := handler.NewMCPServerHandler()
 	roleHandler := handler.NewRoleHandler()
 	userHandler := handler.NewRBACUserHandler()
+	settingHandler := handler.NewSettingHandler()
 
 	r.POST("/api/auth/login", authHandler.Login)
 
@@ -52,6 +53,9 @@ func Setup() *gin.Engine {
 		admin.POST("/users", userHandler.Create)
 		admin.PUT("/users/:id", userHandler.Update)
 		admin.DELETE("/users/:id", userHandler.Delete)
+
+		admin.GET("/settings", settingHandler.Get)
+		admin.PUT("/settings/:key", settingHandler.Save)
 	}
 
 	return r

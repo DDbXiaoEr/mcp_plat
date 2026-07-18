@@ -47,6 +47,7 @@ func Init() {
 		&model.MCPServer{},
 		&model.Role{},
 		&model.RoleServer{},
+		&model.Setting{},
 	)
 	if err != nil {
 		log.Fatalf("failed to migrate database: %v", err)

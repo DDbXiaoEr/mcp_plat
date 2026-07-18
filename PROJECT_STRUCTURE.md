@@ -20,13 +20,17 @@ mcp_plat-console/
 ├── database/
 │   └── database.go           # GORM 初始化 + AutoMigrate
 │
+├── logging/
+│   └── logging.go            # 日志初始化（启动时读 log 设置，启用则重定向到 Syslog，否则标准输出）
+│
 ├── model/
 │   ├── user.go               # User 模型
 │   ├── access_key.go         # AccessKey 模型
 │   ├── usage_history.go      # UsageHistory 模型
 │   ├── mcp_server.go         # MCPServer 模型
 │   ├── role.go               # Role 模型
-│   └── role_server.go        # RoleServer 关联模型
+│   ├── role_server.go        # RoleServer 关联模型
+│   └── setting.go            # Setting 键值模型（系统设置）
 │
 ├── handler/
 │   ├── auth.go               # POST /api/auth/login, GET /api/auth/profile
@@ -34,7 +38,8 @@ mcp_plat-console/
 │   ├── history.go            # GET /api/history
 │   ├── mcp_server.go         # CRUD /api/servers
 │   ├── role.go               # CRUD /api/roles（仅管理员）
-│   └── rbac_user.go          # CRUD /api/users（仅管理员）
+│   ├── rbac_user.go          # CRUD /api/users（仅管理员）
+│   └── setting.go            # GET/PUT /api/settings（仅管理员）
 │
 ├── service/
 │   ├── auth.go               # 登录业务逻辑 + JWT 生成
@@ -43,7 +48,8 @@ mcp_plat-console/
 │   ├── mcp_server.go         # MCPServer 业务逻辑
 │   ├── mcp_server_test.go    # FetchTools 单元测试（mock + 可选真实服务器）
 │   ├── role.go               # Role 业务逻辑
-│   └── rbac_user.go          # RBACUser 业务逻辑
+│   ├── rbac_user.go          # RBACUser 业务逻辑
+│   └── setting.go            # 系统设置业务逻辑（键值 JSON 存取）
 │
 ├── middleware/
 │   └── auth.go               # JWT Bearer Token 鉴权中间件 + AdminRequired
@@ -57,6 +63,7 @@ mcp_plat-console/
 │
 └── web/                      # Vue 3 前端（SPA）
     ├── AGENTS.md             # 前端规范
+    ├── Makefile              # 前端构建脚本（install / build / dev / preview / clean）
     ├── index.html            # HTML 入口
     ├── package.json
     ├── vite.config.js        # Vite 配置（dev proxy /api → localhost:8080）
@@ -121,6 +128,8 @@ mcp_plat-console/
 | POST | `/api/users` | 是 | 是 | handler/rbac_user.go → Create |
 | PUT | `/api/users/:id` | 是 | 是 | handler/rbac_user.go → Update |
 | DELETE | `/api/users/:id` | 是 | 是 | handler/rbac_user.go → Delete |
+| GET | `/api/settings` | 是 | 是 | handler/setting.go → Get |
+| PUT | `/api/settings/:key` | 是 | 是 | handler/setting.go → Save |
 
 ## 内嵌版本前端路由（重要）
 

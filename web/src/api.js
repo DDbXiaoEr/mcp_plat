@@ -124,3 +124,14 @@ export function updateUser(id, body) {
 export function deleteUser(id) {
   return request(`/users/${id}`, { method: 'DELETE' })
 }
+
+export function fetchSettings() {
+  return request('/settings')
+}
+
+export function saveSetting(key, body) {
+  return request(`/settings/${key}`, {
+    method: 'PUT',
+    body: JSON.stringify(body)
+  })
+}

@@ -6,11 +6,18 @@ const stats = [
   { key: 'tools', label: 'MCP 工具数', value: '68' },
   { key: 'calls', label: '当天 AI 调用次数', value: '3,472' }
 ]
+
+const version = __APP_VERSION__
+const gitCommit = __GIT_COMMIT__
+const buildTime = __BUILD_TIME__
 </script>
 
 <template>
   <section class="overview">
-    <h1 class="page__title">平台概况</h1>
+    <div class="overview__head">
+      <h1 class="page__title">平台概况</h1>
+      <span class="overview__version" :title="`commit ${gitCommit}, built at ${buildTime}`">{{ version }}</span>
+    </div>
     <div class="overview__stats">
       <div v-for="item in stats" :key="item.key" class="stat-card">
         <span class="stat-card__label">{{ item.label }}</span>
@@ -64,5 +71,17 @@ const stats = [
   .overview__stats {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+.overview__head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.overview__version {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
 }
 </style>

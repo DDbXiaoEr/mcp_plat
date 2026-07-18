@@ -30,7 +30,7 @@ build-embed-all: build-embed build-embed-windows build-embed-linux-arm64
 
 build-web:
 	@echo "==> building web"
-	cd $(WEB_DIR) && npm ci && npm run build
+	$(MAKE) -C $(WEB_DIR) build
 
 run:
 	go run .
@@ -51,4 +51,5 @@ datagen:
 
 clean:
 	rm -f $(SERVER_OUT) $(SERVER_OUT)-windows-amd64.exe $(SERVER_OUT)-linux-arm64
-	rm -rf $(WEB_DIR)/dist tools/
+	rm -rf tools/
+	$(MAKE) -C $(WEB_DIR) clean
