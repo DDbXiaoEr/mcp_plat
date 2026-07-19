@@ -79,7 +79,8 @@ mcp_plat-console/
         │   └── global.css    # 全局 CSS 变量
         ├── stores/
         │   ├── auth.js       # 鉴权状态（登录/登出/角色）
-        │   └── nav.js        # 侧边栏导航状态（无 Vue Router）
+        │   ├── nav.js        # 侧边栏导航状态（无 Vue Router）
+        │   └── settings.js   # 平台设置共享态（名称/logo/跳转链接）
         └── components/
             ├── LoginView.vue
             ├── TheHeader.vue

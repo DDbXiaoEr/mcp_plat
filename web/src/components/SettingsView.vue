@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { fetchRoles, fetchSettings, saveSetting } from '../api.js'
+import { applyPlatform } from '../stores/settings.js'
 
 const tab = ref('ops')
 
@@ -8,6 +9,7 @@ const logOpen = ref(true)
 const smtpOpen = ref(true)
 const authOpen = ref(true)
 const userOpsOpen = ref(true)
+const platformOpen = ref(true)
 
 const logForm = ref({
   syslogEnabled: false,
@@ -65,6 +67,12 @@ const oauthForm = ref({
   scope: ''
 })
 
+const platformForm = ref({
+  name: '某某大学',
+  logoUrl: '',
+  siteUrl: ''
+})
+
 const roles = ref([])
 const defaultRoleId = ref('')
 const maxAccessKeys = ref(5)
@@ -110,6 +118,11 @@ function saveUserOpsSettings() {
   })
 }
 
+function savePlatformSettings() {
+  saveSection('platform', platformForm.value)
+  applyPlatform(platformForm.value)
+}
+
 function applySettings(data) {
   if (data.log) Object.assign(logForm.value, data.log)
   if (data.smtp) Object.assign(smtpForm.value, data.smtp)
@@ -122,6 +135,10 @@ function applySettings(data) {
   if (data.user_ops) {
     if (data.user_ops.defaultRoleId != null) defaultRoleId.value = data.user_ops.defaultRoleId
     if (data.user_ops.maxAccessKeys != null) maxAccessKeys.value = data.user_ops.maxAccessKeys
+  }
+  if (data.platform) {
+    Object.assign(platformForm.value, data.platform)
+    applyPlatform(data.platform)
   }
 }
 
@@ -339,6 +356,51 @@ onMounted(async () => {
     </div>
 
     <div v-if="tab === 'operation'" class="settings__panel">
+      <div class="collapse">
+        <button class="collapse__head" type="button" @click="platformOpen = !platformOpen">
+          <span class="collapse__title">平台设置</span>
+          <span class="collapse__arrow" :class="{ 'collapse__arrow--open': platformOpen }">▾</span>
+        </button>
+        <div v-show="platformOpen" class="collapse__body">
+          <label class="field">
+            <span class="field__label">平台名称</span>
+            <input
+              v-model="platformForm.name"
+              class="field__input"
+              type="text"
+              placeholder="请输入平台名称，如：某某大学"
+            />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Logo 图片地址</span>
+            <input
+              v-model="platformForm.logoUrl"
+              class="field__input"
+              type="text"
+              placeholder="请输入 Logo 图片的 URL 地址"
+            />
+          </label>
+
+          <label class="field">
+            <span class="field__label">跳转链接</span>
+            <input
+              v-model="platformForm.siteUrl"
+              class="field__input"
+              type="text"
+              placeholder="点击 Logo 时跳转到的网址，如：https://www.example.edu.cn"
+            />
+          </label>
+
+          <div class="collapse__actions">
+            <span v-if="tips.platform" class="save-tip">{{ tips.platform }}</span>
+            <button class="btn btn--primary" type="button" :disabled="saving === 'platform'" @click="savePlatformSettings">
+              {{ saving === 'platform' ? '保存中…' : '保存' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="collapse">
         <button class="collapse__head" type="button" @click="authOpen = !authOpen">
           <span class="collapse__title">用户认证</span>

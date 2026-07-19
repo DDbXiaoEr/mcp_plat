@@ -1,20 +1,28 @@
 <script setup>
+import { onMounted } from 'vue'
 import { auth, logout } from '../stores/auth.js'
+import { platformSettings, loadSettings } from '../stores/settings.js'
 
-// TODO: 后期可配置的 logo 地址，留空则显示占位块
-const logoUrl = ''
+onMounted(() => loadSettings())
 </script>
 
 <template>
   <header class="header">
     <div class="header__brand">
-      <span class="brand__mark" aria-hidden="true">
-        <img v-if="logoUrl" :src="logoUrl" alt="" class="brand__logo" />
-      </span>
-      <span class="brand__text">
-        <strong>某某大学</strong>
-        <em>MCP 服务平台 · 控制台</em>
-      </span>
+      <a
+        class="brand__link"
+        :href="platformSettings.platform.siteUrl || undefined"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <span class="brand__mark" aria-hidden="true">
+          <img v-if="platformSettings.platform.logoUrl" :src="platformSettings.platform.logoUrl" alt="" class="brand__logo" />
+        </span>
+        <span class="brand__text">
+          <strong>{{ platformSettings.platform.name }}</strong>
+          <em>MCP 服务平台 · 控制台</em>
+        </span>
+      </a>
     </div>
 
     <div class="header__actions">
@@ -48,13 +56,18 @@ const logoUrl = ''
 .header__brand {
   display: flex;
   align-items: center;
+}
+
+.brand__link {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
 .brand__mark {
   display: grid;
   place-items: center;
-  width: 40px;
+  min-width: 40px;
   height: 40px;
   border-radius: 12px;
   background: linear-gradient(135deg, var(--xauat-blue), var(--xauat-cyan));
@@ -64,8 +77,8 @@ const logoUrl = ''
 }
 
 .brand__logo {
-  width: 100%;
   height: 100%;
+  width: auto;
   object-fit: contain;
 }
 
