@@ -16,11 +16,11 @@ build-server:
 	@echo "==> building server version $(VERSION)"
 	go build -ldflags "$(LDFLAGS)" -o $(SERVER_OUT) .
 
-build-accesskey-server:
+build-accesskey-server: proto
 	@echo "==> building accesskey gRPC server"
 	go build -ldflags "$(LDFLAGS)" -o $(ACCESSKEY_SERVER_OUT) ./cmd/accesskey-server/
 
-build-apisix-runner:
+build-apisix-runner: proto
 	@echo "==> building APISIX go plugin runner"
 	go build -ldflags "$(LDFLAGS)" -o $(APISIX_RUNNER_OUT) ./cmd/apisix-runner/
 
