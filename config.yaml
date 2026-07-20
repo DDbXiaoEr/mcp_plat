@@ -19,6 +19,7 @@ database:
     dbname: mcp_platform
 
 jwt_secret: mcp-platform-secret-key
+access_key_secret: a8k3x9m2p7q1r6w4v5y0b3n8t2h7j1k5 # 请修改为自定义密钥
 server_port: 8080
 
 admin:

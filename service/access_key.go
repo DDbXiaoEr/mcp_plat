@@ -1,13 +1,14 @@
 package service
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"time"
 
+	"mcp_plat-console/config"
 	"mcp_plat-console/database"
 	"mcp_plat-console/model"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type CreateAccessKeyInput struct {
@@ -23,6 +24,12 @@ type UpdateAccessKeyInput struct {
 	ExpiredAt *time.Time `json:"expired_at"`
 }
 
+type AccessKeyClaims struct {
+	UserID uint   `json:"user_id"`
+	Role   string `json:"role"`
+	jwt.RegisteredClaims
+}
+
 func ListAccessKeys(userID uint) ([]model.AccessKey, error) {
 	var keys []model.AccessKey
 	err := database.DB.Where("user_id = ?", userID).Order("created_at desc").Find(&keys).Error
@@ -30,7 +37,23 @@ func ListAccessKeys(userID uint) ([]model.AccessKey, error) {
 }
 
 func CreateAccessKey(userID uint, input CreateAccessKeyInput) (*model.AccessKey, error) {
-	key := generateAccessKey()
+	var user model.User
+	if err := database.DB.First(&user, userID).Error; err != nil {
+		return nil, errors.New("用户不存在")
+	}
+
+	roleName := ""
+	if user.RoleID != nil {
+		var role model.Role
+		if err := database.DB.First(&role, *user.RoleID).Error; err == nil {
+			roleName = role.Name
+		}
+	}
+
+	key, err := generateAccessKey(userID, roleName, input.ExpiredAt)
+	if err != nil {
+		return nil, err
+	}
 
 	ak := model.AccessKey{
 		UserID:    userID,
@@ -78,8 +101,22 @@ func DeleteAccessKey(id, userID uint) error {
 	return result.Error
 }
 
-func generateAccessKey() string {
-	b := make([]byte, 24)
-	rand.Read(b)
-	return "ak-" + hex.EncodeToString(b)
+func generateAccessKey(userID uint, role string, expiredAt *time.Time) (string, error) {
+	claims := AccessKeyClaims{
+		UserID: userID,
+		Role:   role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt: jwt.NewNumericDate(time.Now()),
+		},
+	}
+	if expiredAt != nil {
+		claims.ExpiresAt = jwt.NewNumericDate(*expiredAt)
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenStr, err := token.SignedString([]byte(config.AppConfig.AccessKeySecret))
+	if err != nil {
+		return "", err
+	}
+	return "ak-" + tokenStr, nil
 }

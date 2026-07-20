@@ -8,10 +8,11 @@ import (
 )
 
 type Config struct {
-	Database   DatabaseConfig `yaml:"database"`
-	JWTSecret  string         `yaml:"jwt_secret"`
-	ServerPort string         `yaml:"server_port"`
-	Admin      AdminConfig    `yaml:"admin"`
+	Database        DatabaseConfig `yaml:"database"`
+	JWTSecret       string         `yaml:"jwt_secret"`
+	AccessKeySecret string         `yaml:"access_key_secret"`
+	ServerPort      string         `yaml:"server_port"`
+	Admin           AdminConfig    `yaml:"admin"`
 }
 
 type DatabaseConfig struct {
@@ -69,6 +70,10 @@ func Load() {
 	if AppConfig.JWTSecret == "" {
 		AppConfig.JWTSecret = "mcp-platform-secret-key"
 	}
+	if AppConfig.AccessKeySecret == "" {
+		// 请修改为自定义密钥
+		AppConfig.AccessKeySecret = "a8k3x9m2p7q1r6w4v5y0b3n8t2h7j1k5"
+	}
 	if AppConfig.ServerPort == "" {
 		AppConfig.ServerPort = "8080"
 	}
@@ -88,8 +93,9 @@ func setDefaults() {
 				Path: "data.db",
 			},
 		},
-		JWTSecret:  "mcp-platform-secret-key",
-		ServerPort: "8080",
+		JWTSecret:       "mcp-platform-secret-key",
+		AccessKeySecret: "a8k3x9m2p7q1r6w4v5y0b3n8t2h7j1k5", // 请修改为自定义密钥
+		ServerPort:      "8080",
 		Admin: AdminConfig{
 			Username: "admin",
 			Password: "admin123",

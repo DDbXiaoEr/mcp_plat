@@ -1,4 +1,4 @@
-.PHONY: build build-server build-embed build-embed-windows build-embed-linux-arm64 build-embed-all build-web run clean build-tool datagen
+.PHONY: build build-server build-embed build-embed-windows build-embed-linux-arm64 build-embed-all build-web run clean build-tool datagen build-accesskey-server build-apisix-runner proto
 
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -6,6 +6,8 @@ BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 LDFLAGS := -s -w -X main.Version=$(VERSION) -X main.GitCommit=$(GIT_COMMIT) -X main.BuildTime=$(BUILD_TIME)
 
 SERVER_OUT := mcp_plat-console
+ACCESSKEY_SERVER_OUT := accesskey-server
+APISIX_RUNNER_OUT := apisix-go-runner
 WEB_DIR := web
 
 build: build-web build-embed
@@ -13,6 +15,18 @@ build: build-web build-embed
 build-server:
 	@echo "==> building server version $(VERSION)"
 	go build -ldflags "$(LDFLAGS)" -o $(SERVER_OUT) .
+
+build-accesskey-server:
+	@echo "==> building accesskey gRPC server"
+	go build -ldflags "$(LDFLAGS)" -o $(ACCESSKEY_SERVER_OUT) ./cmd/accesskey-server/
+
+build-apisix-runner:
+	@echo "==> building APISIX go plugin runner"
+	go build -ldflags "$(LDFLAGS)" -o $(APISIX_RUNNER_OUT) ./cmd/apisix-runner/
+
+proto:
+	@echo "==> generating protobuf code"
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative plugin/accesskey.proto
 
 build-embed: build-web
 	@echo "==> building standalone (embed web) version $(VERSION)"
@@ -51,5 +65,7 @@ datagen:
 
 clean:
 	rm -f $(SERVER_OUT) $(SERVER_OUT)-windows-amd64.exe $(SERVER_OUT)-linux-arm64
+	rm -f $(ACCESSKEY_SERVER_OUT) $(APISIX_RUNNER_OUT)
+	rm -f plugin/accesskey.pb.go plugin/accesskey_grpc.pb.go
 	rm -rf tools/
 	$(MAKE) -C $(WEB_DIR) clean
