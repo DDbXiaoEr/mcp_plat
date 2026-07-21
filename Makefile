@@ -1,12 +1,12 @@
-.PHONY: build build-server build-embed build-embed-windows build-embed-linux-arm64 build-embed-all build-web run clean build-tool datagen build-accesskey-server build-apisix-runner proto
+.PHONY: build build-server build-embed build-embed-windows build-embed-linux-arm64 build-embed-all build-web run clean build-tool datagen build-accesskey-auth-server build-apisix-runner proto
 
-VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+VERSION := $(shell git describe --tags --always 2>/dev/null || echo "dev")
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 LDFLAGS := -s -w -X main.Version=$(VERSION) -X main.GitCommit=$(GIT_COMMIT) -X main.BuildTime=$(BUILD_TIME)
 
 SERVER_OUT := mcp_plat-console
-ACCESSKEY_SERVER_OUT := accesskey-server
+ACCESSKEY_SERVER_OUT := accesskey-auth-server
 APISIX_RUNNER_OUT := apisix-go-runner
 WEB_DIR := web
 
@@ -16,9 +16,9 @@ build-server:
 	@echo "==> building server version $(VERSION)"
 	go build -ldflags "$(LDFLAGS)" -o $(SERVER_OUT) .
 
-build-accesskey-server: proto
+build-accesskey-auth-server: proto
 	@echo "==> building accesskey gRPC server"
-	go build -ldflags "$(LDFLAGS)" -o $(ACCESSKEY_SERVER_OUT) ./cmd/accesskey-server/
+	go build -ldflags "$(LDFLAGS)" -o $(ACCESSKEY_SERVER_OUT) ./cmd/accesskey-auth-server/
 
 build-apisix-runner: proto
 	@echo "==> building APISIX go plugin runner"
