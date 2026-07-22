@@ -7,6 +7,7 @@ const tab = ref('ops')
 
 const logOpen = ref(true)
 const smtpOpen = ref(true)
+const apiGwOpen = ref(true)
 const authOpen = ref(true)
 const userOpsOpen = ref(true)
 const platformOpen = ref(true)
@@ -33,6 +34,18 @@ const smtpForm = ref({
   fromAddress: '',
   fromName: ''
 })
+
+const apiGwForm = ref({
+  provider: 'apisix',
+  adminUrl: '',
+  adminKey: ''
+})
+
+const API_GW_PROVIDERS = [
+  { key: 'apisix', label: 'Apache APISIX' },
+  { key: 'kong', label: 'Kong' },
+  { key: 'tyk', label: 'Tyk' }
+]
 
 const authMethod = ref('cas')
 
@@ -102,6 +115,10 @@ function saveSmtpSettings() {
   saveSection('smtp', smtpForm.value)
 }
 
+function saveApiGwSettings() {
+  saveSection('api_gateway', apiGwForm.value)
+}
+
 function saveAuthSettings() {
   saveSection('auth', {
     method: authMethod.value,
@@ -126,6 +143,7 @@ function savePlatformSettings() {
 function applySettings(data) {
   if (data.log) Object.assign(logForm.value, data.log)
   if (data.smtp) Object.assign(smtpForm.value, data.smtp)
+  if (data.api_gateway) Object.assign(apiGwForm.value, data.api_gateway)
   if (data.auth) {
     if (data.auth.method) authMethod.value = data.auth.method
     if (data.auth.cas) Object.assign(casForm.value, data.auth.cas)
@@ -349,6 +367,54 @@ onMounted(async () => {
             <span v-if="tips.smtp" class="save-tip">{{ tips.smtp }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'smtp'" @click="saveSmtpSettings">
               {{ saving === 'smtp' ? '保存中…' : '保存' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="collapse">
+        <button class="collapse__head" type="button" @click="apiGwOpen = !apiGwOpen">
+          <span class="collapse__title">API 网关设置</span>
+          <span class="collapse__arrow" :class="{ 'collapse__arrow--open': apiGwOpen }">▾</span>
+        </button>
+        <div v-show="apiGwOpen" class="collapse__body">
+          <label class="field">
+            <span class="field__label">API 网关</span>
+            <select v-model="apiGwForm.provider" class="field__input">
+              <option
+                v-for="gw in API_GW_PROVIDERS"
+                :key="gw.key"
+                :value="gw.key"
+              >
+                {{ gw.label }}
+              </option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field__label">网关 Admin API 地址</span>
+            <input
+              v-model="apiGwForm.adminUrl"
+              class="field__input"
+              type="text"
+              placeholder="http://127.0.0.1:9180"
+            />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Admin API Key</span>
+            <input
+              v-model="apiGwForm.adminKey"
+              class="field__input"
+              type="password"
+              placeholder="请输入管理员 API Key"
+            />
+          </label>
+
+          <div class="collapse__actions">
+            <span v-if="tips.api_gateway" class="save-tip">{{ tips.api_gateway }}</span>
+            <button class="btn btn--primary" type="button" :disabled="saving === 'api_gateway'" @click="saveApiGwSettings">
+              {{ saving === 'api_gateway' ? '保存中…' : '保存' }}
             </button>
           </div>
         </div>

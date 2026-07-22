@@ -10,6 +10,7 @@ service AccessKeyService {
 
 message ValidateRequest {
   string access_key = 1;
+  string request_path = 2;
 }
 
 message ValidateResponse {

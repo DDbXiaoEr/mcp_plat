@@ -243,7 +243,7 @@ GET /api/servers
       "address": "https://mcp.xauat.edu.cn/jwc",
       "department": "教务处",
       "protocol": "SSE",
-      "tools": "[\"查询课表\",\"成绩查询\",\"选课信息\"]",
+      "tools": "[{\"name\":\"查询课表\",\"description\":\"查询学期课程安排\"},{\"name\":\"成绩查询\",\"description\":\"查询考试成绩\"}]",
       "created_at": "2026-01-01T12:00:00Z",
       "updated_at": "2026-01-01T12:00:00Z"
     }
@@ -258,7 +258,7 @@ GET /api/servers
 | address | string | MCP 服务器地址 |
 | department | string | 负责部门 |
 | protocol | string | 协议类型（SSE / Streamable HTTP / stdio） |
-| tools | string | 工具列表，JSON 字符串数组格式 |
+| tools | string | 工具列表，JSON 字符串数组格式，每个元素为 `{"name":"...","description":"..."}` |
 
 ### 4.2 新增 MCP 服务器
 
@@ -294,7 +294,38 @@ POST /api/servers
 }
 ```
 
-### 4.5 获取 MCP 服务器工具列表
+### 4.5 发布服务器到 API 网关
+
+```
+POST /api/servers/publish
+```
+
+> ⏳ 待实现。所有接口均需认证。
+
+**请求参数（JSON Body）：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| server_ids | []uint | 是 | 要发布的 MCP 服务器 ID 列表 |
+
+**请求示例：**
+```json
+{
+  "server_ids": [1, 2, 5]
+}
+```
+
+**成功响应：**
+```json
+{
+  "code": 200,
+  "message": "发布成功"
+}
+```
+
+**说明：** 后端根据已配置的 API 网关设置（`api_gateway` 分组），将选中的 MCP 服务器路由注册到 API 网关中。需先配置网关的 Admin API 地址和 Key。
+
+### 4.6 获取 MCP 服务器工具列表
 
 ```
 POST /api/servers/fetch-tools
@@ -315,12 +346,16 @@ POST /api/servers/fetch-tools
   "code": 200,
   "message": "获取成功",
   "data": {
-    "tools": ["查询课表", "成绩查询", "选课信息"]
+    "tools": [
+      { "name": "查询课表", "description": "查询学期课程安排" },
+      { "name": "成绩查询", "description": "查询考试成绩" },
+      { "name": "选课信息", "description": "查询选课信息" }
+    ]
   }
 }
 ```
 
-**说明：** 后端根据地址和协议连接目标 MCP 服务器，调用 `tools/list` 协议方法，返回可用工具名称列表。连接失败或地址无效时返回 4xx/5xx。
+**说明：** 后端根据地址和协议连接目标 MCP 服务器，调用 `tools/list` 协议方法，返回可用工具名称及描述列表。连接失败或地址无效时返回 4xx/5xx。
 
 ### 4.3 更新 MCP 服务器
 
@@ -714,6 +749,16 @@ GET /api/settings
     "user_ops": {
       "defaultRoleId": 1,
       "maxAccessKeys": 5
+    },
+    "platform": {
+      "name": "某某大学",
+      "logoUrl": "https://www.example.edu.cn/logo.png",
+      "siteUrl": "https://www.example.edu.cn"
+    },
+    "api_gateway": {
+      "provider": "apisix",
+      "adminUrl": "http://127.0.0.1:9180",
+      "adminKey": "edd1c9f034335f136f87ad84b625c8f1"
     }
   }
 }
@@ -729,7 +774,7 @@ PUT /api/settings/:key
 
 | 参数 | 说明 |
 |------|------|
-| key | 设置项分组，仅支持 `log` / `smtp` / `auth` / `user_ops` |
+| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `api_gateway` |
 
 **请求参数（JSON Body）：**
 
@@ -791,6 +836,6 @@ PUT /api/settings/:key
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| key | string (PK) | 设置项分组（log / smtp / auth / user_ops） |
+| key | string (PK) | 设置项分组（log / smtp / auth / user_ops / platform / api_gateway） |
 | value | text | 该分组的 JSON 内容 |
 | updated_at | datetime | 更新时间 |

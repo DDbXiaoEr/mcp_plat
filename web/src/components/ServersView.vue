@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { fetchServers, createServer, fetchServerTools } from '../api.js'
 
 const servers = ref([])
@@ -19,7 +19,17 @@ onMounted(async () => {
 })
 
 function parseTools(raw) {
-  try { return JSON.parse(raw) || [] } catch { return [] }
+  if (!raw) return []
+  if (Array.isArray(raw)) return raw.map(normalizeTool)
+  try {
+    const parsed = JSON.parse(raw)
+    if (!parsed) return []
+    return (Array.isArray(parsed) ? parsed : []).map(normalizeTool)
+  } catch { return [] }
+}
+
+function normalizeTool(t) {
+  return typeof t === 'string' ? { name: t, description: '' } : t
 }
 
 const PROTOCOLS = ['SSE', 'Streamable HTTP']
@@ -31,6 +41,8 @@ function select(server) {
   selectedId.value = server.id
   selected.value = server
 }
+
+const selectedTools = computed(() => parseTools(selected.value?.tools))
 
 const showingCreate = ref(false)
 const createForm = ref({ name: '', address: '', department: '', protocol: 'SSE', tools: '' })
@@ -56,7 +68,7 @@ async function fetchTools() {
       address,
       protocol: createForm.value.protocol
     })
-    createForm.value.tools = (data.tools || []).join('\n')
+    createForm.value.tools = JSON.stringify(data.tools || [])
   } catch (err) {
     fetchToolsError.value = err.message || '获取工具列表失败'
   }
@@ -66,10 +78,18 @@ async function fetchTools() {
 async function confirmCreate() {
   const name = createForm.value.name.trim()
   if (!name) return
-  const tools = createForm.value.tools
-    .split(/[,，\n]/)
-    .map((t) => t.trim())
-    .filter(Boolean)
+  const raw = createForm.value.tools.trim()
+  let tools
+  try {
+    const parsed = JSON.parse(raw)
+    tools = Array.isArray(parsed) ? parsed.map(normalizeTool) : []
+  } catch {
+    tools = raw
+      .split(/[,，\n]/)
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .map((name) => ({ name, description: '' }))
+  }
   try {
     const server = await createServer({
       name,
@@ -86,15 +106,39 @@ async function confirmCreate() {
     // ignore
   }
 }
+
+const showingPublish = ref(false)
+const publishSelected = ref([])
+
+function openPublish() {
+  publishSelected.value = []
+  showingPublish.value = true
+}
+
+function togglePublishServer(id) {
+  const i = publishSelected.value.indexOf(id)
+  if (i === -1) publishSelected.value.push(id)
+  else publishSelected.value.splice(i, 1)
+}
+
+function confirmPublish() {
+  alert('发布成功')
+  showingPublish.value = false
+}
 </script>
 
 <template>
   <section class="servers">
     <div class="servers__head">
       <h1 class="page__title">MCP 服务器管理</h1>
-      <button class="btn btn--primary" type="button" @click="openCreate">
-        增加
-      </button>
+      <div class="servers__actions">
+        <button class="btn btn--primary" type="button" @click="openCreate">
+          增加
+        </button>
+        <button class="btn btn--secondary" type="button" @click="openPublish">
+          发布
+        </button>
+      </div>
     </div>
 
     <div class="server-list">
@@ -111,30 +155,46 @@ async function confirmCreate() {
       </button>
     </div>
 
-    <div v-if="selected" class="server-detail">
-      <h2 class="server-detail__title">{{ selected.name }}</h2>
-      <dl class="server-detail__grid">
-        <div class="server-detail__row">
-          <dt>MCP 服务器地址</dt>
-          <dd>{{ selected.address }}</dd>
+    <div v-if="selected" class="drawer">
+      <div class="drawer__overlay" @click="selected = null"></div>
+      <aside class="drawer__panel">
+        <header class="drawer__head">
+          <h2 class="drawer__title">{{ selected.name }}</h2>
+          <button class="drawer__close" type="button" aria-label="关闭" @click="selected = null">
+            ×
+          </button>
+        </header>
+        <div class="drawer__body">
+          <dl class="server-detail__grid">
+            <div class="server-detail__row">
+              <dt>MCP 服务器地址</dt>
+              <dd>{{ selected.address }}</dd>
+            </div>
+            <div class="server-detail__row">
+              <dt>负责部门</dt>
+              <dd>{{ selected.department }}</dd>
+            </div>
+            <div class="server-detail__row">
+              <dt>协议类型</dt>
+              <dd>{{ selected.protocol }}</dd>
+            </div>
+            <div class="server-detail__row">
+              <dt>工具列表</dt>
+              <dd>
+                <ul class="server-detail__tools">
+                  <li
+                    v-for="tool in selectedTools"
+                    :key="tool.name"
+                    :title="tool.description || undefined"
+                  >
+                    {{ tool.name }}
+                  </li>
+                </ul>
+              </dd>
+            </div>
+          </dl>
         </div>
-        <div class="server-detail__row">
-          <dt>负责部门</dt>
-          <dd>{{ selected.department }}</dd>
-        </div>
-        <div class="server-detail__row">
-          <dt>协议类型</dt>
-          <dd>{{ selected.protocol }}</dd>
-        </div>
-        <div class="server-detail__row">
-          <dt>工具列表</dt>
-          <dd>
-            <ul class="server-detail__tools">
-              <li v-for="tool in selected.tools" :key="tool">{{ tool }}</li>
-            </ul>
-          </dd>
-        </div>
-      </dl>
+      </aside>
     </div>
 
     <Teleport to="body">
@@ -220,6 +280,41 @@ async function confirmCreate() {
           </div>
         </div>
       </div>
+
+      <div v-if="showingPublish" class="dialog-overlay" @click.self="showingPublish = false">
+        <div class="dialog">
+          <h2 class="dialog__title">发布到 API 网关</h2>
+          <p class="dialog__desc">选择要发布的 MCP 服务器：</p>
+          <div class="publish-list">
+            <label
+              v-for="server in servers"
+              :key="server.id"
+              class="publish-list__item"
+            >
+              <input
+                type="checkbox"
+                :checked="publishSelected.includes(server.id)"
+                @change="togglePublishServer(server.id)"
+              />
+              <span class="publish-list__name">{{ server.name }}</span>
+              <span class="publish-list__addr">{{ server.address }}</span>
+            </label>
+          </div>
+          <div class="dialog__actions">
+            <button class="btn btn--ghost" type="button" @click="showingPublish = false">
+              取消
+            </button>
+            <button
+              class="btn btn--primary"
+              type="button"
+              :disabled="publishSelected.length === 0"
+              @click="confirmPublish"
+            >
+              确认发布
+            </button>
+          </div>
+        </div>
+      </div>
     </Teleport>
   </section>
 </template>
@@ -237,6 +332,11 @@ async function confirmCreate() {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+.servers__actions {
+  display: flex;
+  gap: 10px;
 }
 
 .btn {
@@ -262,6 +362,16 @@ async function confirmCreate() {
 .btn--primary:hover:not(:disabled) {
   background: var(--xauat-blue-light);
   transform: translateY(-1px);
+}
+
+.btn--secondary {
+  color: var(--xauat-blue);
+  background: transparent;
+  border-color: var(--xauat-blue);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: rgba(10, 61, 122, 0.08);
 }
 
 .btn--ghost {
@@ -319,36 +429,81 @@ async function confirmCreate() {
   color: var(--text-muted);
 }
 
-.server-detail {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 24px;
+.drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
 }
 
-.server-detail__title {
-  font-size: 20px;
+.drawer__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 61, 122, 0.28);
+}
+
+.drawer__panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  box-shadow: -8px 0 30px rgba(10, 61, 122, 0.12);
+}
+
+.drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.drawer__title {
+  font-size: 17px;
   font-weight: 700;
   color: var(--xauat-blue);
-  margin-bottom: 16px;
+}
+
+.drawer__close {
+  width: 32px;
+  height: 32px;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.drawer__close:hover {
+  background: rgba(10, 61, 122, 0.06);
+}
+
+.drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
 }
 
 .server-detail__grid {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 
 .server-detail__row {
-  display: grid;
-  grid-template-columns: 140px 1fr;
-  gap: 16px;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .server-detail__row dt {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -356,6 +511,7 @@ async function confirmCreate() {
 .server-detail__row dd {
   font-size: 14px;
   color: var(--text);
+  word-break: break-all;
 }
 
 .server-detail__tools {
@@ -371,6 +527,11 @@ async function confirmCreate() {
   border-radius: 999px;
   font-size: 13px;
   color: var(--xauat-blue);
+  cursor: default;
+}
+
+.server-detail__tools li[title] {
+  cursor: help;
 }
 
 .dialog-overlay {
@@ -540,5 +701,59 @@ async function confirmCreate() {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 24px;
+}
+
+.dialog__desc {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.publish-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.publish-list__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.publish-list__item:hover {
+  background: rgba(10, 61, 122, 0.04);
+  border-color: rgba(10, 61, 122, 0.25);
+}
+
+.publish-list__item input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--xauat-blue);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.publish-list__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.publish-list__addr {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
 }
 </style>

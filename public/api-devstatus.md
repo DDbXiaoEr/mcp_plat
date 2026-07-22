@@ -17,7 +17,8 @@
 | MCP 服务器 | POST /api/servers | ✅ 已完成 | |
 | MCP 服务器 | PUT /api/servers/:id | ✅ 已完成 | |
 | MCP 服务器 | DELETE /api/servers/:id | ✅ 已完成 | |
-| MCP 服务器 | POST /api/servers/fetch-tools | ✅ 已完成 | 前端已接入 |
+| MCP 服务器 | POST /api/servers/fetch-tools | ✅ 已完成 | 前端已接入，返回 `[{name, description}]` 格式 |
+| MCP 服务器 | POST /api/servers/publish | ⏳ 待开发 | 发布选中的服务器到 API 网关 |
 | RBAC | GET /api/roles | ✅ 已完成 | |
 | RBAC | POST /api/roles | ✅ 已完成 | |
 | RBAC | PUT /api/roles/:id | ✅ 已完成 | |
@@ -29,7 +30,7 @@
 | RBAC | PUT /api/users/:id | ✅ 已完成 | |
 | RBAC | DELETE /api/users/:id | ✅ 已完成 | |
 | 系统设置 | GET /api/settings | ✅ 已完成 | 前端已接入 |
-| 系统设置 | PUT /api/settings/:key | ✅ 已完成 | key: log / smtp / auth / user_ops |
+| 系统设置 | PUT /api/settings/:key | ✅ 已完成 | key: log / smtp / auth / user_ops / platform / api_gateway |
 
 - ✅ 已完成
 - 🚧 开发中

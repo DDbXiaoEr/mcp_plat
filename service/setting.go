@@ -11,10 +11,12 @@ import (
 )
 
 var settingKeys = map[string]bool{
-	"log":      true,
-	"smtp":     true,
-	"auth":     true,
-	"user_ops": true,
+	"log":         true,
+	"smtp":        true,
+	"auth":        true,
+	"user_ops":    true,
+	"api_gateway": true,
+	"platform":    true,
 }
 
 func GetSettings() (map[string]json.RawMessage, error) {

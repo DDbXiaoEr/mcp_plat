@@ -41,7 +41,7 @@ func ListServers() ([]model.MCPServer, error) {
 func CreateServer(input CreateServerInput) (*model.MCPServer, error) {
 	protocol := input.Protocol
 	if protocol == "" {
-		protocol = "SSE"
+		protocol = "streamable http"
 	}
 	server := model.MCPServer{
 		Name:       input.Name,
@@ -123,7 +123,7 @@ type toolInfo struct {
 	Description string `json:"description"`
 }
 
-func FetchTools(input FetchToolsInput) ([]string, error) {
+func FetchTools(input FetchToolsInput) ([]toolInfo, error) {
 	protocol := input.Protocol
 	if protocol == "" {
 		protocol = "Streamable HTTP"
@@ -141,7 +141,7 @@ func FetchTools(input FetchToolsInput) ([]string, error) {
 	}
 }
 
-func fetchToolsStreamableHTTP(address string) ([]string, error) {
+func fetchToolsStreamableHTTP(address string) ([]toolInfo, error) {
 	client := &http.Client{Timeout: 15 * time.Second}
 
 	initReq := jsonRPCRequest{
@@ -203,12 +203,7 @@ func fetchToolsStreamableHTTP(address string) ([]string, error) {
 		return nil, fmt.Errorf("解析工具列表失败: %w", err)
 	}
 
-	toolNames := make([]string, len(toolsResult.Tools))
-	for i, t := range toolsResult.Tools {
-		toolNames[i] = t.Name
-	}
-
-	return toolNames, nil
+	return toolsResult.Tools, nil
 }
 
 func postJSONRPC(client *http.Client, address, sessionID string, reqBody jsonRPCRequest) (*jsonRPCResponse, string, error) {
@@ -277,7 +272,7 @@ func readSSEData(body io.Reader) ([]byte, error) {
 	return nil, errors.New("未从 SSE 响应中读取到数据")
 }
 
-func fetchToolsSSE(address string) ([]string, error) {
+func fetchToolsSSE(address string) ([]toolInfo, error) {
 	client := &http.Client{Timeout: 15 * time.Second}
 
 	resp, err := client.Get(address)

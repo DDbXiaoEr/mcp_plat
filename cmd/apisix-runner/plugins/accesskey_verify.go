@@ -60,7 +60,9 @@ func (p *AccessKeyVerify) RequestFilter(conf interface{}, w http.ResponseWriter,
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	resp, err := plugin.ValidateAccessKey(ctx, grpcAddr, accessKey)
+	requestPath := string(r.Path())
+
+	resp, err := plugin.ValidateAccessKey(ctx, grpcAddr, accessKey, requestPath)
 	if err != nil || !resp.Valid {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
