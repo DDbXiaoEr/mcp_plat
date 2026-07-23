@@ -163,6 +163,7 @@ func genMCPServers(n int) {
 	}
 
 	for i := 0; i < n; i++ {
+		id := fmt.Sprintf("%s-%s-%s-%s-%s", randomHex(4), randomHex(2), randomHex(2), randomHex(2), randomHex(6))
 		name := fmt.Sprintf("mcp-server-%s", randomHex(4))
 		port := 3000 + randomInt(6000)
 		address := fmt.Sprintf("http://10.%d.%d.%d:%d", randomInt(256), randomInt(256), randomInt(256), port)
@@ -171,6 +172,7 @@ func genMCPServers(n int) {
 		tools := randomChoice(toolsList)
 
 		s := model.MCPServer{
+			ID:         id,
 			Name:       name,
 			Address:    address,
 			Department: department,
