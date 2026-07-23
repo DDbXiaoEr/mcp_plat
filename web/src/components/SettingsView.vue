@@ -38,6 +38,7 @@ const smtpForm = ref({
 const apiGwForm = ref({
   provider: 'apisix',
   adminUrl: '',
+  defaultPublishDomain: '',
   adminKey: ''
 })
 
@@ -398,6 +399,16 @@ onMounted(async () => {
               class="field__input"
               type="text"
               placeholder="http://127.0.0.1:9180"
+            />
+          </label>
+
+          <label class="field">
+            <span class="field__label">默认发布域名</span>
+            <input
+              v-model="apiGwForm.defaultPublishDomain"
+              class="field__input"
+              type="text"
+              placeholder="例如 mcp.xauat.edu.cn"
             />
           </label>
 

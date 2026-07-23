@@ -241,6 +241,7 @@ GET /api/servers
       "id": 1,
       "name": "教务系统 MCP",
       "address": "https://mcp.xauat.edu.cn/jwc",
+      "service_address": "192.168.1.100:8081",
       "department": "教务处",
       "protocol": "SSE",
       "tools": "[{\"name\":\"查询课表\",\"description\":\"查询学期课程安排\"},{\"name\":\"成绩查询\",\"description\":\"查询考试成绩\"}]",
@@ -255,7 +256,8 @@ GET /api/servers
 |------|------|------|
 | id | uint | 服务器 ID |
 | name | string | 服务器名称 |
-| address | string | MCP 服务器地址 |
+| address | string | MCP 服务器地址（API 网关路径或完整 URL） |
+| service_address | string | MCP 服务地址（IP:端口，用于 API 网关路由后端） |
 | department | string | 负责部门 |
 | protocol | string | 协议类型（SSE / Streamable HTTP / stdio） |
 | tools | string | 工具列表，JSON 字符串数组格式，每个元素为 `{"name":"...","description":"..."}` |
@@ -271,7 +273,8 @@ POST /api/servers
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | name | string | 是 | 服务器名称 |
-| address | string | 是 | MCP 服务器地址 |
+| address | string | 是 | MCP 服务器地址（API 网关路径或完整 URL） |
+| service_address | string | 否 | MCP 服务地址（IP:端口，用于 API 网关路由后端） |
 | department | string | 否 | 负责部门 |
 | protocol | string | 否 | 协议类型，默认 SSE |
 | tools | string | 否 | 工具列表，JSON 字符串数组格式 |
@@ -285,6 +288,7 @@ POST /api/servers
     "id": 1,
     "name": "教务系统 MCP",
     "address": "https://mcp.xauat.edu.cn/jwc",
+    "service_address": "192.168.1.100:8081",
     "department": "教务处",
     "protocol": "SSE",
     "tools": "[\"查询课表\",\"成绩查询\"]",
@@ -369,6 +373,7 @@ PUT /api/servers/:id
 |------|------|------|------|
 | name | string | 否 | 服务器名称 |
 | address | string | 否 | MCP 服务器地址 |
+| service_address | string | 否 | MCP 服务地址（IP:端口） |
 | department | string | 否 | 负责部门 |
 | protocol | string | 否 | 协议类型 |
 | tools | string | 否 | 工具列表，JSON 字符串数组格式 |
@@ -758,7 +763,8 @@ GET /api/settings
     "api_gateway": {
       "provider": "apisix",
       "adminUrl": "http://127.0.0.1:9180",
-      "adminKey": "edd1c9f034335f136f87ad84b625c8f1"
+      "adminKey": "edd1c9f034335f136f87ad84b625c8f1",
+      "defaultPublishDomain": "mcp.xauat.edu.cn"
     }
   }
 }

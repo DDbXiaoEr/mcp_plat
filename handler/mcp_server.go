@@ -83,3 +83,18 @@ func (h *MCPServerHandler) FetchTools(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "获取成功", "data": gin.H{"tools": tools}})
 }
+
+func (h *MCPServerHandler) Publish(c *gin.Context) {
+	var input service.PublishInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
+		return
+	}
+
+	if err := service.PublishServers(input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "发布成功"})
+}

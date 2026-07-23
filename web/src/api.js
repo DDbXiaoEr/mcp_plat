@@ -129,6 +129,13 @@ export function fetchSettings() {
   return request('/settings')
 }
 
+export function publishServers(serverIds) {
+  return request('/servers/publish', {
+    method: 'POST',
+    body: JSON.stringify({ server_ids: serverIds })
+  })
+}
+
 export function saveSetting(key, body) {
   return request(`/settings/${key}`, {
     method: 'PUT',

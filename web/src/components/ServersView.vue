@@ -1,11 +1,16 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { fetchServers, createServer, fetchServerTools } from '../api.js'
+import { fetchServers, createServer, fetchServerTools, publishServers } from '../api.js'
 
 const servers = ref([])
 const loading = ref(true)
 
 onMounted(async () => {
+  await loadServers()
+  loading.value = false
+})
+
+async function loadServers() {
   try {
     const data = await fetchServers()
     servers.value = data.map((s) => ({
@@ -15,8 +20,7 @@ onMounted(async () => {
   } catch {
     // ignore load error
   }
-  loading.value = false
-})
+}
 
 function parseTools(raw) {
   if (!raw) return []
@@ -45,21 +49,21 @@ function select(server) {
 const selectedTools = computed(() => parseTools(selected.value?.tools))
 
 const showingCreate = ref(false)
-const createForm = ref({ name: '', address: '', department: '', protocol: 'SSE', tools: '' })
+const createForm = ref({ name: '', address: '', service_address: '', department: '', protocol: 'SSE', tools: '' })
 const fetchingTools = ref(false)
 const fetchToolsError = ref('')
 
 function openCreate() {
-  createForm.value = { name: '', address: '', department: '', protocol: 'SSE', tools: '' }
+  createForm.value = { name: '', address: '', service_address: '', department: '', protocol: 'SSE', tools: '' }
   fetchToolsError.value = ''
   showingCreate.value = true
 }
 
 async function fetchTools() {
-  const address = createForm.value.address.trim()
+  const address = createForm.value.service_address.trim()
   fetchToolsError.value = ''
   if (!address) {
-    fetchToolsError.value = '请先填写 MCP 服务器路径'
+    fetchToolsError.value = '请先填写 MCP 服务地址'
     return
   }
   fetchingTools.value = true
@@ -94,6 +98,7 @@ async function confirmCreate() {
     const server = await createServer({
       name,
       address: createForm.value.address.trim(),
+      service_address: createForm.value.service_address.trim(),
       department: createForm.value.department.trim(),
       protocol: createForm.value.protocol,
       tools: JSON.stringify(tools)
@@ -109,6 +114,12 @@ async function confirmCreate() {
 
 const showingPublish = ref(false)
 const publishSelected = ref([])
+const showingPublishConfirm = ref(false)
+const publishing = ref(false)
+
+const publishTargets = computed(() =>
+  servers.value.filter((s) => publishSelected.value.includes(s.id))
+)
 
 function openPublish() {
   publishSelected.value = []
@@ -122,8 +133,26 @@ function togglePublishServer(id) {
 }
 
 function confirmPublish() {
-  alert('发布成功')
   showingPublish.value = false
+  showingPublishConfirm.value = true
+}
+
+function backToPublish() {
+  showingPublishConfirm.value = false
+  showingPublish.value = true
+}
+
+async function executePublish() {
+  publishing.value = true
+  try {
+    await publishServers(publishSelected.value)
+    alert('发布成功')
+    showingPublishConfirm.value = false
+    await loadServers()
+  } catch (e) {
+    alert(e.message || '发布失败')
+  }
+  publishing.value = false
 }
 </script>
 
@@ -150,7 +179,10 @@ function confirmPublish() {
         type="button"
         @click="select(server)"
       >
-        <span class="server-list__name">{{ server.name }}</span>
+        <div class="server-list__info">
+          <span class="server-list__name">{{ server.name }}</span>
+          <span class="server-list__uuid">{{ server.id }}</span>
+        </div>
         <span class="server-list__dept">{{ server.department }}</span>
       </button>
     </div>
@@ -167,8 +199,16 @@ function confirmPublish() {
         <div class="drawer__body">
           <dl class="server-detail__grid">
             <div class="server-detail__row">
+              <dt>UUID</dt>
+              <dd class="server-detail__uuid">{{ selected.id }}</dd>
+            </div>
+            <div class="server-detail__row">
               <dt>MCP 服务器地址</dt>
               <dd>{{ selected.address }}</dd>
+            </div>
+            <div class="server-detail__row">
+              <dt>MCP 服务地址</dt>
+              <dd>{{ selected.service_address || '未填写' }}</dd>
             </div>
             <div class="server-detail__row">
               <dt>负责部门</dt>
@@ -212,22 +252,30 @@ function confirmPublish() {
               />
             </div>
             <div class="dialog__group">
-              <label class="dialog__label">
-                MCP 服务器地址
-                <span class="dialog__help">
-                  ?
-                  <span class="dialog__tooltip">
-                    在 API 网关统一管理的场景下，地址应填写对应的 URL 路径，例如
-                    <code>/jwc/mcp</code>（由网关转发到实际服务）；独立部署时填写完整地址，例如
-                    <code>https://mcp.xauat.edu.cn/jwc</code>。
-                  </span>
-                </span>
-              </label>
+              <label class="dialog__label">MCP服务器URI路径</label>
               <input
                 v-model="createForm.address"
                 class="dialog__input"
                 type="text"
-                placeholder="https://mcp.xauat.edu.cn/..."
+                placeholder="/mcp/server（仅路径，不含域名）"
+              />
+            </div>
+            <div class="dialog__group">
+              <label class="dialog__label">
+                MCP 服务地址
+                <span class="dialog__help">
+                  ?
+                  <span class="dialog__tooltip">
+                    填写 MCP 服务的实际 IP:端口，例如
+                    <code>192.168.1.100:8081</code>，用于在 API 网关创建路由。
+                  </span>
+                </span>
+              </label>
+              <input
+                v-model="createForm.service_address"
+                class="dialog__input"
+                type="text"
+                placeholder="192.168.1.100:8081"
               />
             </div>
             <div class="dialog__group">
@@ -311,6 +359,48 @@ function confirmPublish() {
               @click="confirmPublish"
             >
               确认发布
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="showingPublishConfirm" class="dialog-overlay" @click.self="showingPublishConfirm = false">
+        <div class="dialog">
+          <h2 class="dialog__title">确认发布配置</h2>
+          <p class="dialog__desc">
+            即将向 API 网关推送以下路由配置：
+          </p>
+          <div class="publish-preview">
+            <div
+              v-for="server in publishTargets"
+              :key="server.id"
+              class="publish-preview__card"
+            >
+              <div class="publish-preview__row">
+                <span class="publish-preview__label">服务名称</span>
+                <span class="publish-preview__value">{{ server.name }}</span>
+              </div>
+              <div class="publish-preview__row">
+                <span class="publish-preview__label">网关路径</span>
+                <span class="publish-preview__value">{{ server.address }}</span>
+              </div>
+              <div class="publish-preview__row">
+                <span class="publish-preview__label">后端地址</span>
+                <span class="publish-preview__value">{{ server.service_address || '未填写' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="dialog__actions">
+            <button class="btn btn--ghost" type="button" @click="backToPublish">
+              返回修改
+            </button>
+            <button
+              class="btn btn--primary"
+              type="button"
+              :disabled="publishing"
+              @click="executePublish"
+            >
+              {{ publishing ? '发布中...' : '确认推送' }}
             </button>
           </div>
         </div>
@@ -409,6 +499,13 @@ function confirmPublish() {
   transition: background 0.2s, border-color 0.2s;
 }
 
+.server-list__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
 .server-list__item:hover {
   background: rgba(10, 61, 122, 0.06);
 }
@@ -422,6 +519,17 @@ function confirmPublish() {
   font-size: 15px;
   font-weight: 600;
   color: var(--text);
+}
+
+.server-list__uuid {
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--text-muted);
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 240px;
 }
 
 .server-list__dept {
@@ -512,6 +620,13 @@ function confirmPublish() {
   font-size: 14px;
   color: var(--text);
   word-break: break-all;
+}
+
+.server-detail__uuid {
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--text-muted);
+  opacity: 0.85;
 }
 
 .server-detail__tools {
@@ -755,5 +870,46 @@ function confirmPublish() {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 200px;
+}
+
+.publish-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.publish-preview__card {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.publish-preview__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.publish-preview__row + .publish-preview__row {
+  border-top: 1px solid rgba(10, 61, 122, 0.06);
+}
+
+.publish-preview__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.publish-preview__value {
+  font-size: 13px;
+  color: var(--text);
+  word-break: break-all;
+  text-align: right;
 }
 </style>

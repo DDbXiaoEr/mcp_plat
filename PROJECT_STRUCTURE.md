@@ -119,6 +119,7 @@ mcp_plat-console/
 | PUT | `/api/servers/:id` | 是 | - | handler/mcp_server.go → Update |
 | DELETE | `/api/servers/:id` | 是 | - | handler/mcp_server.go → Delete |
 | POST | `/api/servers/fetch-tools` | 是 | - | handler/mcp_server.go → FetchTools |
+| POST | `/api/servers/publish` | 否 | - | handler/mcp_server.go → Publish |
 | GET | `/api/roles` | 是 | 是 | handler/role.go → List |
 | POST | `/api/roles` | 是 | 是 | handler/role.go → Create |
 | PUT | `/api/roles/:id` | 是 | 是 | handler/role.go → Update |

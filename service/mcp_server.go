@@ -19,19 +19,21 @@ import (
 )
 
 type CreateServerInput struct {
-	Name       string `json:"name" binding:"required"`
-	Address    string `json:"address" binding:"required"`
-	Department string `json:"department"`
-	Protocol   string `json:"protocol"`
-	Tools      string `json:"tools"`
+	Name           string `json:"name" binding:"required"`
+	Address        string `json:"address" binding:"required"`
+	ServiceAddress string `json:"service_address"`
+	Department     string `json:"department"`
+	Protocol       string `json:"protocol"`
+	Tools          string `json:"tools"`
 }
 
 type UpdateServerInput struct {
-	Name       string `json:"name"`
-	Address    string `json:"address"`
-	Department string `json:"department"`
-	Protocol   string `json:"protocol"`
-	Tools      string `json:"tools"`
+	Name           string `json:"name"`
+	Address        string `json:"address"`
+	ServiceAddress string `json:"service_address"`
+	Department     string `json:"department"`
+	Protocol       string `json:"protocol"`
+	Tools          string `json:"tools"`
 }
 
 func ListServers() ([]model.MCPServer, error) {
@@ -46,12 +48,13 @@ func CreateServer(input CreateServerInput) (*model.MCPServer, error) {
 		protocol = "streamable http"
 	}
 	server := model.MCPServer{
-		ID:         uuid.New().String(),
-		Name:       input.Name,
-		Address:    input.Address,
-		Department: input.Department,
-		Protocol:   protocol,
-		Tools:      input.Tools,
+		ID:             uuid.New().String(),
+		Name:           input.Name,
+		Address:        input.Address,
+		ServiceAddress: input.ServiceAddress,
+		Department:     input.Department,
+		Protocol:       protocol,
+		Tools:          input.Tools,
 	}
 	if err := database.DB.Create(&server).Error; err != nil {
 		return nil, err
@@ -71,6 +74,9 @@ func UpdateServer(id string, input UpdateServerInput) error {
 	}
 	if input.Address != "" {
 		updates["address"] = input.Address
+	}
+	if input.ServiceAddress != "" {
+		updates["service_address"] = input.ServiceAddress
 	}
 	if input.Department != "" {
 		updates["department"] = input.Department
@@ -132,11 +138,24 @@ func FetchTools(input FetchToolsInput) ([]toolInfo, error) {
 		protocol = "Streamable HTTP"
 	}
 
+	address := input.Address
+	if !strings.Contains(address, "://") {
+		if strings.HasPrefix(address, "/") {
+			var gw ApiGatewaySetting
+			if err := GetSetting("api_gateway", &gw); err != nil || gw.DefaultPublishDomain == "" {
+				return nil, errors.New("请先在系统设置中配置 API 网关默认域名")
+			}
+			address = strings.TrimRight(gw.DefaultPublishDomain, "/") + address
+		} else {
+			address = "http://" + address
+		}
+	}
+
 	switch protocol {
 	case "Streamable HTTP":
-		return fetchToolsStreamableHTTP(input.Address)
+		return fetchToolsStreamableHTTP(address)
 	case "SSE":
-		return fetchToolsSSE(input.Address)
+		return fetchToolsSSE(address)
 	case "stdio":
 		return nil, errors.New("stdio 协议暂不支持远程获取工具列表")
 	default:
@@ -332,4 +351,111 @@ func fetchToolsSSE(address string) ([]toolInfo, error) {
 	}
 
 	return tools, nil
+}
+
+type PublishInput struct {
+	ServerIDs []string `json:"server_ids" binding:"required"`
+}
+
+type ApiGatewaySetting struct {
+	Provider             string `json:"provider"`
+	AdminURL             string `json:"adminUrl"`
+	AdminKey             string `json:"adminKey"`
+	DefaultPublishDomain string `json:"defaultPublishDomain"`
+}
+
+func PublishServers(input PublishInput) error {
+	var gw ApiGatewaySetting
+	if err := GetSetting("api_gateway", &gw); err != nil {
+		return errors.New("请先在系统设置中配置 API 网关参数")
+	}
+	if gw.AdminURL == "" || gw.AdminKey == "" {
+		return errors.New("API 网关 Admin API 地址和 Key 未配置")
+	}
+
+	var servers []model.MCPServer
+	if err := database.DB.Where("id IN ?", input.ServerIDs).Find(&servers).Error; err != nil {
+		return fmt.Errorf("查询服务器失败: %w", err)
+	}
+	if len(servers) == 0 {
+		return errors.New("未找到指定的服务器")
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	var errs []string
+
+	for _, srv := range servers {
+		if srv.ServiceAddress == "" {
+			errs = append(errs, fmt.Sprintf("%s: 未配置后端服务地址", srv.Name))
+			continue
+		}
+
+		upstreamBody := map[string]interface{}{
+			"name":  srv.Name,
+			"type":  "roundrobin",
+			"nodes": map[string]int{srv.ServiceAddress: 1},
+		}
+		if err := putAPISIXAdmin(client, gw.AdminURL, gw.AdminKey, "/apisix/admin/upstreams/"+srv.ID, upstreamBody); err != nil {
+			errs = append(errs, fmt.Sprintf("%s: 创建上游失败: %v", srv.Name, err))
+			continue
+		}
+
+		routeBody := map[string]interface{}{
+			"name":        srv.Name,
+			"uris":        []string{"/" + srv.ID, "/" + srv.ID + "/*"},
+			"upstream_id": srv.ID,
+		}
+		if gw.DefaultPublishDomain != "" {
+			routeBody["host"] = gw.DefaultPublishDomain
+		}
+		if srv.Address != "" && srv.Address != "/" {
+			routeBody["plugins"] = map[string]interface{}{
+				"proxy-rewrite": map[string]interface{}{
+					"regex_uri": []string{
+						"^/" + srv.ID + "(.*)",
+						srv.Address + "$1",
+					},
+				},
+			}
+		}
+
+		if err := putAPISIXAdmin(client, gw.AdminURL, gw.AdminKey, "/apisix/admin/routes/"+srv.ID, routeBody); err != nil {
+			errs = append(errs, fmt.Sprintf("%s: 创建路由失败: %v", srv.Name, err))
+			continue
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("部分发布失败: %s", strings.Join(errs, "; "))
+	}
+
+	return nil
+}
+
+func putAPISIXAdmin(client *http.Client, adminURL, adminKey, apiPath string, body interface{}) error {
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("构建请求失败: %w", err)
+	}
+
+	urlStr := strings.TrimRight(adminURL, "/") + apiPath
+	req, err := http.NewRequest(http.MethodPut, urlStr, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return fmt.Errorf("构建请求失败: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-KEY", adminKey)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("请求 APISIX Admin API 失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("APISIX 返回错误 (status=%d): %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
 }
