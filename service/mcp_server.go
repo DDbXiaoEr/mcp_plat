@@ -14,6 +14,8 @@ import (
 
 	"mcp_plat-console/database"
 	"mcp_plat-console/model"
+
+	"github.com/google/uuid"
 )
 
 type CreateServerInput struct {
@@ -44,6 +46,7 @@ func CreateServer(input CreateServerInput) (*model.MCPServer, error) {
 		protocol = "streamable http"
 	}
 	server := model.MCPServer{
+		ID:         uuid.New().String(),
 		Name:       input.Name,
 		Address:    input.Address,
 		Department: input.Department,
@@ -56,7 +59,7 @@ func CreateServer(input CreateServerInput) (*model.MCPServer, error) {
 	return &server, nil
 }
 
-func UpdateServer(id uint, input UpdateServerInput) error {
+func UpdateServer(id string, input UpdateServerInput) error {
 	var server model.MCPServer
 	if err := database.DB.First(&server, id).Error; err != nil {
 		return errors.New("MCP 服务器不存在")
@@ -82,7 +85,7 @@ func UpdateServer(id uint, input UpdateServerInput) error {
 	return database.DB.Model(&server).Updates(updates).Error
 }
 
-func DeleteServer(id uint) error {
+func DeleteServer(id string) error {
 	result := database.DB.Delete(&model.MCPServer{}, id)
 	if result.RowsAffected == 0 {
 		return errors.New("MCP 服务器不存在")

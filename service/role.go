@@ -10,20 +10,20 @@ import (
 type CreateRoleInput struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
-	ServerIDs   []uint `json:"server_ids"`
+	ServerIDs   []string `json:"server_ids"`
 }
 
 type UpdateRoleInput struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	ServerIDs   []uint `json:"server_ids"`
+	ServerIDs   []string `json:"server_ids"`
 }
 
 type RoleOutput struct {
 	ID          uint   `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	ServerIDs   []uint `json:"server_ids"`
+	ServerIDs   []string `json:"server_ids"`
 	UserCount   int    `json:"user_count"`
 }
 
@@ -39,12 +39,12 @@ func ListRoles() ([]RoleOutput, error) {
 
 	result := make([]RoleOutput, 0, len(roles))
 	for _, role := range roles {
-		var serverIDs []uint
+		var serverIDs []string
 		database.DB.Model(&model.RoleServer{}).
 			Where("role_id = ?", role.ID).
 			Pluck("server_id", &serverIDs)
 		if serverIDs == nil {
-			serverIDs = []uint{}
+			serverIDs = []string{}
 		}
 
 		var userCount int64

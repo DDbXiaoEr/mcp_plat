@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"strconv"
 
 	"mcp_plat-console/service"
 
@@ -42,11 +41,7 @@ func (h *MCPServerHandler) Create(c *gin.Context) {
 }
 
 func (h *MCPServerHandler) Update(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
-		return
-	}
+	id := c.Param("id")
 
 	var input service.UpdateServerInput
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -54,7 +49,7 @@ func (h *MCPServerHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if err := service.UpdateServer(uint(id), input); err != nil {
+	if err := service.UpdateServer(id, input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
 		return
 	}
@@ -63,13 +58,9 @@ func (h *MCPServerHandler) Update(c *gin.Context) {
 }
 
 func (h *MCPServerHandler) Delete(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
-		return
-	}
+	id := c.Param("id")
 
-	if err := service.DeleteServer(uint(id)); err != nil {
+	if err := service.DeleteServer(id); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
 		return
 	}

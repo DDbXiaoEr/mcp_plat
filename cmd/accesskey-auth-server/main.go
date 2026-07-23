@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
-	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -95,10 +94,10 @@ func setDefaults() {
 	}
 }
 
-var serverIDPattern = regexp.MustCompile(`/api/servers/(\d+)`)
+var serverIDPattern = regexp.MustCompile(`/api/servers/([0-9a-fA-F\-]+)`)
 
 type cacheEntry struct {
-	serverIDs []uint
+	serverIDs []string
 	expiresAt time.Time
 }
 
@@ -113,7 +112,7 @@ func newRoleCache() *roleCache {
 	}
 }
 
-func (c *roleCache) get(roleID uint) ([]uint, bool) {
+func (c *roleCache) get(roleID uint) ([]string, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -127,7 +126,7 @@ func (c *roleCache) get(roleID uint) ([]uint, bool) {
 	return entry.serverIDs, true
 }
 
-func (c *roleCache) set(roleID uint, serverIDs []uint) {
+func (c *roleCache) set(roleID uint, serverIDs []string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -137,22 +136,17 @@ func (c *roleCache) set(roleID uint, serverIDs []uint) {
 	}
 }
 
-func extractServerID(requestPath string) (uint, bool) {
+func extractServerID(requestPath string) (string, bool) {
 	if requestPath == "" {
-		return 0, false
+		return "", false
 	}
 
 	matches := serverIDPattern.FindStringSubmatch(requestPath)
 	if len(matches) < 2 {
-		return 0, false
+		return "", false
 	}
 
-	id, err := strconv.ParseUint(matches[1], 10, 64)
-	if err != nil {
-		return 0, false
-	}
-
-	return uint(id), true
+	return matches[1], true
 }
 
 type accessKeyServer struct {
@@ -199,7 +193,7 @@ func (s *accessKeyServer) Validate(ctx context.Context, req *plugin.ValidateRequ
 			}, nil
 		}
 
-		serverIDs = make([]uint, 0, len(roleServers))
+		serverIDs = make([]string, 0, len(roleServers))
 		for _, rs := range roleServers {
 			serverIDs = append(serverIDs, rs.ServerID)
 		}

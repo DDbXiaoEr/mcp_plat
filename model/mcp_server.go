@@ -3,7 +3,7 @@ package model
 import "time"
 
 type MCPServer struct {
-	ID         uint      `gorm:"primarykey" json:"id"`
+	ID         string    `gorm:"primaryKey;type:varchar(36)" json:"id"`
 	Name       string    `gorm:"not null;size:128" json:"name"`
 	Address    string    `gorm:"not null;size:512" json:"address"`
 	Department string    `gorm:"size:128" json:"department"`
