@@ -1,8 +1,7 @@
 # gRPC accesskey auth server 配置文件
-# 请修改 access_key_secret 为自定义密钥
-
-access_key_secret: a8k3x9m2p7q1r6w4v5y0b3n8t2h7j1k5 # 请修改为自定义密钥，需与主程序一致
-grpc_addr: :9090
+# 密钥需至少 32 字符随机值，需与主程序保持一致
+access_key_secret: changeme-please-generate-a-random-32-char-string
+grpc_addr: 127.0.0.1:9090
 
 database:
   type: sqlite

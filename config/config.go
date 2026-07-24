@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -50,56 +51,87 @@ func Load() {
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		fmt.Printf("config: %s not found, using defaults\n", configPath)
-		setDefaults()
-		return
+		fmt.Printf("config: %s not found, using env vars only\n", configPath)
+	} else {
+		if err := yaml.Unmarshal(data, AppConfig); err != nil {
+			log.Fatalf("config: failed to parse %s: %v", configPath, err)
+		}
 	}
 
-	if err := yaml.Unmarshal(data, AppConfig); err != nil {
-		fmt.Printf("config: failed to parse %s: %v, using defaults\n", configPath, err)
-		setDefaults()
-		return
-	}
+	applyEnvOverrides()
+	applySoftDefaults()
+	validateRequired()
+}
 
+func applyEnvOverrides() {
+	if v := os.Getenv("JWT_SECRET"); v != "" {
+		AppConfig.JWTSecret = v
+	}
+	if v := os.Getenv("ACCESS_KEY_SECRET"); v != "" {
+		AppConfig.AccessKeySecret = v
+	}
+	if v := os.Getenv("SERVER_PORT"); v != "" {
+		AppConfig.ServerPort = v
+	}
+	if v := os.Getenv("ADMIN_USERNAME"); v != "" {
+		AppConfig.Admin.Username = v
+	}
+	if v := os.Getenv("ADMIN_PASSWORD"); v != "" {
+		AppConfig.Admin.Password = v
+	}
+	if v := os.Getenv("DB_TYPE"); v != "" {
+		AppConfig.Database.Type = v
+	}
+	if v := os.Getenv("DB_POSTGRES_HOST"); v != "" {
+		AppConfig.Database.Postgres.Host = v
+	}
+	if v := os.Getenv("DB_POSTGRES_PORT"); v != "" {
+		AppConfig.Database.Postgres.Port = v
+	}
+	if v := os.Getenv("DB_POSTGRES_USER"); v != "" {
+		AppConfig.Database.Postgres.User = v
+	}
+	if v := os.Getenv("DB_POSTGRES_PASSWORD"); v != "" {
+		AppConfig.Database.Postgres.Password = v
+	}
+	if v := os.Getenv("DB_POSTGRES_DBNAME"); v != "" {
+		AppConfig.Database.Postgres.DBName = v
+	}
+	if v := os.Getenv("DB_SQLITE_PATH"); v != "" {
+		AppConfig.Database.SQLite.Path = v
+	}
+}
+
+func applySoftDefaults() {
 	if AppConfig.Database.Type == "" {
 		AppConfig.Database.Type = "sqlite"
 	}
 	if AppConfig.Database.SQLite.Path == "" {
 		AppConfig.Database.SQLite.Path = "data.db"
 	}
-	if AppConfig.JWTSecret == "" {
-		AppConfig.JWTSecret = "mcp-platform-secret-key"
-	}
-	if AppConfig.AccessKeySecret == "" {
-		// 请修改为自定义密钥
-		AppConfig.AccessKeySecret = "a8k3x9m2p7q1r6w4v5y0b3n8t2h7j1k5"
-	}
 	if AppConfig.ServerPort == "" {
 		AppConfig.ServerPort = "8080"
 	}
-	if AppConfig.Admin.Username == "" {
-		AppConfig.Admin.Username = "admin"
-	}
-	if AppConfig.Admin.Password == "" {
-		AppConfig.Admin.Password = "admin123"
-	}
 }
 
-func setDefaults() {
-	AppConfig = &Config{
-		Database: DatabaseConfig{
-			Type: "sqlite",
-			SQLite: SQLiteConfig{
-				Path: "data.db",
-			},
-		},
-		JWTSecret:       "mcp-platform-secret-key",
-		AccessKeySecret: "a8k3x9m2p7q1r6w4v5y0b3n8t2h7j1k5", // 请修改为自定义密钥
-		ServerPort:      "8080",
-		Admin: AdminConfig{
-			Username: "admin",
-			Password: "admin123",
-		},
+func validateRequired() {
+	if AppConfig.JWTSecret == "" {
+		log.Fatal("config: JWT_SECRET is required, set via config.yaml or JWT_SECRET env var")
+	}
+	if len(AppConfig.JWTSecret) < 32 {
+		log.Fatal("config: JWT_SECRET must be at least 32 characters")
+	}
+	if AppConfig.AccessKeySecret == "" {
+		log.Fatal("config: ACCESS_KEY_SECRET is required, set via config.yaml or ACCESS_KEY_SECRET env var")
+	}
+	if len(AppConfig.AccessKeySecret) < 32 {
+		log.Fatal("config: ACCESS_KEY_SECRET must be at least 32 characters")
+	}
+	if AppConfig.Admin.Username == "" {
+		log.Fatal("config: ADMIN_USERNAME is required, set via config.yaml or ADMIN_USERNAME env var")
+	}
+	if AppConfig.Admin.Password == "" {
+		log.Fatal("config: ADMIN_PASSWORD is required, set via config.yaml or ADMIN_PASSWORD env var")
 	}
 }
 

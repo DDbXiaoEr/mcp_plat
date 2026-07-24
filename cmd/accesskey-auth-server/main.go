@@ -54,22 +54,23 @@ func Load() {
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		fmt.Printf("config: %s not found, using defaults\n", configPath)
-		setDefaults()
-		return
+		fmt.Printf("config: %s not found, using env vars only\n", configPath)
+	} else {
+		if err := yaml.Unmarshal(data, AppConfig); err != nil {
+			fmt.Fprintf(os.Stderr, "config: failed to parse %s: %v\n", configPath, err)
+			os.Exit(1)
+		}
 	}
 
-	if err := yaml.Unmarshal(data, AppConfig); err != nil {
-		fmt.Printf("config: failed to parse %s: %v, using defaults\n", configPath, err)
-		setDefaults()
-		return
+	if v := os.Getenv("ACCESS_KEY_SECRET"); v != "" {
+		AppConfig.AccessKeySecret = v
+	}
+	if v := os.Getenv("GRPC_ADDR"); v != "" {
+		AppConfig.GrpcAddr = v
 	}
 
-	if AppConfig.AccessKeySecret == "" {
-		AppConfig.AccessKeySecret = "a8k3x9m2p7q1r6w4v5y0b3n8t2h7j1k5"
-	}
 	if AppConfig.GrpcAddr == "" {
-		AppConfig.GrpcAddr = ":9090"
+		AppConfig.GrpcAddr = "127.0.0.1:9090"
 	}
 	if AppConfig.Database.Type == "" {
 		AppConfig.Database.Type = "sqlite"
@@ -77,24 +78,19 @@ func Load() {
 	if AppConfig.Database.SQLite.Path == "" {
 		AppConfig.Database.SQLite.Path = "data.db"
 	}
-}
 
-func setDefaults() {
-	AppConfig = &Config{
-		AccessKeySecret: "a8k3x9m2p7q1r6w4v5y0b3n8t2h7j1k5",
-		GrpcAddr:        ":9090",
-		Database: DatabaseConfig{
-			Type: "sqlite",
-			SQLite: struct {
-				Path string `yaml:"path"`
-			}{
-				Path: "data.db",
-			},
-		},
+	if AppConfig.AccessKeySecret == "" {
+		fmt.Fprintf(os.Stderr, "config: ACCESS_KEY_SECRET is required\n")
+		os.Exit(1)
+	}
+	if len(AppConfig.AccessKeySecret) < 32 {
+		fmt.Fprintf(os.Stderr, "config: ACCESS_KEY_SECRET must be at least 32 characters\n")
+		os.Exit(1)
 	}
 }
 
-var serverIDPattern = regexp.MustCompile(`/api/servers/([0-9a-fA-F\-]+)`)
+var serverIDPattern = regexp.MustCompile(`^/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:/|$)`)
+var serverIDPatternGeneric = regexp.MustCompile(`^/([0-9a-fA-F\-]+)`)
 
 type cacheEntry struct {
 	serverIDs []string
@@ -141,12 +137,14 @@ func extractServerID(requestPath string) (string, bool) {
 		return "", false
 	}
 
-	matches := serverIDPattern.FindStringSubmatch(requestPath)
-	if len(matches) < 2 {
-		return "", false
+	if matches := serverIDPattern.FindStringSubmatch(requestPath); len(matches) >= 2 {
+		return matches[1], true
+	}
+	if matches := serverIDPatternGeneric.FindStringSubmatch(requestPath); len(matches) >= 2 {
+		return matches[1], true
 	}
 
-	return matches[1], true
+	return "", false
 }
 
 type accessKeyServer struct {
@@ -165,14 +163,16 @@ func (s *accessKeyServer) Validate(ctx context.Context, req *plugin.ValidateRequ
 		}, nil
 	}
 
-	serverID, hasServerID := extractServerID(req.RequestPath)
-
-	if !hasServerID {
-		return &plugin.ValidateResponse{
-			Valid:  true,
-			UserId: uint64(claims.UserID),
-			Role:   claims.Role,
-		}, nil
+	serverID := req.ServerId
+	if serverID == "" {
+		var ok bool
+		serverID, ok = extractServerID(req.RequestPath)
+		if !ok {
+			return &plugin.ValidateResponse{
+				Valid:   false,
+				Message: "无法识别请求的 MCP 服务器",
+			}, nil
+		}
 	}
 
 	var role model.Role

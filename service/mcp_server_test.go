@@ -68,7 +68,7 @@ func TestFetchToolsStreamableHTTP(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FetchTools 失败: %v", err)
 	}
-	if len(tools) != 2 || tools[0] != "tool_a" || tools[1] != "tool_b" {
+	if len(tools) != 2 || tools[0].Name != "tool_a" || tools[1].Name != "tool_b" {
 		t.Fatalf("工具列表不符合预期: %v", tools)
 	}
 }
@@ -81,7 +81,7 @@ func TestFetchToolsStreamableHTTPWithSSEResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FetchTools 失败: %v", err)
 	}
-	if len(tools) != 2 || tools[0] != "tool_a" || tools[1] != "tool_b" {
+	if len(tools) != 2 || tools[0].Name != "tool_a" || tools[1].Name != "tool_b" {
 		t.Fatalf("工具列表不符合预期: %v", tools)
 	}
 }

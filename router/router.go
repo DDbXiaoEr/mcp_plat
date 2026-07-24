@@ -19,7 +19,6 @@ func Setup() *gin.Engine {
 	settingHandler := handler.NewSettingHandler()
 
 	r.POST("/api/auth/login", authHandler.Login)
-	r.POST("/api/servers/publish", serverHandler.Publish)
 
 	auth := r.Group("/api")
 	auth.Use(middleware.AuthRequired())
@@ -32,17 +31,18 @@ func Setup() *gin.Engine {
 		auth.DELETE("/access-keys/:id", accessKeyHandler.Delete)
 
 		auth.GET("/history", historyHandler.List)
-
-		auth.GET("/servers", serverHandler.List)
-		auth.POST("/servers", serverHandler.Create)
-		auth.POST("/servers/fetch-tools", serverHandler.FetchTools)
-		auth.PUT("/servers/:id", serverHandler.Update)
-		auth.DELETE("/servers/:id", serverHandler.Delete)
 	}
 
 	admin := r.Group("/api")
 	admin.Use(middleware.AuthRequired(), middleware.AdminRequired())
 	{
+		admin.GET("/servers", serverHandler.List)
+		admin.POST("/servers", serverHandler.Create)
+		admin.POST("/servers/fetch-tools", serverHandler.FetchTools)
+		admin.PUT("/servers/:id", serverHandler.Update)
+		admin.DELETE("/servers/:id", serverHandler.Delete)
+		admin.POST("/servers/publish", serverHandler.Publish)
+
 		admin.GET("/roles", roleHandler.List)
 		admin.POST("/roles", roleHandler.Create)
 		admin.PUT("/roles/:id", roleHandler.Update)

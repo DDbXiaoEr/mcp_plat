@@ -16,6 +16,7 @@ import (
 type AccessKeyVerifyConf struct {
 	HeaderName string `json:"header_name"`
 	GrpcAddr   string `json:"grpc_addr"`
+	ServerID   string `json:"server_id"`
 }
 
 type AccessKeyVerify struct{}
@@ -62,7 +63,7 @@ func (p *AccessKeyVerify) RequestFilter(conf interface{}, w http.ResponseWriter,
 
 	requestPath := string(r.Path())
 
-	resp, err := plugin.ValidateAccessKey(ctx, grpcAddr, accessKey, requestPath)
+	resp, err := plugin.ValidateAccessKey(ctx, grpcAddr, accessKey, requestPath, cfg.ServerID)
 	if err != nil || !resp.Valid {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)

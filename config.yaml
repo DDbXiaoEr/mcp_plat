@@ -4,10 +4,6 @@ database:
   # type: sqlite
   # sqlite:
   #   path: data.db
-  #   max_idle_conns: 10
-  #   max_open_conns: 100
-  #   journal_mode: WAL
-  #   busy_timeout: 5000
 
   # -------- PostgreSQL --------
   type: postgres
@@ -15,13 +11,14 @@ database:
     host: localhost
     port: 5432
     user: root
-    password: "123456"
+    password: changeme
     dbname: mcp_platform
 
-jwt_secret: mcp-platform-secret-key
-access_key_secret: a8k3x9m2p7q1r6w4v5y0b3n8t2h7j1k5 # 请修改为自定义密钥
+# 密钥需至少 32 字符随机值，生产环境建议通过环境变量注入
+jwt_secret: changeme-please-generate-a-random-32-char-string
+access_key_secret: changeme-another-random-32-char-string
 server_port: 8080
 
 admin:
   username: admin
-  password: admin123
+  password: changeme

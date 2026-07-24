@@ -405,17 +405,23 @@ func PublishServers(input PublishInput) error {
 			"name":        srv.Name,
 			"uris":        []string{"/" + srv.ID, "/" + srv.ID + "/*"},
 			"upstream_id": srv.ID,
+			"plugins": map[string]interface{}{
+				"ext-plugin-pre-req": map[string]interface{}{
+					"accesskey_verify": map[string]interface{}{
+						"server_id": srv.ID,
+					},
+				},
+			},
 		}
 		if gw.DefaultPublishDomain != "" {
 			routeBody["host"] = gw.DefaultPublishDomain
 		}
 		if srv.Address != "" && srv.Address != "/" {
-			routeBody["plugins"] = map[string]interface{}{
-				"proxy-rewrite": map[string]interface{}{
-					"regex_uri": []string{
-						"^/" + srv.ID + "(.*)",
-						srv.Address + "$1",
-					},
+			plugins := routeBody["plugins"].(map[string]interface{})
+			plugins["proxy-rewrite"] = map[string]interface{}{
+				"regex_uri": []string{
+					"^/" + srv.ID + "(.*)",
+					srv.Address + "$1",
 				},
 			}
 		}
