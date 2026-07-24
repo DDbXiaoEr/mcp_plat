@@ -91,6 +91,8 @@ const roles = ref([])
 const defaultRoleId = ref('')
 const maxAccessKeys = ref(5)
 
+const apiGwConfigured = ref(false)
+
 const saving = ref('')
 const tips = ref({})
 
@@ -144,7 +146,10 @@ function savePlatformSettings() {
 function applySettings(data) {
   if (data.log) Object.assign(logForm.value, data.log)
   if (data.smtp) Object.assign(smtpForm.value, data.smtp)
-  if (data.api_gateway) Object.assign(apiGwForm.value, data.api_gateway)
+  if (data.api_gateway) {
+    apiGwConfigured.value = true
+    Object.assign(apiGwForm.value, data.api_gateway)
+  }
   if (data.auth) {
     if (data.auth.method) authMethod.value = data.auth.method
     if (data.auth.cas) Object.assign(casForm.value, data.auth.cas)
@@ -379,6 +384,10 @@ onMounted(async () => {
           <span class="collapse__arrow" :class="{ 'collapse__arrow--open': apiGwOpen }">▾</span>
         </button>
         <div v-show="apiGwOpen" class="collapse__body">
+          <div v-if="apiGwConfigured" class="api-gw-warning">
+            <span class="api-gw-warning__icon">!</span>
+            已检测到当前系统配置了 API 网关，修改保存后会覆盖当前配置。
+          </div>
           <label class="field">
             <span class="field__label">API 网关</span>
             <select v-model="apiGwForm.provider" class="field__input">
@@ -393,7 +402,16 @@ onMounted(async () => {
           </label>
 
           <label class="field">
-            <span class="field__label">网关 Admin API 地址</span>
+            <span class="field__label">
+              网关 Admin API 地址
+              <span class="field__help">
+                ?
+                <span class="field__tooltip">
+                  填写网关 Admin API 的基础地址，不要附带路径。例如填写
+                  <code>http://127.0.0.1:9180</code> 而非 <code>http://127.0.0.1:9180/apisix/admin</code>。
+                </span>
+              </span>
+            </span>
             <input
               v-model="apiGwForm.adminUrl"
               class="field__input"
@@ -849,6 +867,97 @@ onMounted(async () => {
 .field__muted {
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.field__help {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  margin-left: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: rgba(10, 61, 122, 0.08);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: help;
+  vertical-align: middle;
+}
+
+.field__tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  z-index: 10;
+}
+
+.field__tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--border);
+}
+
+.field__tooltip code {
+  padding: 1px 5px;
+  font-size: 11px;
+  color: var(--xauat-blue);
+  background: rgba(30, 95, 176, 0.1);
+  border-radius: 4px;
+}
+
+.field__help:hover .field__tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.api-gw-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+}
+
+.api-gw-warning__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: #f59e0b;
+  border-radius: 50%;
 }
 
 .switch {

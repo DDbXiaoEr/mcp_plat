@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { fetchServers, createServer, fetchServerTools, publishServers } from '../api.js'
+import { fetchServers, createServer, fetchServerTools, publishServers, deleteServer } from '../api.js'
 
 const servers = ref([])
 const loading = ref(true)
@@ -46,28 +46,57 @@ function select(server) {
   selected.value = server
 }
 
+function openDeleteConfirm(server) {
+  deleteTarget.value = server
+  showingDeleteConfirm.value = true
+}
+
+async function removeServer() {
+  if (!deleteTarget.value) return
+  deleting.value = true
+  try {
+    await deleteServer(deleteTarget.value.id)
+    servers.value = servers.value.filter((s) => s.id !== deleteTarget.value.id)
+    if (selectedId.value === deleteTarget.value.id) {
+      selectedId.value = ''
+      selected.value = null
+    }
+    showingDeleteConfirm.value = false
+    deleteTarget.value = null
+    alert('删除成功。请手动到 API 网关下线路由和上游规则。')
+  } catch {
+    // ignore
+  }
+  deleting.value = false
+}
+
 const selectedTools = computed(() => parseTools(selected.value?.tools))
 
 const showingCreate = ref(false)
 const createForm = ref({ name: '', address: '', service_address: '', department: '', protocol: 'SSE', tools: '' })
 const fetchingTools = ref(false)
 const fetchToolsError = ref('')
+const useHttps = ref(false)
 
 function openCreate() {
   createForm.value = { name: '', address: '', service_address: '', department: '', protocol: 'SSE', tools: '' }
   fetchToolsError.value = ''
+  useHttps.value = false
   showingCreate.value = true
 }
 
 async function fetchTools() {
-  const address = createForm.value.service_address.trim()
+  const host = createForm.value.service_address.trim()
+  const path = createForm.value.address.trim()
   fetchToolsError.value = ''
-  if (!address) {
+  if (!host) {
     fetchToolsError.value = '请先填写 MCP 服务地址'
     return
   }
   fetchingTools.value = true
   try {
+    const scheme = useHttps.value ? 'https://' : 'http://'
+    const address = scheme + host.replace(/\/+$/, '') + (path.startsWith('/') ? path : '/' + path)
     const data = await fetchServerTools({
       address,
       protocol: createForm.value.protocol
@@ -111,6 +140,10 @@ async function confirmCreate() {
     // ignore
   }
 }
+
+const showingDeleteConfirm = ref(false)
+const deleting = ref(false)
+const deleteTarget = ref(null)
 
 const showingPublish = ref(false)
 const publishSelected = ref([])
@@ -171,6 +204,12 @@ async function executePublish() {
     </div>
 
     <div class="server-list">
+      <div class="server-list__header">
+        <span class="server-list__header-cell server-list__name-col">名称</span>
+        <span class="server-list__header-cell server-list__uuid-col">UUID</span>
+        <span class="server-list__header-cell server-list__dept-col">部门</span>
+        <span class="server-list__header-cell server-list__action-col">操作</span>
+      </div>
       <button
         v-for="server in servers"
         :key="server.id"
@@ -179,11 +218,20 @@ async function executePublish() {
         type="button"
         @click="select(server)"
       >
-        <div class="server-list__info">
+        <div class="server-list__info server-list__name-col">
           <span class="server-list__name">{{ server.name }}</span>
-          <span class="server-list__uuid">{{ server.id }}</span>
         </div>
-        <span class="server-list__dept">{{ server.department }}</span>
+        <span class="server-list__uuid server-list__uuid-col">{{ server.id }}</span>
+        <span class="server-list__dept server-list__dept-col">{{ server.department }}</span>
+        <span class="server-list__action-col">
+          <button
+            class="server-list__del"
+            type="button"
+            @click.stop="openDeleteConfirm(server)"
+          >
+            删除
+          </button>
+        </span>
       </button>
     </div>
 
@@ -252,7 +300,16 @@ async function executePublish() {
               />
             </div>
             <div class="dialog__group">
-              <label class="dialog__label">MCP服务器URI路径</label>
+              <label class="dialog__label">
+                MCP服务器URI路径
+                <span class="dialog__help">
+                  ?
+                  <span class="dialog__tooltip">
+                    填写 MCP 提供服务的 URI，例如
+                    <code>192.168.1.100:8080/mcp</code> 的话就填写 <code>/mcp</code>。
+                  </span>
+                </span>
+              </label>
               <input
                 v-model="createForm.address"
                 class="dialog__input"
@@ -277,6 +334,21 @@ async function executePublish() {
                 type="text"
                 placeholder="192.168.1.100:8081"
               />
+            </div>
+            <div class="dialog__group">
+              <label class="dialog__label">连接方式</label>
+              <div class="dialog__toggle">
+                <button
+                  type="button"
+                  :class="['dialog__toggle-btn', { 'dialog__toggle-btn--active': !useHttps }]"
+                  @click="useHttps = false"
+                >HTTP</button>
+                <button
+                  type="button"
+                  :class="['dialog__toggle-btn', { 'dialog__toggle-btn--active': useHttps }]"
+                  @click="useHttps = true"
+                >HTTPS</button>
+              </div>
             </div>
             <div class="dialog__group">
               <label class="dialog__label">负责部门</label>
@@ -405,6 +477,31 @@ async function executePublish() {
           </div>
         </div>
       </div>
+      <div v-if="showingDeleteConfirm" class="dialog-overlay" @click.self="showingDeleteConfirm = false">
+        <div class="dialog">
+          <h2 class="dialog__title">确认删除</h2>
+          <p class="dialog__desc">
+            确定要删除 MCP 服务器「{{ deleteTarget?.name }}」吗？
+          </p>
+          <p class="dialog__warn">
+            注意：此操作仅从数据库中移除记录，不会自动从 API 网关下线服务器，请手动到 API 网关删除相关路由和上游规则。
+          </p>
+          <div class="dialog__actions">
+            <button class="btn btn--ghost" type="button" @click="showingDeleteConfirm = false">
+              取消
+            </button>
+            <button
+              class="btn btn--danger"
+              type="button"
+              :disabled="deleting"
+              @click="removeServer"
+            >
+              {{ deleting ? '删除中...' : '确认删除' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
     </Teleport>
   </section>
 </template>
@@ -475,6 +572,16 @@ async function executePublish() {
   border-color: rgba(10, 61, 122, 0.25);
 }
 
+.btn--danger {
+  color: #fff;
+  background: #c0392b;
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: #e74c3c;
+  transform: translateY(-1px);
+}
+
 .server-list {
   display: flex;
   flex-direction: column;
@@ -486,10 +593,43 @@ async function executePublish() {
   padding: 12px;
 }
 
+.server-list__header {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.server-list__header-cell {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.server-list__name-col {
+  flex: 0 0 160px;
+  min-width: 0;
+}
+
+.server-list__uuid-col {
+  flex: 0 0 320px;
+  margin-left: 24px;
+}
+
+.server-list__dept-col {
+  flex: 0 0 120px;
+  margin-left: 24px;
+}
+
+.server-list__action-col {
+  flex: 0 0 64px;
+  margin-left: 12px;
+}
+
 .server-list__item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 12px 16px;
   background: transparent;
   border: 1px solid var(--border);
@@ -501,8 +641,7 @@ async function executePublish() {
 
 .server-list__info {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
   min-width: 0;
 }
 
@@ -522,19 +661,31 @@ async function executePublish() {
 }
 
 .server-list__uuid {
-  font-size: 11px;
+  font-size: 12px;
   font-family: monospace;
   color: var(--text-muted);
-  opacity: 0.7;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 240px;
+  opacity: 0.75;
 }
 
 .server-list__dept {
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.server-list__del {
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: #c0392b;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.server-list__del:hover {
+  background: #e74c3c;
 }
 
 .drawer {
@@ -784,6 +935,30 @@ async function executePublish() {
   cursor: not-allowed;
 }
 
+.dialog__toggle {
+  display: flex;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.dialog__toggle-btn {
+  flex: 1;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+
+.dialog__toggle-btn--active {
+  color: #fff;
+  background: var(--xauat-blue);
+}
+
 .dialog__input {
   width: 100%;
   padding: 8px 14px;
@@ -822,6 +997,17 @@ async function executePublish() {
   font-size: 14px;
   color: var(--text-muted);
   margin-bottom: 16px;
+}
+
+.dialog__warn {
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #856404;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 10px;
+  margin-bottom: 8px;
 }
 
 .publish-list {

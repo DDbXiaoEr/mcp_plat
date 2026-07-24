@@ -92,7 +92,8 @@ func UpdateServer(id string, input UpdateServerInput) error {
 }
 
 func DeleteServer(id string) error {
-	result := database.DB.Delete(&model.MCPServer{}, id)
+	database.DB.Where("server_id = ?", id).Delete(&model.RoleServer{})
+	result := database.DB.Where("id = ?", id).Delete(&model.MCPServer{})
 	if result.RowsAffected == 0 {
 		return errors.New("MCP 服务器不存在")
 	}

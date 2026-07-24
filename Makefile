@@ -6,6 +6,7 @@ BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 LDFLAGS := -s -w -X main.Version=$(VERSION) -X main.GitCommit=$(GIT_COMMIT) -X main.BuildTime=$(BUILD_TIME)
 
 SERVER_OUT := mcp_plat-console
+EMBED_OUT := mcp_plat
 ACCESSKEY_SERVER_OUT := accesskey-auth-server
 APISIX_RUNNER_OUT := apisix-go-runner
 WEB_DIR := web
@@ -30,15 +31,15 @@ proto:
 
 build-embed: build-web
 	@echo "==> building standalone (embed web) version $(VERSION)"
-	go build -tags embed -ldflags "$(LDFLAGS)" -o $(SERVER_OUT) .
+	go build -tags embed -ldflags "$(LDFLAGS)" -o $(EMBED_OUT) .
 
 build-embed-windows: build-web
 	@echo "==> building standalone (embed web) windows-amd64 version $(VERSION)"
-	GOOS=windows GOARCH=amd64 go build -tags embed -ldflags "$(LDFLAGS)" -o $(SERVER_OUT)-windows-amd64.exe .
+	GOOS=windows GOARCH=amd64 go build -tags embed -ldflags "$(LDFLAGS)" -o $(EMBED_OUT)-windows-amd64.exe .
 
 build-embed-linux-arm64: build-web
 	@echo "==> building standalone (embed web) linux-arm64 version $(VERSION)"
-	GOOS=linux GOARCH=arm64 go build -tags embed -ldflags "$(LDFLAGS)" -o $(SERVER_OUT)-linux-arm64 .
+	GOOS=linux GOARCH=arm64 go build -tags embed -ldflags "$(LDFLAGS)" -o $(EMBED_OUT)-linux-arm64 .
 
 build-embed-all: build-embed build-embed-windows build-embed-linux-arm64
 
@@ -64,7 +65,7 @@ datagen:
 	@go run cmd/datagen/main.go -table $(TABLE) -count $(or $(COUNT),1)
 
 clean:
-	rm -f $(SERVER_OUT) $(SERVER_OUT)-windows-amd64.exe $(SERVER_OUT)-linux-arm64
+	rm -f $(SERVER_OUT) $(EMBED_OUT) $(EMBED_OUT)-windows-amd64.exe $(EMBED_OUT)-linux-arm64
 	rm -f $(ACCESSKEY_SERVER_OUT) $(APISIX_RUNNER_OUT)
 	rm -f plugin/accesskey.pb.go plugin/accesskey_grpc.pb.go
 	rm -rf tools/
