@@ -30,7 +30,7 @@
 | RBAC | PUT /api/users/:id | ✅ 已完成 | |
 | RBAC | DELETE /api/users/:id | ✅ 已完成 | |
 | 系统设置 | GET /api/settings | ✅ 已完成 | 前端已接入 |
-| 系统设置 | PUT /api/settings/:key | ✅ 已完成 | key: log / smtp / auth / user_ops / platform / api_gateway |
+| 系统设置 | PUT /api/settings/:key | ✅ 已完成 | key: log / smtp / auth / user_ops / platform / api_gateway / network_security |
 
 - ✅ 已完成
 - 🚧 开发中

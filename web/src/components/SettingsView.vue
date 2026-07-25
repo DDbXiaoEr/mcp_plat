@@ -8,6 +8,7 @@ const tab = ref('ops')
 const logOpen = ref(true)
 const smtpOpen = ref(true)
 const apiGwOpen = ref(true)
+const networkSecurityOpen = ref(true)
 const authOpen = ref(true)
 const userOpsOpen = ref(true)
 const platformOpen = ref(true)
@@ -47,6 +48,10 @@ const API_GW_PROVIDERS = [
   { key: 'kong', label: 'Kong' },
   { key: 'tyk', label: 'Tyk' }
 ]
+
+const networkSecurityForm = ref({
+  allowlist: ''
+})
 
 const authMethod = ref('cas')
 
@@ -122,6 +127,15 @@ function saveApiGwSettings() {
   saveSection('api_gateway', apiGwForm.value)
 }
 
+function saveNetworkSecuritySettings() {
+  saveSection('network_security', {
+    allowlist: networkSecurityForm.value.allowlist
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line !== '')
+  })
+}
+
 function saveAuthSettings() {
   saveSection('auth', {
     method: authMethod.value,
@@ -149,6 +163,9 @@ function applySettings(data) {
   if (data.api_gateway) {
     apiGwConfigured.value = true
     Object.assign(apiGwForm.value, data.api_gateway)
+  }
+  if (data.network_security && data.network_security.allowlist) {
+    networkSecurityForm.value.allowlist = data.network_security.allowlist.join('\n')
   }
   if (data.auth) {
     if (data.auth.method) authMethod.value = data.auth.method
@@ -444,6 +461,41 @@ onMounted(async () => {
             <span v-if="tips.api_gateway" class="save-tip">{{ tips.api_gateway }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'api_gateway'" @click="saveApiGwSettings">
               {{ saving === 'api_gateway' ? '保存中…' : '保存' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="collapse">
+        <button class="collapse__head" type="button" @click="networkSecurityOpen = !networkSecurityOpen">
+          <span class="collapse__title">网络安全</span>
+          <span class="collapse__arrow" :class="{ 'collapse__arrow--open': networkSecurityOpen }">▾</span>
+        </button>
+        <div v-show="networkSecurityOpen" class="collapse__body">
+          <label class="field">
+            <span class="field__label">
+              允许连接的内网 CIDR
+              <span class="field__help">
+                ?
+                <span class="field__tooltip">
+                  每行一个 CIDR 地址段，例如 <code>10.0.0.0/8</code>。<br />
+                  配置后，获取工具列表时将允许连接这些内网地址。<br />
+                  如需连接 MCP 服务器内网 IP，在此添加对应的地址段即可。
+                </span>
+              </span>
+            </span>
+            <textarea
+              v-model="networkSecurityForm.allowlist"
+              class="field__input field__textarea"
+              rows="5"
+              placeholder="10.0.0.0/8&#10;172.16.0.0/12&#10;192.168.1.0/24"
+            ></textarea>
+          </label>
+
+          <div class="collapse__actions">
+            <span v-if="tips.network_security" class="save-tip">{{ tips.network_security }}</span>
+            <button class="btn btn--primary" type="button" :disabled="saving === 'network_security'" @click="saveNetworkSecuritySettings">
+              {{ saving === 'network_security' ? '保存中…' : '保存' }}
             </button>
           </div>
         </div>
@@ -862,6 +914,13 @@ onMounted(async () => {
 .field__input:focus {
   border-color: var(--xauat-blue-light);
   box-shadow: 0 0 0 3px rgba(30, 95, 176, 0.12);
+}
+
+.field__textarea {
+  resize: vertical;
+  min-height: 100px;
+  font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
+  line-height: 1.6;
 }
 
 .field__muted {

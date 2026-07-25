@@ -25,7 +25,7 @@ func ListHistory(userID uint, query HistoryQuery) (*HistoryListOutput, error) {
 	if query.Page <= 0 {
 		query.Page = 1
 	}
-	if query.PageSize <= 0 {
+	if query.PageSize <= 0 || query.PageSize > 100 {
 		query.PageSize = 20
 	}
 

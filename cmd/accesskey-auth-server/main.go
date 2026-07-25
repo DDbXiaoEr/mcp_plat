@@ -157,6 +157,42 @@ func (s *accessKeyServer) Validate(ctx context.Context, req *plugin.ValidateRequ
 		}, nil
 	}
 
+	var ak model.AccessKey
+	if err := s.db.Where("key = ?", req.AccessKey).First(&ak).Error; err != nil {
+		return &plugin.ValidateResponse{
+			Valid:   false,
+			Message: "access key 不存在或已删除",
+		}, nil
+	}
+	if !ak.Enabled {
+		return &plugin.ValidateResponse{
+			Valid:   false,
+			Message: "access key 已被禁用",
+		}, nil
+	}
+	if ak.ExpiredAt != nil && time.Now().After(*ak.ExpiredAt) {
+		return &plugin.ValidateResponse{
+			Valid:   false,
+			Message: "access key 已过期",
+		}, nil
+	}
+
+	var user model.User
+	if err := s.db.First(&user, claims.UserID).Error; err != nil || user.Status == 0 {
+		return &plugin.ValidateResponse{
+			Valid:   false,
+			Message: "用户不存在或已被禁用",
+		}, nil
+	}
+
+	roleName := claims.Role
+	if user.RoleID != nil {
+		var currentRole model.Role
+		if err := s.db.First(&currentRole, *user.RoleID).Error; err == nil {
+			roleName = currentRole.Name
+		}
+	}
+
 	serverID := req.ServerId
 	if serverID == "" {
 		var ok bool
@@ -170,7 +206,7 @@ func (s *accessKeyServer) Validate(ctx context.Context, req *plugin.ValidateRequ
 	}
 
 	var role model.Role
-	if err := s.db.Where("name = ?", claims.Role).First(&role).Error; err != nil {
+	if err := s.db.Where("name = ?", roleName).First(&role).Error; err != nil {
 		return &plugin.ValidateResponse{
 			Valid:   false,
 			Message: "角色不存在",
@@ -200,7 +236,7 @@ func (s *accessKeyServer) Validate(ctx context.Context, req *plugin.ValidateRequ
 			return &plugin.ValidateResponse{
 				Valid:  true,
 				UserId: uint64(claims.UserID),
-				Role:   claims.Role,
+				Role:   roleName,
 			}, nil
 		}
 	}

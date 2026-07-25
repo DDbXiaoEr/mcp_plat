@@ -29,6 +29,7 @@ func (h *SettingHandler) Get(c *gin.Context) {
 func (h *SettingHandler) Save(c *gin.Context) {
 	key := c.Param("key")
 
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 1<<20)
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil || len(body) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})

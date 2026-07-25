@@ -9,6 +9,7 @@ SERVER_OUT := mcp_plat-console
 EMBED_OUT := mcp_plat
 ACCESSKEY_SERVER_OUT := accesskey-auth-server
 APISIX_RUNNER_OUT := apisix-go-runner
+ARCH ?= amd64
 WEB_DIR := web
 
 build: build-web build-embed
@@ -18,12 +19,12 @@ build-server:
 	go build -ldflags "$(LDFLAGS)" -o $(SERVER_OUT) .
 
 build-accesskey-auth-server: proto
-	@echo "==> building accesskey gRPC server"
-	go build -ldflags "$(LDFLAGS)" -o $(ACCESSKEY_SERVER_OUT) ./cmd/accesskey-auth-server/
+	@echo "==> building accesskey gRPC server (linux/$(ARCH))"
+	GOOS=linux GOARCH=$(ARCH) go build -ldflags "$(LDFLAGS)" -o $(ACCESSKEY_SERVER_OUT)-linux-$(ARCH) ./cmd/accesskey-auth-server/
 
 build-apisix-runner: proto
-	@echo "==> building APISIX go plugin runner"
-	go build -ldflags "$(LDFLAGS)" -o $(APISIX_RUNNER_OUT) ./cmd/apisix-runner/
+	@echo "==> building APISIX go plugin runner (linux/$(ARCH))"
+	GOOS=linux GOARCH=$(ARCH) go build -ldflags "$(LDFLAGS)" -o $(APISIX_RUNNER_OUT)-linux-$(ARCH) ./cmd/apisix-runner/
 
 proto:
 	@echo "==> generating protobuf code"
@@ -66,7 +67,7 @@ datagen:
 
 clean:
 	rm -f $(SERVER_OUT) $(EMBED_OUT) $(EMBED_OUT)-windows-amd64.exe $(EMBED_OUT)-linux-arm64
-	rm -f $(ACCESSKEY_SERVER_OUT) $(APISIX_RUNNER_OUT)
+	rm -f $(ACCESSKEY_SERVER_OUT)-linux-* $(APISIX_RUNNER_OUT)-linux-*
 	rm -f plugin/accesskey.pb.go plugin/accesskey_grpc.pb.go
 	rm -rf tools/
 	$(MAKE) -C $(WEB_DIR) clean

@@ -11,7 +11,7 @@ database:
     host: localhost
     port: 5432
     user: root
-    password: changeme
+    password: 123456
     dbname: mcp_platform
 
 # 密钥需至少 32 字符随机值，生产环境建议通过环境变量注入
@@ -21,4 +21,4 @@ server_port: 8080
 
 admin:
   username: admin
-  password: changeme
+  password: admin123

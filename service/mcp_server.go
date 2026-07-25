@@ -3,10 +3,12 @@ package service
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -17,6 +19,148 @@ import (
 
 	"github.com/google/uuid"
 )
+
+type NetworkSecuritySetting struct {
+	Allowlist []string `json:"allowlist"`
+}
+
+var privateNetworks = []*net.IPNet{
+	{IP: net.IPv4(127, 0, 0, 0), Mask: net.CIDRMask(8, 32)},     // loopback IPv4
+	{IP: net.IPv4(10, 0, 0, 0), Mask: net.CIDRMask(8, 32)},      // private A
+	{IP: net.IPv4(172, 16, 0, 0), Mask: net.CIDRMask(12, 32)},   // private B
+	{IP: net.IPv4(192, 168, 0, 0), Mask: net.CIDRMask(16, 32)},  // private C
+	{IP: net.IPv4(169, 254, 0, 0), Mask: net.CIDRMask(16, 32)},  // link-local
+	{IP: net.IPv4(224, 0, 0, 0), Mask: net.CIDRMask(4, 32)},     // multicast
+	{IP: net.IPv4(0, 0, 0, 0), Mask: net.CIDRMask(8, 32)},       // current network
+}
+
+func loadAllowedCIDRs() []*net.IPNet {
+	var ns NetworkSecuritySetting
+	if err := GetSetting("network_security", &ns); err != nil {
+		return nil
+	}
+	var cidrs []*net.IPNet
+	for _, cidrStr := range ns.Allowlist {
+		cidrStr = strings.TrimSpace(cidrStr)
+		if cidrStr == "" {
+			continue
+		}
+		_, cidr, err := net.ParseCIDR(cidrStr)
+		if err != nil {
+			continue
+		}
+		cidrs = append(cidrs, cidr)
+	}
+	return cidrs
+}
+
+func isSafeIP(ip net.IP, allowedCIDRs []*net.IPNet) bool {
+	if ip == nil {
+		return false
+	}
+	for _, cidr := range allowedCIDRs {
+		if cidr.Contains(ip) {
+			return true
+		}
+	}
+	if ip.IsLoopback() {
+		return true
+	}
+	if ip.IsPrivate() || ip.IsLinkLocalMulticast() ||
+		ip.IsLinkLocalUnicast() || ip.IsMulticast() || ip.IsUnspecified() {
+		return false
+	}
+	for _, n := range privateNetworks {
+		if n.Contains(ip) {
+			return false
+		}
+	}
+	return true
+}
+
+func safeDialContext(dialer *net.Dialer, allowedCIDRs []*net.IPNet) func(ctx context.Context, network, addr string) (net.Conn, error) {
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(addr)
+		if err != nil {
+			host = addr
+			port = ""
+		}
+
+		ips, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
+		if err != nil {
+			return nil, fmt.Errorf("DNS 解析失败: %w", err)
+		}
+		for _, ip := range ips {
+			if !isSafeIP(ip, allowedCIDRs) {
+				return nil, fmt.Errorf("拒绝连接到内网地址: %s", ip.String())
+			}
+		}
+
+		if port != "" {
+			addr = net.JoinHostPort(host, port)
+		}
+		return dialer.DialContext(ctx, network, addr)
+	}
+}
+
+func safeCheckRedirect(client *http.Client, allowedCIDRs []*net.IPNet) func(req *http.Request, via []*http.Request) error {
+	return func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 5 {
+			return errors.New("重定向次数过多")
+		}
+
+		host := req.URL.Hostname()
+		ips, err := net.DefaultResolver.LookupIP(context.Background(), "ip", host)
+		if err != nil {
+			return fmt.Errorf("重定向目标 DNS 解析失败")
+		}
+		for _, ip := range ips {
+			if !isSafeIP(ip, allowedCIDRs) {
+				return fmt.Errorf("拒绝重定向到内网地址")
+			}
+		}
+		return nil
+	}
+}
+
+func safeHTTPClient(timeout time.Duration, allowedCIDRs []*net.IPNet) *http.Client {
+	dialer := &net.Dialer{Timeout: timeout}
+	c := &http.Client{
+		Timeout: timeout,
+		Transport: &http.Transport{
+			DialContext:           safeDialContext(dialer, allowedCIDRs),
+			MaxIdleConns:          10,
+			IdleConnTimeout:       30 * time.Second,
+			DisableCompression:    false,
+			ResponseHeaderTimeout: timeout,
+			ExpectContinueTimeout: 2 * time.Second,
+		},
+	}
+	c.CheckRedirect = safeCheckRedirect(c, allowedCIDRs)
+	return c
+}
+
+func validateMCPAddress(raw string, allowedCIDRs []*net.IPNet) (string, error) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", fmt.Errorf("URL 解析失败: %w", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return "", errors.New("仅支持 http/https 协议")
+	}
+
+	host := u.Hostname()
+	ips, err := net.DefaultResolver.LookupIP(context.Background(), "ip", host)
+	if err != nil {
+		return "", fmt.Errorf("DNS 解析失败: %w", err)
+	}
+	for _, ip := range ips {
+		if !isSafeIP(ip, allowedCIDRs) {
+			return "", fmt.Errorf("不允许连接到内网地址")
+		}
+	}
+	return raw, nil
+}
 
 type CreateServerInput struct {
 	Name           string `json:"name" binding:"required"`
@@ -139,6 +283,8 @@ func FetchTools(input FetchToolsInput) ([]toolInfo, error) {
 		protocol = "Streamable HTTP"
 	}
 
+	allowedCIDRs := loadAllowedCIDRs()
+
 	address := input.Address
 	if !strings.Contains(address, "://") {
 		if strings.HasPrefix(address, "/") {
@@ -152,11 +298,16 @@ func FetchTools(input FetchToolsInput) ([]toolInfo, error) {
 		}
 	}
 
+	validatedAddr, err := validateMCPAddress(address, allowedCIDRs)
+	if err != nil {
+		return nil, err
+	}
+
 	switch protocol {
 	case "Streamable HTTP":
-		return fetchToolsStreamableHTTP(address)
+		return fetchToolsStreamableHTTP(validatedAddr, allowedCIDRs)
 	case "SSE":
-		return fetchToolsSSE(address)
+		return fetchToolsSSE(validatedAddr, allowedCIDRs)
 	case "stdio":
 		return nil, errors.New("stdio 协议暂不支持远程获取工具列表")
 	default:
@@ -164,8 +315,8 @@ func FetchTools(input FetchToolsInput) ([]toolInfo, error) {
 	}
 }
 
-func fetchToolsStreamableHTTP(address string) ([]toolInfo, error) {
-	client := &http.Client{Timeout: 15 * time.Second}
+func fetchToolsStreamableHTTP(address string, allowedCIDRs []*net.IPNet) ([]toolInfo, error) {
+	client := safeHTTPClient(15*time.Second, allowedCIDRs)
 
 	initReq := jsonRPCRequest{
 		JSONRPC: "2.0",
@@ -252,8 +403,8 @@ func postJSONRPC(client *http.Client, address, sessionID string, reqBody jsonRPC
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-		respBody, _ := io.ReadAll(resp.Body)
-		return nil, "", fmt.Errorf("MCP 服务器返回错误状态 %d: %s", resp.StatusCode, string(respBody))
+		io.Copy(io.Discard, resp.Body)
+		return nil, "", fmt.Errorf("MCP 服务器返回错误状态 %d", resp.StatusCode)
 	}
 
 	newSessionID := resp.Header.Get("Mcp-Session-Id")
@@ -295,8 +446,8 @@ func readSSEData(body io.Reader) ([]byte, error) {
 	return nil, errors.New("未从 SSE 响应中读取到数据")
 }
 
-func fetchToolsSSE(address string) ([]toolInfo, error) {
-	client := &http.Client{Timeout: 15 * time.Second}
+func fetchToolsSSE(address string, allowedCIDRs []*net.IPNet) ([]toolInfo, error) {
+	client := safeHTTPClient(15*time.Second, allowedCIDRs)
 
 	resp, err := client.Get(address)
 	if err != nil {
@@ -320,17 +471,18 @@ func fetchToolsSSE(address string) ([]toolInfo, error) {
 						messageEndpoint = strings.TrimSpace(messageEndpoint)
 
 						parsed, err := url.Parse(messageEndpoint)
-						if err != nil || !parsed.IsAbs() {
-							base, err := url.Parse(address)
-							if err != nil {
-								return nil, fmt.Errorf("解析 SSE 端点地址失败")
-							}
-							endpointURL, err := url.Parse(messageEndpoint)
-							if err != nil {
-								return nil, fmt.Errorf("解析 SSE 端点相对路径失败")
-							}
-							messageEndpoint = base.ResolveReference(endpointURL).String()
+						if err != nil || parsed.IsAbs() {
+							return nil, errors.New("SSE 端点不允许使用绝对 URL")
 						}
+						base, err := url.Parse(address)
+						if err != nil {
+							return nil, errors.New("解析 SSE 端点地址失败")
+						}
+						endpointURL, err := url.Parse(messageEndpoint)
+						if err != nil {
+							return nil, errors.New("解析 SSE 端点相对路径失败")
+						}
+						messageEndpoint = base.ResolveReference(endpointURL).String()
 					}
 				}
 				break
@@ -346,7 +498,7 @@ func fetchToolsSSE(address string) ([]toolInfo, error) {
 		return nil, errors.New("未能获取 SSE 消息端点")
 	}
 
-	tools, err := fetchToolsStreamableHTTP(messageEndpoint)
+	tools, err := fetchToolsStreamableHTTP(messageEndpoint, allowedCIDRs)
 	if err != nil {
 		return nil, fmt.Errorf("通过 SSE 端点获取工具列表失败: %w", err)
 	}
@@ -405,23 +557,17 @@ func PublishServers(input PublishInput) error {
 			"name":        srv.Name,
 			"uris":        []string{"/" + srv.ID, "/" + srv.ID + "/*"},
 			"upstream_id": srv.ID,
-			"plugins": map[string]interface{}{
-				"ext-plugin-pre-req": map[string]interface{}{
-					"accesskey_verify": map[string]interface{}{
-						"server_id": srv.ID,
-					},
-				},
-			},
 		}
 		if gw.DefaultPublishDomain != "" {
 			routeBody["host"] = gw.DefaultPublishDomain
 		}
 		if srv.Address != "" && srv.Address != "/" {
-			plugins := routeBody["plugins"].(map[string]interface{})
-			plugins["proxy-rewrite"] = map[string]interface{}{
-				"regex_uri": []string{
-					"^/" + srv.ID + "(.*)",
-					srv.Address + "$1",
+			routeBody["plugins"] = map[string]interface{}{
+				"proxy-rewrite": map[string]interface{}{
+					"regex_uri": []string{
+						"^/" + srv.ID + "(.*)",
+						srv.Address + "$1",
+					},
 				},
 			}
 		}
@@ -460,8 +606,8 @@ func putAPISIXAdmin(client *http.Client, adminURL, adminKey, apiPath string, bod
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("APISIX 返回错误 (status=%d): %s", resp.StatusCode, string(respBody))
+		io.Copy(io.Discard, resp.Body)
+		return fmt.Errorf("APISIX 返回错误 (status=%d)", resp.StatusCode)
 	}
 
 	return nil

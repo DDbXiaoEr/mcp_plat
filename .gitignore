@@ -18,8 +18,8 @@ vendor/
 
 # compiled binary
 mcp_plat-console
-/accesskey-auth-server
-apisix-go-runner
+accesskey-auth-server-*
+apisix-go-runner-*
 datagen
 tools/
 

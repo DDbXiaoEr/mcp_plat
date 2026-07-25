@@ -765,6 +765,9 @@ GET /api/settings
       "adminUrl": "http://127.0.0.1:9180",
       "adminKey": "edd1c9f034335f136f87ad84b625c8f1",
       "defaultPublishDomain": "mcp.xauat.edu.cn"
+    },
+    "network_security": {
+      "allowlist": ["10.0.0.0/8", "172.16.0.0/12", "192.168.1.0/24"]
     }
   }
 }
@@ -780,7 +783,7 @@ PUT /api/settings/:key
 
 | 参数 | 说明 |
 |------|------|
-| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `api_gateway` |
+| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `api_gateway` / `network_security` |
 
 **请求参数（JSON Body）：**
 
@@ -842,6 +845,6 @@ PUT /api/settings/:key
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| key | string (PK) | 设置项分组（log / smtp / auth / user_ops / platform / api_gateway） |
+| key | string (PK) | 设置项分组（log / smtp / auth / user_ops / platform / api_gateway / network_security） |
 | value | text | 该分组的 JSON 内容 |
 | updated_at | datetime | 更新时间 |
