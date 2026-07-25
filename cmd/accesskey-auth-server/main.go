@@ -54,19 +54,13 @@ func Load() {
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		fmt.Printf("config: %s not found, using env vars only\n", configPath)
-	} else {
-		if err := yaml.Unmarshal(data, AppConfig); err != nil {
-			fmt.Fprintf(os.Stderr, "config: failed to parse %s: %v\n", configPath, err)
-			os.Exit(1)
-		}
+		fmt.Fprintf(os.Stderr, "config: %s not found\n", configPath)
+		os.Exit(1)
 	}
 
-	if v := os.Getenv("ACCESS_KEY_SECRET"); v != "" {
-		AppConfig.AccessKeySecret = v
-	}
-	if v := os.Getenv("GRPC_ADDR"); v != "" {
-		AppConfig.GrpcAddr = v
+	if err := yaml.Unmarshal(data, AppConfig); err != nil {
+		fmt.Fprintf(os.Stderr, "config: failed to parse %s: %v\n", configPath, err)
+		os.Exit(1)
 	}
 
 	if AppConfig.GrpcAddr == "" {
@@ -80,11 +74,11 @@ func Load() {
 	}
 
 	if AppConfig.AccessKeySecret == "" {
-		fmt.Fprintf(os.Stderr, "config: ACCESS_KEY_SECRET is required\n")
+		fmt.Fprintf(os.Stderr, "config: access_key_secret is required in grpc_server.yaml\n")
 		os.Exit(1)
 	}
 	if len(AppConfig.AccessKeySecret) < 32 {
-		fmt.Fprintf(os.Stderr, "config: ACCESS_KEY_SECRET must be at least 32 characters\n")
+		fmt.Fprintf(os.Stderr, "config: access_key_secret must be at least 32 characters\n")
 		os.Exit(1)
 	}
 }

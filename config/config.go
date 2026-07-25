@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -51,55 +50,15 @@ func Load() {
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		fmt.Printf("config: %s not found, using env vars only\n", configPath)
-	} else {
-		if err := yaml.Unmarshal(data, AppConfig); err != nil {
-			log.Fatalf("config: failed to parse %s: %v", configPath, err)
-		}
+		log.Fatalf("config: %s not found", configPath)
 	}
 
-	applyEnvOverrides()
+	if err := yaml.Unmarshal(data, AppConfig); err != nil {
+		log.Fatalf("config: failed to parse %s: %v", configPath, err)
+	}
+
 	applySoftDefaults()
 	validateRequired()
-}
-
-func applyEnvOverrides() {
-	if v := os.Getenv("JWT_SECRET"); v != "" {
-		AppConfig.JWTSecret = v
-	}
-	if v := os.Getenv("ACCESS_KEY_SECRET"); v != "" {
-		AppConfig.AccessKeySecret = v
-	}
-	if v := os.Getenv("SERVER_PORT"); v != "" {
-		AppConfig.ServerPort = v
-	}
-	if v := os.Getenv("ADMIN_USERNAME"); v != "" {
-		AppConfig.Admin.Username = v
-	}
-	if v := os.Getenv("ADMIN_PASSWORD"); v != "" {
-		AppConfig.Admin.Password = v
-	}
-	if v := os.Getenv("DB_TYPE"); v != "" {
-		AppConfig.Database.Type = v
-	}
-	if v := os.Getenv("DB_POSTGRES_HOST"); v != "" {
-		AppConfig.Database.Postgres.Host = v
-	}
-	if v := os.Getenv("DB_POSTGRES_PORT"); v != "" {
-		AppConfig.Database.Postgres.Port = v
-	}
-	if v := os.Getenv("DB_POSTGRES_USER"); v != "" {
-		AppConfig.Database.Postgres.User = v
-	}
-	if v := os.Getenv("DB_POSTGRES_PASSWORD"); v != "" {
-		AppConfig.Database.Postgres.Password = v
-	}
-	if v := os.Getenv("DB_POSTGRES_DBNAME"); v != "" {
-		AppConfig.Database.Postgres.DBName = v
-	}
-	if v := os.Getenv("DB_SQLITE_PATH"); v != "" {
-		AppConfig.Database.SQLite.Path = v
-	}
 }
 
 func applySoftDefaults() {
@@ -116,22 +75,22 @@ func applySoftDefaults() {
 
 func validateRequired() {
 	if AppConfig.JWTSecret == "" {
-		log.Fatal("config: JWT_SECRET is required, set via config.yaml or JWT_SECRET env var")
+		log.Fatal("config: jwt_secret is required in config.yaml")
 	}
 	if len(AppConfig.JWTSecret) < 32 {
-		log.Fatal("config: JWT_SECRET must be at least 32 characters")
+		log.Fatal("config: jwt_secret must be at least 32 characters")
 	}
 	if AppConfig.AccessKeySecret == "" {
-		log.Fatal("config: ACCESS_KEY_SECRET is required, set via config.yaml or ACCESS_KEY_SECRET env var")
+		log.Fatal("config: access_key_secret is required in config.yaml")
 	}
 	if len(AppConfig.AccessKeySecret) < 32 {
-		log.Fatal("config: ACCESS_KEY_SECRET must be at least 32 characters")
+		log.Fatal("config: access_key_secret must be at least 32 characters")
 	}
 	if AppConfig.Admin.Username == "" {
-		log.Fatal("config: ADMIN_USERNAME is required, set via config.yaml or ADMIN_USERNAME env var")
+		log.Fatal("config: admin.username is required in config.yaml")
 	}
 	if AppConfig.Admin.Password == "" {
-		log.Fatal("config: ADMIN_PASSWORD is required, set via config.yaml or ADMIN_PASSWORD env var")
+		log.Fatal("config: admin.password is required in config.yaml")
 	}
 }
 
