@@ -149,6 +149,7 @@ const showingPublish = ref(false)
 const publishSelected = ref([])
 const showingPublishConfirm = ref(false)
 const publishing = ref(false)
+const enableAuth = ref(false)
 
 const publishTargets = computed(() =>
   servers.value.filter((s) => publishSelected.value.includes(s.id))
@@ -156,6 +157,7 @@ const publishTargets = computed(() =>
 
 function openPublish() {
   publishSelected.value = []
+  enableAuth.value = false
   showingPublish.value = true
 }
 
@@ -178,7 +180,7 @@ function backToPublish() {
 async function executePublish() {
   publishing.value = true
   try {
-    await publishServers(publishSelected.value)
+    await publishServers(publishSelected.value, enableAuth.value)
     alert('发布成功')
     showingPublishConfirm.value = false
     await loadServers()
@@ -418,7 +420,16 @@ async function executePublish() {
               />
               <span class="publish-list__name">{{ server.name }}</span>
               <span class="publish-list__addr">{{ server.address }}</span>
+             </label>
+          </div>
+          <div class="publish-auth">
+            <label class="publish-auth__label">
+              <input type="checkbox" v-model="enableAuth" />
+              <span class="publish-auth__text">启用 Access Key 认证</span>
             </label>
+            <p class="publish-auth__hint">
+              启用后请求本 MCP 服务时需要携带有效的 access key
+            </p>
           </div>
           <div class="dialog__actions">
             <button class="btn btn--ghost" type="button" @click="showingPublish = false">
@@ -459,6 +470,12 @@ async function executePublish() {
               <div class="publish-preview__row">
                 <span class="publish-preview__label">后端地址</span>
                 <span class="publish-preview__value">{{ server.service_address || '未填写' }}</span>
+              </div>
+              <div class="publish-preview__row">
+                <span class="publish-preview__label">认证状态</span>
+                <span class="publish-preview__value" :class="{ 'publish-preview__auth-on': enableAuth }">
+                  {{ enableAuth ? '已启用 Access Key 认证' : '未启用' }}
+                </span>
               </div>
             </div>
           </div>
@@ -1097,5 +1114,47 @@ async function executePublish() {
   color: var(--text);
   word-break: break-all;
   text-align: right;
+}
+
+.publish-preview__auth-on {
+  color: var(--xauat-blue);
+  font-weight: 600;
+}
+
+.publish-auth {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.publish-auth__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.publish-auth__label input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--xauat-blue);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.publish-auth__text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.publish-auth__hint {
+  margin-top: 6px;
+  margin-left: 24px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 </style>

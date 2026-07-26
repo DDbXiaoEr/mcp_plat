@@ -304,18 +304,20 @@ POST /api/servers
 POST /api/servers/publish
 ```
 
-> ⏳ 待实现。所有接口均需认证。
+> 需管理员权限。
 
 **请求参数（JSON Body）：**
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| server_ids | []uint | 是 | 要发布的 MCP 服务器 ID 列表 |
+| server_ids | []string | 是 | 要发布的 MCP 服务器 ID 列表 |
+| enable_auth | bool | 否 | 是否启用 Access Key 认证（默认 false），启用后路由会下发 accesskey_verify 插件 |
 
 **请求示例：**
 ```json
 {
-  "server_ids": [1, 2, 5]
+  "server_ids": ["uuid-1", "uuid-2"],
+  "enable_auth": true
 }
 ```
 
@@ -327,7 +329,7 @@ POST /api/servers/publish
 }
 ```
 
-**说明：** 后端根据已配置的 API 网关设置（`api_gateway` 分组），将选中的 MCP 服务器路由注册到 API 网关中。需先配置网关的 Admin API 地址和 Key。
+**说明：** 后端根据已配置的 API 网关设置（`api_gateway` 分组），将选中的 MCP 服务器路由注册到 API 网关中。需先配置网关的 Admin API 地址和 Key。若启用认证，还需配置 `authGrpcAddr` 指向 accesskey-auth-server 的 gRPC 地址。
 
 ### 4.6 获取 MCP 服务器工具列表
 
@@ -764,7 +766,8 @@ GET /api/settings
       "provider": "apisix",
       "adminUrl": "http://127.0.0.1:9180",
       "adminKey": "edd1c9f034335f136f87ad84b625c8f1",
-      "defaultPublishDomain": "mcp.xauat.edu.cn"
+      "defaultPublishDomain": "mcp.xauat.edu.cn",
+      "authGrpcAddr": ":9090"
     },
     "network_security": {
       "allowlist": ["10.0.0.0/8", "172.16.0.0/12", "192.168.1.0/24"]

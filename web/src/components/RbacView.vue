@@ -86,7 +86,6 @@ async function confirmRole() {
     description: roleForm.value.description.trim(),
     server_ids: Object.keys(roleForm.value.servers)
       .filter((k) => roleForm.value.servers[k])
-      .map(Number)
   }
   if (!body.name) return
   try {

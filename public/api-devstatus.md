@@ -18,7 +18,7 @@
 | MCP 服务器 | PUT /api/servers/:id | ✅ 已完成 | 新增 service_address 字段（IP:端口） |
 | MCP 服务器 | DELETE /api/servers/:id | ✅ 已完成 | |
 | MCP 服务器 | POST /api/servers/fetch-tools | ✅ 已完成 | 前端已接入，返回 `[{name, description}]` 格式 |
-| MCP 服务器 | POST /api/servers/publish | ✅ 已完成 | 发布选中的服务器到 APISIX 网关 |
+| MCP 服务器 | POST /api/servers/publish | ✅ 已完成 | 支持 enable_auth 选项决定是否下发 accesskey_verify 插件 |
 | RBAC | GET /api/roles | ✅ 已完成 | |
 | RBAC | POST /api/roles | ✅ 已完成 | |
 | RBAC | PUT /api/roles/:id | ✅ 已完成 | |

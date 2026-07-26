@@ -507,7 +507,8 @@ func fetchToolsSSE(address string, allowedCIDRs []*net.IPNet) ([]toolInfo, error
 }
 
 type PublishInput struct {
-	ServerIDs []string `json:"server_ids" binding:"required"`
+	ServerIDs  []string `json:"server_ids" binding:"required"`
+	EnableAuth bool     `json:"enable_auth"`
 }
 
 type ApiGatewaySetting struct {
@@ -515,6 +516,7 @@ type ApiGatewaySetting struct {
 	AdminURL             string `json:"adminUrl"`
 	AdminKey             string `json:"adminKey"`
 	DefaultPublishDomain string `json:"defaultPublishDomain"`
+	AuthGrpcAddr         string `json:"authGrpcAddr"`
 }
 
 func PublishServers(input PublishInput) error {
@@ -561,15 +563,34 @@ func PublishServers(input PublishInput) error {
 		if gw.DefaultPublishDomain != "" {
 			routeBody["host"] = gw.DefaultPublishDomain
 		}
+
+		plugins := map[string]interface{}{}
 		if srv.Address != "" && srv.Address != "/" {
-			routeBody["plugins"] = map[string]interface{}{
-				"proxy-rewrite": map[string]interface{}{
-					"regex_uri": []string{
-						"^/" + srv.ID + "(.*)",
-						srv.Address + "$1",
+			plugins["proxy-rewrite"] = map[string]interface{}{
+				"regex_uri": []string{
+					"^/" + srv.ID + "(.*)",
+					srv.Address + "$1",
+				},
+			}
+		}
+		if input.EnableAuth {
+			if gw.AuthGrpcAddr == "" {
+				errs = append(errs, fmt.Sprintf("%s: 启用认证但未配置 gRPC 校验地址", srv.Name))
+				continue
+			}
+			authValue := fmt.Sprintf(`{"header_name":"X-Access-Key","grpc_addr":"%s","server_id":"%s"}`,
+				gw.AuthGrpcAddr, srv.ID)
+			plugins["ext-plugin-pre-req"] = map[string]interface{}{
+				"conf": []map[string]interface{}{
+					{
+						"name":  "accesskey_verify",
+						"value": authValue,
 					},
 				},
 			}
+		}
+		if len(plugins) > 0 {
+			routeBody["plugins"] = plugins
 		}
 
 		if err := putAPISIXAdmin(client, gw.AdminURL, gw.AdminKey, "/apisix/admin/routes/"+srv.ID, routeBody); err != nil {

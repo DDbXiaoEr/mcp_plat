@@ -457,6 +457,26 @@ onMounted(async () => {
             />
           </label>
 
+          <label class="field">
+            <span class="field__label">
+              Access Key 认证 gRPC 地址
+              <span class="field__help">
+                ?
+                <span class="field__tooltip">
+                  对应 accesskey-auth-server 的 gRPC 监听地址，例如
+                  <code>:9090</code> 或 <code>127.0.0.1:9090</code>。
+                  发布时若启用认证，将下发 accesskey_verify 插件并指向该地址。
+                </span>
+              </span>
+            </span>
+            <input
+              v-model="apiGwForm.authGrpcAddr"
+              class="field__input"
+              type="text"
+              placeholder=":9090"
+            />
+          </label>
+
           <div class="collapse__actions">
             <span v-if="tips.api_gateway" class="save-tip">{{ tips.api_gateway }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'api_gateway'" @click="saveApiGwSettings">

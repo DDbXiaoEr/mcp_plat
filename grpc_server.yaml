@@ -1,9 +1,0 @@
-# gRPC accesskey auth server 配置文件
-# 密钥需至少 32 字符随机值，需与主程序保持一致
-access_key_secret: changeme-please-generate-a-random-32-char-string
-grpc_addr: :9090
-
-database:
-  type: sqlite
-  sqlite:
-    path: data.db

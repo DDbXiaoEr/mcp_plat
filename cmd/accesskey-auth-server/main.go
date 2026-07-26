@@ -47,7 +47,7 @@ var AppConfig *Config
 func Load() {
 	AppConfig = &Config{}
 
-	configPath := "grpc_server.yaml"
+	configPath := "accesskey_auth_server.yml"
 	if p := os.Getenv("GRPC_CONFIG_PATH"); p != "" {
 		configPath = p
 	}
@@ -74,7 +74,7 @@ func Load() {
 	}
 
 	if AppConfig.AccessKeySecret == "" {
-		fmt.Fprintf(os.Stderr, "config: access_key_secret is required in grpc_server.yaml\n")
+		fmt.Fprintf(os.Stderr, "config: access_key_secret is required in accesskey_auth_server.yml\n")
 		os.Exit(1)
 	}
 	if len(AppConfig.AccessKeySecret) < 32 {
@@ -299,7 +299,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(grpc.UnaryInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		fmt.Printf("[accesskey-auth] 收到请求 method=%s\n", info.FullMethod)
+		return handler(ctx, req)
+	}))
 	plugin.RegisterAccessKeyServiceServer(srv, &accessKeyServer{
 		secret: []byte(AppConfig.AccessKeySecret),
 		db:     db,
