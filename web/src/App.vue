@@ -1,6 +1,6 @@
 <script setup>
-import { computed, watch } from 'vue'
-import { auth } from './stores/auth.js'
+import { computed, watch, onMounted, ref } from 'vue'
+import { auth, casLogin } from './stores/auth.js'
 import { nav, resetNav } from './stores/nav.js'
 import LoginView from './components/LoginView.vue'
 import TheHeader from './components/TheHeader.vue'
@@ -27,6 +27,24 @@ const views = {
 const currentView = computed(() => views[nav.active] || WelcomeView)
 
 watch(() => auth.user, () => resetNav())
+
+const casError = ref('')
+
+onMounted(async () => {
+  const params = new URLSearchParams(window.location.search)
+  const ticket = params.get('ticket')
+  if (ticket && !auth.user) {
+    const serviceUrl = window.location.origin + window.location.pathname
+    const result = await casLogin(ticket, serviceUrl)
+    if (!result.ok) {
+      casError.value = result.message
+    } else {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('ticket')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }
+})
 </script>
 
 <template>

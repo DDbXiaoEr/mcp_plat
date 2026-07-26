@@ -1,11 +1,22 @@
 <script setup>
-import { ref } from 'vue'
-import { login } from '../stores/auth.js'
+import { ref, onMounted } from 'vue'
+import { login, fetchAuthMethod } from '../stores/auth.js'
 
 const username = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
+
+onMounted(async () => {
+  const authMethod = await fetchAuthMethod()
+  if (authMethod.method === 'cas' && authMethod.cas?.serverUrl) {
+    const backUrl = window.location.origin + window.location.pathname
+    const loginUrl = authMethod.cas.serverUrl.replace(/\/$/, '') +
+      '/login?service=' + encodeURIComponent(backUrl)
+    window.location.href = loginUrl
+    return
+  }
+})
 
 async function onSubmit() {
   error.value = ''

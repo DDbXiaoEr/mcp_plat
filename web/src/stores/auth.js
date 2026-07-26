@@ -39,18 +39,53 @@ export async function login(username, password) {
     if (json.code !== 200) {
       return { ok: false, message: json.message || '登录失败' }
     }
-    const user = {
-      username: json.data.username,
-      role: json.data.role,
-      roleLabel: roleLabel(json.data.role),
-      token: json.data.token
-    }
-    state.user = user
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
+    saveLogin(json.data)
     return { ok: true }
   } catch {
     return { ok: false, message: '网络错误，请稍后重试' }
   }
+}
+
+export async function casLogin(ticket, serviceUrl) {
+  try {
+    const res = await fetch('/api/auth/cas/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticket, serviceUrl })
+    })
+    const json = await res.json()
+    if (json.code !== 200) {
+      return { ok: false, message: json.message || 'CAS 登录失败' }
+    }
+    saveLogin(json.data)
+    return { ok: true }
+  } catch {
+    return { ok: false, message: '网络错误，请稍后重试' }
+  }
+}
+
+export async function fetchAuthMethod() {
+  try {
+    const res = await fetch('/api/auth/method')
+    const json = await res.json()
+    if (json.code !== 200) {
+      return { method: 'local' }
+    }
+    return json.data
+  } catch {
+    return { method: 'local' }
+  }
+}
+
+function saveLogin(data) {
+  const user = {
+    username: data.username,
+    role: data.role,
+    roleLabel: roleLabel(data.role),
+    token: data.token
+  }
+  state.user = user
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
 }
 
 export function logout() {

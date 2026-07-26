@@ -70,6 +70,52 @@ GET /api/auth/profile
 }
 ```
 
+### 1.3 获取认证方式
+
+```
+GET /api/auth/method
+```
+
+**成功响应：**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "method": "cas",
+    "cas": { "serverUrl": "https://cas.example.edu.cn", "serviceUrl": "http://localhost:5174", "version": "3.0" }
+  }
+}
+```
+
+`method` 可能的值：`local`（本地数据库）、`ldap`、`cas`。
+
+### 1.4 CAS 登录验证
+
+```
+POST /api/auth/cas/validate
+```
+
+**请求参数（JSON Body）：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| ticket | string | 是 | CAS 返回的 ticket |
+| serviceUrl | string | 是 | 回调地址，需与 CAS redirect 时一致 |
+
+**成功响应：**
+```json
+{
+  "code": 200,
+  "message": "登录成功",
+  "data": {
+    "token": "eyJhbGciOi...",
+    "username": "2021001",
+    "role": "user"
+  }
+}
+```
+
 ---
 
 ## 2. AccessKey 管理

@@ -99,6 +99,32 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "登录成功", "data": output})
 }
 
+func (h *AuthHandler) CASValidate(c *gin.Context) {
+	var input service.CASValidateInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
+		return
+	}
+
+	output, err := service.CASLogin(input)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "登录成功", "data": output})
+}
+
+func (h *AuthHandler) GetAuthMethod(c *gin.Context) {
+	output, err := service.GetAuthMethod()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": output})
+}
+
 func (h *AuthHandler) Profile(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	role := c.GetString("role")
