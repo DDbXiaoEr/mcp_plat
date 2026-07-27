@@ -13,6 +13,15 @@ import (
 	runnerPlugin "github.com/apache/apisix-go-plugin-runner/pkg/plugin"
 )
 
+type jsonRpcRequest struct {
+	Method string          `json:"method"`
+	Params json.RawMessage `json:"params"`
+}
+
+type toolCallParams struct {
+	Name string `json:"name"`
+}
+
 type AccessKeyVerifyConf struct {
 	HeaderName string `json:"header_name"`
 	GrpcAddr   string `json:"grpc_addr"`
@@ -63,7 +72,24 @@ func (p *AccessKeyVerify) RequestFilter(conf interface{}, w http.ResponseWriter,
 
 	requestPath := string(r.Path())
 
-	resp, err := plugin.ValidateAccessKey(ctx, grpcAddr, accessKey, requestPath, cfg.ServerID)
+	toolName := ""
+	if r.Method() == "POST" {
+		body, bodyErr := r.Body()
+		if bodyErr == nil && len(body) > 0 {
+			var jrpc jsonRpcRequest
+			if json.Unmarshal(body, &jrpc) == nil && jrpc.Method == "tools/call" {
+				var params toolCallParams
+				if json.Unmarshal(jrpc.Params, &params) == nil {
+					toolName = params.Name
+				}
+			}
+		}
+		if bodyErr != nil {
+			log.Warnf("读取请求体失败: %s", bodyErr)
+		}
+	}
+
+	resp, err := plugin.ValidateAccessKey(ctx, grpcAddr, accessKey, requestPath, cfg.ServerID, toolName)
 	if err != nil || !resp.Valid {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)

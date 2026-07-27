@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -86,6 +87,10 @@ func Load() {
 var serverIDPattern = regexp.MustCompile(`^/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:/|$)`)
 var serverIDPatternGeneric = regexp.MustCompile(`^/([0-9a-fA-F\-]+)`)
 
+type serverToolEntry struct {
+	Name  string   `json:"name"`
+	Tools []string `json:"tools"`
+}
 type cacheEntry struct {
 	serverIDs []string
 	expiresAt time.Time
@@ -231,19 +236,71 @@ func (s *accessKeyServer) Validate(ctx context.Context, req *plugin.ValidateRequ
 		s.cache.set(role.ID, serverIDs)
 	}
 
+	serverAllowed := false
 	for _, allowedID := range serverIDs {
 		if allowedID == serverID {
+			serverAllowed = true
+			break
+		}
+	}
+	if !serverAllowed {
+		return &plugin.ValidateResponse{
+			Valid:   false,
+			Message: "无权访问该 MCP 服务器",
+		}, nil
+	}
+
+	if ak.Servers != "" {
+		var entries []serverToolEntry
+		if err := json.Unmarshal([]byte(ak.Servers), &entries); err != nil {
 			return &plugin.ValidateResponse{
-				Valid:  true,
-				UserId: uint64(claims.UserID),
-				Role:   roleName,
+				Valid:   false,
+				Message: "AccessKey 服务器权限配置格式错误",
 			}, nil
+		}
+
+		if len(entries) == 0 {
+			return &plugin.ValidateResponse{
+				Valid:   false,
+				Message: "AccessKey 未授权访问任何服务器",
+			}, nil
+		}
+
+		var matchedEntry *serverToolEntry
+		for i := range entries {
+			if entries[i].Name == serverID {
+				matchedEntry = &entries[i]
+				break
+			}
+		}
+		if matchedEntry == nil {
+			return &plugin.ValidateResponse{
+				Valid:   false,
+				Message: "AccessKey 未授权访问该服务器",
+			}, nil
+		}
+
+		if len(matchedEntry.Tools) > 0 && req.ToolName != "" {
+			toolAllowed := false
+			for _, t := range matchedEntry.Tools {
+				if t == req.ToolName {
+					toolAllowed = true
+					break
+				}
+			}
+			if !toolAllowed {
+				return &plugin.ValidateResponse{
+					Valid:   false,
+					Message: "AccessKey 未授权使用该工具",
+				}, nil
+			}
 		}
 	}
 
 	return &plugin.ValidateResponse{
-		Valid:   false,
-		Message: "无权访问该 MCP 服务器",
+		Valid:  true,
+		UserId: uint64(claims.UserID),
+		Role:   roleName,
 	}, nil
 }
 

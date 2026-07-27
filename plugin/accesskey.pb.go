@@ -26,6 +26,7 @@ type ValidateRequest struct {
 	AccessKey     string                 `protobuf:"bytes,1,opt,name=access_key,json=accessKey,proto3" json:"access_key,omitempty"`
 	RequestPath   string                 `protobuf:"bytes,2,opt,name=request_path,json=requestPath,proto3" json:"request_path,omitempty"`
 	ServerId      string                 `protobuf:"bytes,3,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	ToolName      string                 `protobuf:"bytes,4,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -77,6 +78,13 @@ func (x *ValidateRequest) GetRequestPath() string {
 func (x *ValidateRequest) GetServerId() string {
 	if x != nil {
 		return x.ServerId
+	}
+	return ""
+}
+
+func (x *ValidateRequest) GetToolName() string {
+	if x != nil {
+		return x.ToolName
 	}
 	return ""
 }
@@ -153,12 +161,13 @@ var File_plugin_accesskey_proto protoreflect.FileDescriptor
 
 const file_plugin_accesskey_proto_rawDesc = "" +
 	"\n" +
-	"\x16plugin/accesskey.proto\x12\x06plugin\"p\n" +
+	"\x16plugin/accesskey.proto\x12\x06plugin\"\x8d\x01\n" +
 	"\x0fValidateRequest\x12\x1d\n" +
 	"\n" +
 	"access_key\x18\x01 \x01(\tR\taccessKey\x12!\n" +
 	"\frequest_path\x18\x02 \x01(\tR\vrequestPath\x12\x1b\n" +
-	"\tserver_id\x18\x03 \x01(\tR\bserverId\"o\n" +
+	"\tserver_id\x18\x03 \x01(\tR\bserverId\x12\x1b\n" +
+	"\ttool_name\x18\x04 \x01(\tR\btoolName\"o\n" +
 	"\x10ValidateResponse\x12\x14\n" +
 	"\x05valid\x18\x01 \x01(\bR\x05valid\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\x04R\x06userId\x12\x12\n" +

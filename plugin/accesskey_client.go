@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func ValidateAccessKey(ctx context.Context, grpcAddr string, key string, requestPath string, serverID string) (*ValidateResponse, error) {
+func ValidateAccessKey(ctx context.Context, grpcAddr string, key string, requestPath string, serverID string, toolName string) (*ValidateResponse, error) {
 	conn, err := grpc.NewClient(grpcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
@@ -15,5 +15,5 @@ func ValidateAccessKey(ctx context.Context, grpcAddr string, key string, request
 	defer conn.Close()
 
 	client := NewAccessKeyServiceClient(conn)
-	return client.Validate(ctx, &ValidateRequest{AccessKey: key, RequestPath: requestPath, ServerId: serverID})
+	return client.Validate(ctx, &ValidateRequest{AccessKey: key, RequestPath: requestPath, ServerId: serverID, ToolName: toolName})
 }
