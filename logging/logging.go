@@ -1,5 +1,7 @@
 package logging
 
+// Author: deepseek-v4-pro / opencode
+
 import (
 	"fmt"
 	"log"

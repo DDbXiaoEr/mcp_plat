@@ -1,5 +1,7 @@
 package service
 
+// Author: deepseek-v4-pro / opencode
+
 import (
 	"mcp_plat-console/database"
 	"mcp_plat-console/model"

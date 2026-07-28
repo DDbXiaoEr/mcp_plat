@@ -1,5 +1,7 @@
 package main
 
+// Author: deepseek-v4-pro / opencode
+
 import (
 	"crypto/rand"
 	"encoding/hex"
@@ -182,7 +184,7 @@ func genMCPServers(n int) {
 		if err := database.DB.Create(&s).Error; err != nil {
 			fmt.Printf("FAIL: create mcp_server %s: %v\n", name, err)
 		} else {
-			fmt.Printf("OK:   created mcp_server id=%d name=%s address=%s\n", s.ID, s.Name, s.Address)
+			fmt.Printf("OK:   created mcp_server id=%s name=%s address=%s\n", s.ID, s.Name, s.Address)
 		}
 	}
 }

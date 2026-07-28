@@ -1,4 +1,6 @@
 <script setup>
+
+// Author: deepseek-v4-pro / opencode
 import { reactive, ref, computed, watch } from 'vue'
 
 const EXPIRATION_OPTIONS = [
@@ -26,7 +28,18 @@ const form = reactive({
 const selectedServer = ref('')
 
 function parseTools(raw) {
-  try { return JSON.parse(raw) || [] } catch { return [] }
+  try {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) {
+      return parsed.map((t) => {
+        if (typeof t === 'object' && t.name) return t.name
+        return t
+      })
+    }
+    return []
+  } catch {
+    return []
+  }
 }
 
 const currentTools = computed(() => {
@@ -36,7 +49,20 @@ const currentTools = computed(() => {
 
 function parseServers(raw) {
   try {
-    return JSON.parse(raw) || {}
+    const obj = JSON.parse(raw) || {}
+    if (typeof obj !== 'object' || Array.isArray(obj)) return {}
+    const result = {}
+    for (const [sid, tools] of Object.entries(obj)) {
+      if (Array.isArray(tools)) {
+        result[sid] = tools.map((t) => {
+          if (typeof t === 'object' && t.name) return t.name
+          return t
+        })
+      } else {
+        result[sid] = tools
+      }
+    }
+    return result
   } catch {
     return {}
   }

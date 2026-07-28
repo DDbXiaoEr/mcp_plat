@@ -1,4 +1,6 @@
 <script setup>
+
+// Author: deepseek-v4-pro / opencode
 import { onMounted } from 'vue'
 import { auth, logout } from '../stores/auth.js'
 import { platformSettings, loadSettings } from '../stores/settings.js'

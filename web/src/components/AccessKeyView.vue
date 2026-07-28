@@ -1,4 +1,6 @@
 <script setup>
+
+// Author: deepseek-v4-pro / opencode
 import { ref, onMounted } from 'vue'
 import { setActive } from '../stores/nav.js'
 import { fetchAccessKeys, createAccessKey, updateAccessKey, deleteAccessKey, fetchServers } from '../api.js'
@@ -7,7 +9,18 @@ import AccessKeyDrawer from './AccessKeyDrawer.vue'
 const servers = ref([])
 
 function parseTools(raw) {
-  try { return JSON.parse(raw) || [] } catch { return [] }
+  try {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) {
+      return parsed.map((t) => {
+        if (typeof t === 'object' && t.name) return t.name
+        return t
+      })
+    }
+    return []
+  } catch {
+    return []
+  }
 }
 
 function defaultServersJSON() {

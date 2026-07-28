@@ -1,3 +1,4 @@
+// Author: deepseek-v4-pro / opencode
 import { reactive, readonly } from 'vue'
 
 // TODO: 后端/路由接入后，菜单可改为配置化或路由驱动

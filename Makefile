@@ -1,4 +1,4 @@
-.PHONY: build build-server build-embed build-embed-windows build-embed-linux-arm64 build-embed-all build-web run clean build-tool datagen build-accesskey-auth-server build-apisix-runner proto
+.PHONY: build build-server build-embed build-embed-windows build-embed-linux-arm64 build-embed-all build-web run clean build-tool datagen build-accesskey-auth-server build-accesskey-auth-server-linux-amd64 build-apisix-runner proto
 
 VERSION := $(shell git describe --tags --always 2>/dev/null || echo "dev")
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -19,8 +19,12 @@ build-server:
 	go build -ldflags "$(LDFLAGS)" -o $(SERVER_OUT) .
 
 build-accesskey-auth-server: proto
-	@echo "==> building accesskey gRPC server (linux/$(ARCH))"
-	GOOS=linux GOARCH=$(ARCH) go build -ldflags "$(LDFLAGS)" -o $(ACCESSKEY_SERVER_OUT)-linux-$(ARCH) ./cmd/accesskey-auth-server/
+	@echo "==> building accesskey gRPC server (current platform)"
+	go build -ldflags "$(LDFLAGS)" -o $(ACCESSKEY_SERVER_OUT) ./cmd/accesskey-auth-server/
+
+build-accesskey-auth-server-linux-amd64: proto
+	@echo "==> building accesskey gRPC server (linux/amd64)"
+	GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(ACCESSKEY_SERVER_OUT)-linux-amd64 ./cmd/accesskey-auth-server/
 
 build-apisix-runner: proto
 	@echo "==> building APISIX go plugin runner (linux/$(ARCH))"
@@ -61,13 +65,14 @@ build-tool:
 	@echo "==> building tools"
 	@mkdir -p tools
 	go build -o tools/datagen cmd/datagen/main.go
+	go build -o tools/accesskey-test cmd/accesskey-test/main.go
 
 datagen:
 	@go run cmd/datagen/main.go -table $(TABLE) -count $(or $(COUNT),1)
 
 clean:
 	rm -f $(SERVER_OUT) $(EMBED_OUT) $(EMBED_OUT)-windows-amd64.exe $(EMBED_OUT)-linux-arm64
-	rm -f $(ACCESSKEY_SERVER_OUT)-linux-* $(APISIX_RUNNER_OUT)-linux-*
+	rm -f $(ACCESSKEY_SERVER_OUT) $(ACCESSKEY_SERVER_OUT)-linux-* $(APISIX_RUNNER_OUT)-linux-*
 	rm -f plugin/accesskey.pb.go plugin/accesskey_grpc.pb.go
 	rm -rf tools/
 	$(MAKE) -C $(WEB_DIR) clean

@@ -1,4 +1,6 @@
 <script setup>
+
+// Author: deepseek-v4-pro / opencode
 import { ref, computed } from 'vue'
 
 // TODO: 后端接入后，替换为真实的使用历史接口数据

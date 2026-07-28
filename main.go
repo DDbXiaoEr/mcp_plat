@@ -2,6 +2,8 @@
 
 package main
 
+// Author: deepseek-v4-pro / opencode
+
 import (
 	"context"
 	"fmt"

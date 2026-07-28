@@ -1,3 +1,4 @@
+// Author: deepseek-v4-pro / opencode
 import { getToken } from './stores/auth.js'
 
 const BASE = '/api'

@@ -1,5 +1,7 @@
 package service
 
+// Author: deepseek-v4-pro / opencode
+
 import (
 	"errors"
 	"fmt"

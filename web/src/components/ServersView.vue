@@ -1,4 +1,6 @@
 <script setup>
+
+// Author: deepseek-v4-pro / opencode
 import { ref, computed, onMounted } from 'vue'
 import { fetchServers, createServer, fetchServerTools, publishServers, deleteServer } from '../api.js'
 

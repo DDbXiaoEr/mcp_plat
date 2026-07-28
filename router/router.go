@@ -1,5 +1,7 @@
 package router
 
+// Author: deepseek-v4-pro / opencode
+
 import (
 	"mcp_plat-console/handler"
 	"mcp_plat-console/middleware"
@@ -33,12 +35,13 @@ func Setup() *gin.Engine {
 		auth.DELETE("/access-keys/:id", accessKeyHandler.Delete)
 
 		auth.GET("/history", historyHandler.List)
+
+		auth.GET("/servers", serverHandler.List)
 	}
 
 	admin := r.Group("/api")
 	admin.Use(middleware.AuthRequired(), middleware.AdminRequired())
 	{
-		admin.GET("/servers", serverHandler.List)
 		admin.POST("/servers", serverHandler.Create)
 		admin.POST("/servers/fetch-tools", serverHandler.FetchTools)
 		admin.PUT("/servers/:id", serverHandler.Update)

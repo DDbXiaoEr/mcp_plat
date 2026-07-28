@@ -1,4 +1,6 @@
 <script setup>
+
+// Author: deepseek-v4-pro / opencode
 // TODO: 接入后端后替换为真实统计数据
 const stats = [
   { key: 'users', label: '平台用户数', value: '1,286' },

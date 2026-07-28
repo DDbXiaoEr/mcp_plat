@@ -1,4 +1,6 @@
 <script setup>
+
+// Author: deepseek-v4-pro / opencode
 import { ref, onMounted } from 'vue'
 import { login, fetchAuthMethod } from '../stores/auth.js'
 

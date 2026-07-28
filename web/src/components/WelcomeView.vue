@@ -1,4 +1,6 @@
 <script setup>
+
+// Author: deepseek-v4-pro / opencode
 import { auth } from '../stores/auth.js'
 </script>
 

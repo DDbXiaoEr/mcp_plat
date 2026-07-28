@@ -1,5 +1,7 @@
 package plugins
 
+// Author: deepseek-v4-pro / opencode
+
 import (
 	"context"
 	"encoding/json"

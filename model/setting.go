@@ -1,5 +1,7 @@
 package model
 
+// Author: deepseek-v4-pro / opencode
+
 import "time"
 
 type Setting struct {

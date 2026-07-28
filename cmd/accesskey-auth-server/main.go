@@ -1,5 +1,7 @@
 package main
 
+// Author: deepseek-v4-pro / opencode
+
 import (
 	"context"
 	"encoding/json"
@@ -87,10 +89,6 @@ func Load() {
 var serverIDPattern = regexp.MustCompile(`^/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:/|$)`)
 var serverIDPatternGeneric = regexp.MustCompile(`^/([0-9a-fA-F\-]+)`)
 
-type serverToolEntry struct {
-	Name  string   `json:"name"`
-	Tools []string `json:"tools"`
-}
 type cacheEntry struct {
 	serverIDs []string
 	expiresAt time.Time
@@ -251,38 +249,32 @@ func (s *accessKeyServer) Validate(ctx context.Context, req *plugin.ValidateRequ
 	}
 
 	if ak.Servers != "" {
-		var entries []serverToolEntry
-		if err := json.Unmarshal([]byte(ak.Servers), &entries); err != nil {
+		var serverTools map[string][]string
+		if err := json.Unmarshal([]byte(ak.Servers), &serverTools); err != nil {
 			return &plugin.ValidateResponse{
 				Valid:   false,
 				Message: "AccessKey 服务器权限配置格式错误",
 			}, nil
 		}
 
-		if len(entries) == 0 {
+		if len(serverTools) == 0 {
 			return &plugin.ValidateResponse{
 				Valid:   false,
 				Message: "AccessKey 未授权访问任何服务器",
 			}, nil
 		}
 
-		var matchedEntry *serverToolEntry
-		for i := range entries {
-			if entries[i].Name == serverID {
-				matchedEntry = &entries[i]
-				break
-			}
-		}
-		if matchedEntry == nil {
+		allowedTools, hasServer := serverTools[serverID]
+		if !hasServer {
 			return &plugin.ValidateResponse{
 				Valid:   false,
 				Message: "AccessKey 未授权访问该服务器",
 			}, nil
 		}
 
-		if len(matchedEntry.Tools) > 0 && req.ToolName != "" {
+		if req.ToolName != "" {
 			toolAllowed := false
-			for _, t := range matchedEntry.Tools {
+			for _, t := range allowedTools {
 				if t == req.ToolName {
 					toolAllowed = true
 					break

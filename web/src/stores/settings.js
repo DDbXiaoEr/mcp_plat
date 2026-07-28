@@ -1,3 +1,4 @@
+// Author: deepseek-v4-pro / opencode
 import { reactive, readonly } from 'vue'
 import { fetchSettings } from '../api.js'
 

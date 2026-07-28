@@ -1,5 +1,7 @@
 package middleware
 
+// Author: deepseek-v4-pro / opencode
+
 import (
 	"net/http"
 	"strings"

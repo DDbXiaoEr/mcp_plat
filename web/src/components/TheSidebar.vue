@@ -1,4 +1,6 @@
 <script setup>
+
+// Author: deepseek-v4-pro / opencode
 import { computed } from 'vue'
 import { auth } from '../stores/auth.js'
 import { nav, menusFor, setActive } from '../stores/nav.js'

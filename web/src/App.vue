@@ -1,4 +1,6 @@
 <script setup>
+
+// Author: deepseek-v4-pro / opencode
 import { computed, watch, onMounted, ref } from 'vue'
 import { auth, casLogin } from './stores/auth.js'
 import { nav, resetNav } from './stores/nav.js'
