@@ -32,7 +32,7 @@ func main() {
 }
 
 func run() error {
-	configPath := "build/config.yaml"
+	configPath := "config.yaml"
 	if p := os.Getenv("CONFIG_PATH"); p != "" {
 		configPath = p
 	}

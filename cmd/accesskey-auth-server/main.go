@@ -50,7 +50,7 @@ var AppConfig *Config
 func Load() {
 	AppConfig = &Config{}
 
-	configPath := "build/accesskey_auth_server.yml"
+	configPath := "accesskey_auth_server.yml"
 	if p := os.Getenv("GRPC_CONFIG_PATH"); p != "" {
 		configPath = p
 	}
