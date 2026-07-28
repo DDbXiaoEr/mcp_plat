@@ -1,0 +1,24 @@
+database:
+  # 二选一，取消对应注释即可
+  # -------- SQLite --------
+  # type: sqlite
+  # sqlite:
+  #   path: data.db
+
+  # -------- PostgreSQL --------
+  type: postgres
+  postgres:
+    host: 192.168.31.233
+    port: 5432
+    user: root
+    password: 123456
+    dbname: mcp_platform
+
+# 密钥需至少 32 字符随机值，生产环境建议通过环境变量注入
+jwt_secret: 446516d9dfc261012f6976f2aded319367ec7a1915ccb40eeb54e51f18b0fa0a
+access_key_secret: e44d69a04bcb05a5e5c6dacc26a5bf0b9945b9b4cfea62b2dd5c7865e2fdb356
+server_port: 8080
+
+admin:
+  username: admin
+  password: admin123

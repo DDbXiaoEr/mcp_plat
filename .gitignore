@@ -23,6 +23,11 @@ apisix-go-runner-*
 datagen
 tools/
 
+# build directory (track configs only)
+build/*
+!build/config.yaml
+!build/accesskey_auth_server.yml
+
 # web dist archive
 web/dist.zip
 

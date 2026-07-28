@@ -45,7 +45,7 @@ var AppConfig *Config
 func Load() {
 	AppConfig = &Config{}
 
-	configPath := "config.yaml"
+	configPath := "build/config.yaml"
 	if p := os.Getenv("CONFIG_PATH"); p != "" {
 		configPath = p
 	}
