@@ -33,3 +33,4 @@ web/dist.zip
 
 # sqlite database
 data.db
+build/
