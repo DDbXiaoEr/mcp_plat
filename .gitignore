@@ -11,6 +11,7 @@ dist-ssr
 *.exe
 *.test
 *.out
+*.pb.go
 go.work
 .env
 
