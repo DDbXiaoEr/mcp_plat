@@ -171,6 +171,7 @@ type CreateServerInput struct {
 	Department     string `json:"department"`
 	Protocol       string `json:"protocol"`
 	Tools          string `json:"tools"`
+	Description    string `json:"description"`
 }
 
 type UpdateServerInput struct {
@@ -180,6 +181,7 @@ type UpdateServerInput struct {
 	Department     string `json:"department"`
 	Protocol       string `json:"protocol"`
 	Tools          string `json:"tools"`
+	Description    string `json:"description"`
 }
 
 func ListServers() ([]model.MCPServer, error) {
@@ -201,6 +203,7 @@ func CreateServer(input CreateServerInput) (*model.MCPServer, error) {
 		Department:     input.Department,
 		Protocol:       protocol,
 		Tools:          input.Tools,
+		Description:    input.Description,
 	}
 	if err := database.DB.Create(&server).Error; err != nil {
 		return nil, err
@@ -232,6 +235,9 @@ func UpdateServer(id string, input UpdateServerInput) error {
 	}
 	if input.Tools != "" {
 		updates["tools"] = input.Tools
+	}
+	if input.Description != "" {
+		updates["description"] = input.Description
 	}
 
 	return database.DB.Model(&server).Updates(updates).Error
@@ -509,8 +515,9 @@ func fetchToolsSSE(address string, allowedCIDRs []*net.IPNet) ([]toolInfo, error
 }
 
 type PublishInput struct {
-	ServerIDs  []string `json:"server_ids" binding:"required"`
-	EnableAuth bool     `json:"enable_auth"`
+	ServerIDs       []string `json:"server_ids" binding:"required"`
+	EnableAuth      bool     `json:"enable_auth"`
+	AccesskeyHeader string   `json:"accesskey_header"`
 }
 
 type ApiGatewaySetting struct {
@@ -519,6 +526,7 @@ type ApiGatewaySetting struct {
 	AdminKey             string `json:"adminKey"`
 	DefaultPublishDomain string `json:"defaultPublishDomain"`
 	AuthGrpcAddr         string `json:"authGrpcAddr"`
+	AccesskeyHeader      string `json:"accesskeyHeader"`
 }
 
 func PublishServers(input PublishInput) error {
@@ -575,13 +583,20 @@ func PublishServers(input PublishInput) error {
 				},
 			}
 		}
-		if input.EnableAuth {
-			if gw.AuthGrpcAddr == "" {
-				errs = append(errs, fmt.Sprintf("%s: 启用认证但未配置 gRPC 校验地址", srv.Name))
-				continue
-			}
-			authValue := fmt.Sprintf(`{"header_name":"X-Access-Key","grpc_addr":"%s","server_id":"%s"}`,
-				gw.AuthGrpcAddr, srv.ID)
+	if input.EnableAuth {
+		if gw.AuthGrpcAddr == "" {
+			errs = append(errs, fmt.Sprintf("%s: 启用认证但未配置 gRPC 校验地址", srv.Name))
+			continue
+		}
+		headerName := input.AccesskeyHeader
+		if headerName == "" {
+			headerName = gw.AccesskeyHeader
+		}
+		if headerName == "" {
+			headerName = "X-Access-Key"
+		}
+		authValue := fmt.Sprintf(`{"header_name":"%s","grpc_addr":"%s","server_id":"%s"}`,
+			headerName, gw.AuthGrpcAddr, srv.ID)
 			plugins["ext-plugin-pre-req"] = map[string]interface{}{
 				"conf": []map[string]interface{}{
 					{
@@ -603,6 +618,10 @@ func PublishServers(input PublishInput) error {
 
 	if len(errs) > 0 {
 		return fmt.Errorf("部分发布失败: %s", strings.Join(errs, "; "))
+	}
+
+	if err := database.DB.Model(&model.MCPServer{}).Where("id IN ?", input.ServerIDs).Update("status", "published").Error; err != nil {
+		return fmt.Errorf("更新发布状态失败: %w", err)
 	}
 
 	return nil

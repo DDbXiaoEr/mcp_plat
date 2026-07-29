@@ -2,15 +2,34 @@
 
 // Author: deepseek-v4-pro / opencode
 import { ref, computed, onMounted } from 'vue'
-import { fetchServers, createServer, fetchServerTools, publishServers, deleteServer } from '../api.js'
+import { fetchServers, createServer, fetchServerTools, publishServers, deleteServer, updateServer, fetchSettings } from '../api.js'
 
 const servers = ref([])
 const loading = ref(true)
+const accesskeyHeader = ref('X-Access-Key')
+
+const editingDesc = ref(false)
+const editDescValue = ref('')
+const savingDesc = ref(false)
 
 onMounted(async () => {
-  await loadServers()
+  await Promise.all([
+    loadServers(),
+    loadGatewaySettings()
+  ])
   loading.value = false
 })
+
+async function loadGatewaySettings() {
+  try {
+    const data = await fetchSettings()
+    if (data && data.api_gateway && data.api_gateway.accesskeyHeader) {
+      accesskeyHeader.value = data.api_gateway.accesskeyHeader
+    }
+  } catch (e) {
+    console.error('加载 API 网关设置失败:', e)
+  }
+}
 
 async function loadServers() {
   try {
@@ -74,14 +93,36 @@ async function removeServer() {
 
 const selectedTools = computed(() => parseTools(selected.value?.tools))
 
+function startEditDesc() {
+  editDescValue.value = selected.value?.description || ''
+  editingDesc.value = true
+}
+
+async function saveDescription() {
+  if (!selected.value) return
+  savingDesc.value = true
+  try {
+    await updateServer(selected.value.id, { description: editDescValue.value })
+    selected.value.description = editDescValue.value
+    editingDesc.value = false
+  } catch {
+    // ignore
+  }
+  savingDesc.value = false
+}
+
+function cancelEditDesc() {
+  editingDesc.value = false
+}
+
 const showingCreate = ref(false)
-const createForm = ref({ name: '', address: '', service_address: '', department: '', protocol: 'SSE', tools: '' })
+const createForm = ref({ name: '', address: '', service_address: '', department: '', protocol: 'SSE', tools: '', description: '' })
 const fetchingTools = ref(false)
 const fetchToolsError = ref('')
 const useHttps = ref(false)
 
 function openCreate() {
-  createForm.value = { name: '', address: '', service_address: '', department: '', protocol: 'SSE', tools: '' }
+  createForm.value = { name: '', address: '', service_address: '', department: '', protocol: 'SSE', tools: '', description: '' }
   fetchToolsError.value = ''
   useHttps.value = false
   showingCreate.value = true
@@ -132,7 +173,8 @@ async function confirmCreate() {
       service_address: createForm.value.service_address.trim(),
       department: createForm.value.department.trim(),
       protocol: createForm.value.protocol,
-      tools: JSON.stringify(tools)
+      tools: JSON.stringify(tools),
+      description: createForm.value.description.trim()
     })
     server.tools = tools
     servers.value.push(server)
@@ -182,7 +224,7 @@ function backToPublish() {
 async function executePublish() {
   publishing.value = true
   try {
-    await publishServers(publishSelected.value, enableAuth.value)
+    await publishServers(publishSelected.value, enableAuth.value, accesskeyHeader.value)
     alert('发布成功')
     showingPublishConfirm.value = false
     await loadServers()
@@ -208,10 +250,11 @@ async function executePublish() {
     </div>
 
     <div class="server-list">
-      <div class="server-list__header">
+       <div class="server-list__header">
         <span class="server-list__header-cell server-list__name-col">名称</span>
         <span class="server-list__header-cell server-list__uuid-col">UUID</span>
         <span class="server-list__header-cell server-list__dept-col">部门</span>
+        <span class="server-list__header-cell server-list__status-col">状态</span>
         <span class="server-list__header-cell server-list__action-col">操作</span>
       </div>
       <button
@@ -227,6 +270,11 @@ async function executePublish() {
         </div>
         <span class="server-list__uuid server-list__uuid-col">{{ server.id }}</span>
         <span class="server-list__dept server-list__dept-col">{{ server.department }}</span>
+        <span class="server-list__status-col">
+          <span class="server-list__status" :class="server.status === 'published' ? 'server-list__status--on' : 'server-list__status--off'">
+            {{ server.status === 'published' ? '已发布' : '未发布' }}
+          </span>
+        </span>
         <span class="server-list__action-col">
           <button
             class="server-list__del"
@@ -255,7 +303,7 @@ async function executePublish() {
               <dd class="server-detail__uuid">{{ selected.id }}</dd>
             </div>
             <div class="server-detail__row">
-              <dt>MCP 服务器地址</dt>
+              <dt>MCP服务的URI</dt>
               <dd>{{ selected.address }}</dd>
             </div>
             <div class="server-detail__row">
@@ -277,11 +325,47 @@ async function executePublish() {
                   <li
                     v-for="tool in selectedTools"
                     :key="tool.name"
-                    :title="tool.description || undefined"
                   >
-                    {{ tool.name }}
+                    <span class="server-detail__tool-name">{{ tool.name }}</span>
+                    <span v-if="tool.description" class="server-detail__tool-desc">{{ tool.description }}</span>
                   </li>
                 </ul>
+              </dd>
+            </div>
+            <div class="server-detail__row">
+              <dt>发布状态</dt>
+              <dd>
+                <span class="server-detail__status" :class="selected.status === 'published' ? 'server-detail__status--on' : 'server-detail__status--off'">
+                  {{ selected.status === 'published' ? '已发布' : '未发布' }}
+                </span>
+              </dd>
+            </div>
+            <div class="server-detail__row">
+              <div class="server-detail__label-row">
+                <dt>描述</dt>
+                <button
+                  v-if="!editingDesc"
+                  class="server-detail__edit-btn"
+                  type="button"
+                  @click="startEditDesc"
+                >
+                  编辑
+                </button>
+              </div>
+              <dd v-if="!editingDesc">{{ selected.description || '暂无描述' }}</dd>
+              <dd v-else class="server-detail__edit">
+                <textarea
+                  v-model="editDescValue"
+                  class="dialog__input dialog__textarea"
+                  rows="3"
+                  placeholder="请输入描述信息"
+                ></textarea>
+                <div class="server-detail__edit-actions">
+                  <button class="btn btn--ghost" type="button" @click="cancelEditDesc">取消</button>
+                  <button class="btn btn--primary" type="button" :disabled="savingDesc" @click="saveDescription">
+                    {{ savingDesc ? '保存中…' : '保存' }}
+                  </button>
+                </div>
               </dd>
             </div>
           </dl>
@@ -362,6 +446,15 @@ async function executePublish() {
                 type="text"
                 placeholder="请输入负责部门"
               />
+            </div>
+            <div class="dialog__group">
+              <label class="dialog__label">描述</label>
+              <textarea
+                v-model="createForm.description"
+                class="dialog__input dialog__textarea"
+                rows="2"
+                placeholder="请输入服务器描述信息"
+              ></textarea>
             </div>
             <div class="dialog__group">
               <label class="dialog__label">协议类型</label>
@@ -478,6 +571,10 @@ async function executePublish() {
                 <span class="publish-preview__value" :class="{ 'publish-preview__auth-on': enableAuth }">
                   {{ enableAuth ? '已启用 Access Key 认证' : '未启用' }}
                 </span>
+              </div>
+              <div v-if="enableAuth" class="publish-preview__row">
+                <span class="publish-preview__label">Access Key Header</span>
+                <span class="publish-preview__value">{{ accesskeyHeader }}</span>
               </div>
             </div>
           </div>
@@ -639,6 +736,29 @@ async function executePublish() {
 .server-list__dept-col {
   flex: 0 0 120px;
   margin-left: 24px;
+}
+
+.server-list__status-col {
+  flex: 0 0 80px;
+  margin-left: 24px;
+}
+
+.server-list__status {
+  display: inline-block;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+.server-list__status--on {
+  color: #1a7a1a;
+  background: #d4edda;
+}
+
+.server-list__status--off {
+  color: #6c757d;
+  background: #e9ecef;
 }
 
 .server-list__action-col {
@@ -807,16 +927,77 @@ async function executePublish() {
 }
 
 .server-detail__tools li {
-  padding: 4px 12px;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 14px;
   background: rgba(30, 95, 176, 0.1);
-  border-radius: 999px;
+  border-radius: 10px;
   font-size: 13px;
   color: var(--xauat-blue);
   cursor: default;
+  gap: 4px;
 }
 
-.server-detail__tools li[title] {
-  cursor: help;
+.server-detail__tool-name {
+  font-weight: 600;
+}
+
+.server-detail__tool-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.server-detail__label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.server-detail__edit-btn {
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--xauat-blue);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.server-detail__edit-btn:hover {
+  background: rgba(10, 61, 122, 0.06);
+}
+
+.server-detail__status {
+  display: inline-block;
+  padding: 2px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+.server-detail__status--on {
+  color: #1a7a1a;
+  background: #d4edda;
+}
+
+.server-detail__status--off {
+  color: #6c757d;
+  background: #e9ecef;
+}
+
+.server-detail__edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.server-detail__edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .dialog-overlay {
