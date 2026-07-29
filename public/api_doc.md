@@ -291,6 +291,8 @@ GET /api/servers
       "department": "教务处",
       "protocol": "SSE",
       "tools": "[{\"name\":\"查询课表\",\"description\":\"查询学期课程安排\"},{\"name\":\"成绩查询\",\"description\":\"查询考试成绩\"}]",
+      "description": "教务系统 MCP 服务，提供课表查询与成绩查询能力",
+      "status": "published",
       "created_at": "2026-01-01T12:00:00Z",
       "updated_at": "2026-01-01T12:00:00Z"
     }
@@ -307,6 +309,8 @@ GET /api/servers
 | department | string | 负责部门 |
 | protocol | string | 协议类型（SSE / Streamable HTTP / stdio） |
 | tools | string | 工具列表，JSON 字符串数组格式，每个元素为 `{"name":"...","description":"..."}` |
+| description | string | 服务器描述信息 |
+| status | string | 发布状态，`published`（已发布）或 `unpublished`（未发布） |
 
 ### 4.2 新增 MCP 服务器
 
@@ -324,6 +328,7 @@ POST /api/servers
 | department | string | 否 | 负责部门 |
 | protocol | string | 否 | 协议类型，默认 SSE |
 | tools | string | 否 | 工具列表，JSON 字符串数组格式 |
+| description | string | 否 | 服务器描述信息 |
 
 **响应示例：**
 ```json
@@ -358,6 +363,7 @@ POST /api/servers/publish
 |------|------|------|------|
 | server_ids | []string | 是 | 要发布的 MCP 服务器 ID 列表 |
 | enable_auth | bool | 否 | 是否启用 Access Key 认证（默认 false），启用后路由会下发 accesskey_verify 插件 |
+| accesskey_header | string | 否 | 自定义 Access Key 的 HTTP Header 名称，未传时优先使用网关设置中配置的值，均未配置时默认 `X-Access-Key` |
 
 **请求示例：**
 ```json
@@ -425,6 +431,7 @@ PUT /api/servers/:id
 | department | string | 否 | 负责部门 |
 | protocol | string | 否 | 协议类型 |
 | tools | string | 否 | 工具列表，JSON 字符串数组格式 |
+| description | string | 否 | 服务器描述信息 |
 
 **响应示例：**
 ```json
@@ -813,7 +820,8 @@ GET /api/settings
       "adminUrl": "http://127.0.0.1:9180",
       "adminKey": "edd1c9f034335f136f87ad84b625c8f1",
       "defaultPublishDomain": "mcp.xauat.edu.cn",
-      "authGrpcAddr": ":9090"
+      "authGrpcAddr": ":9090",
+      "accesskeyHeader": "X-Access-Key"
     },
     "network_security": {
       "allowlist": ["10.0.0.0/8", "172.16.0.0/12", "192.168.1.0/24"]

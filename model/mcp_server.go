@@ -12,6 +12,8 @@ type MCPServer struct {
 	Department     string    `gorm:"size:128" json:"department"`
 	Protocol       string    `gorm:"size:32;default:streamable http" json:"protocol"`
 	Tools          string    `gorm:"type:text" json:"tools"`
+	Description    string    `gorm:"type:text" json:"description"`
+	Status         string    `gorm:"size:32;default:unpublished" json:"status"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }

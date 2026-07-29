@@ -42,7 +42,8 @@ const apiGwForm = ref({
   provider: 'apisix',
   adminUrl: '',
   defaultPublishDomain: '',
-  adminKey: ''
+  adminKey: '',
+  accesskeyHeader: ''
 })
 
 const API_GW_PROVIDERS = [
@@ -476,6 +477,26 @@ onMounted(async () => {
               class="field__input"
               type="text"
               placeholder=":9090"
+            />
+          </label>
+
+          <label class="field">
+            <span class="field__label">
+              Access Key Header 名称
+              <span class="field__help">
+                ?
+                <span class="field__tooltip">
+                  指定请求中携带 Access Key 的 HTTP Header 名称。<br />
+                  发布路由时若已配置则使用自定义 Header，未配置则默认使用
+                  <code>X-Access-Key</code>。
+                </span>
+              </span>
+            </span>
+            <input
+              v-model="apiGwForm.accesskeyHeader"
+              class="field__input"
+              type="text"
+              placeholder="X-Access-Key"
             />
           </label>
 

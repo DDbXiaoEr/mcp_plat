@@ -9,8 +9,18 @@ mcp_plat-console/
 ├── go.mod / go.sum
 ├── AGENTS.md                # 项目整体规范
 ├── PROJECT_STRUCTURE.md     # 本文件 —— 项目结构速查
+├── README.md
 │
 ├── cmd/
+│   ├── accesskey-auth-server/
+│   │   └── main.go           # AccessKey 认证 gRPC 服务
+│   ├── accesskey-test/
+│   │   └── main.go           # AccessKey 测试工具
+│   ├── apisix-runner/
+│   │   ├── main.go           # APISIX runner 入口
+│   │   └── plugins/
+│   │       ├── accesskey_verify.go   # AccessKey 校验插件
+│   │       └── apisix_route_example.md
 │   └── datagen/
 │       └── main.go           # 测试数据生成工具
 │
@@ -44,6 +54,8 @@ mcp_plat-console/
 ├── service/
 │   ├── auth.go               # 登录业务逻辑 + JWT 生成
 │   ├── access_key.go         # AccessKey 业务逻辑
+│   ├── cas.go                # CAS 认证业务逻辑
+│   ├── ldap.go               # LDAP 认证业务逻辑
 │   ├── history.go            # 使用历史业务逻辑
 │   ├── mcp_server.go         # MCPServer 业务逻辑
 │   ├── mcp_server_test.go    # FetchTools 单元测试（mock + 可选真实服务器）
@@ -54,6 +66,12 @@ mcp_plat-console/
 ├── middleware/
 │   └── auth.go               # JWT Bearer Token 鉴权中间件 + AdminRequired
 │
+├── plugin/
+│   ├── access_key.go         # AccessKey grpc 插件注册
+│   ├── accesskey_client.go   # AccessKey grpc 客户端
+│   ├── accesskey_grpc.pb.go  # gRPC 生成代码
+│   └── accesskey.pb.go       # protobuf 生成代码
+│
 ├── router/
 │   └── router.go             # Gin 路由注册（仅 main.go 使用，main_embed.go 自行注册）
 │
@@ -63,6 +81,7 @@ mcp_plat-console/
 │
 └── web/                      # Vue 3 前端（SPA）
     ├── AGENTS.md             # 前端规范
+    ├── PROJECT_STRUCTURE.md  # 前端项目结构
     ├── Makefile              # 前端构建脚本（install / build / dev / preview / clean）
     ├── index.html            # HTML 入口
     ├── package.json
@@ -108,6 +127,8 @@ mcp_plat-console/
 | Method | Path | 鉴权 | 管理员 | Handler |
 |--------|------|:---:|:---:|---------|
 | POST | `/api/auth/login` | 否 | - | handler/auth.go → Login |
+| GET | `/api/auth/method` | 否 | - | handler/auth.go → GetAuthMethod |
+| POST | `/api/auth/cas/validate` | 否 | - | handler/auth.go → CASValidate |
 | GET | `/api/auth/profile` | 是 | - | handler/auth.go → Profile |
 | GET | `/api/access-keys` | 是 | - | handler/access_key.go → List |
 | POST | `/api/access-keys` | 是 | - | handler/access_key.go → Create |
@@ -115,11 +136,11 @@ mcp_plat-console/
 | DELETE | `/api/access-keys/:id` | 是 | - | handler/access_key.go → Delete |
 | GET | `/api/history` | 是 | - | handler/history.go → List（⏳ 计划中） |
 | GET | `/api/servers` | 是 | - | handler/mcp_server.go → List |
-| POST | `/api/servers` | 是 | - | handler/mcp_server.go → Create |
-| PUT | `/api/servers/:id` | 是 | - | handler/mcp_server.go → Update |
-| DELETE | `/api/servers/:id` | 是 | - | handler/mcp_server.go → Delete |
-| POST | `/api/servers/fetch-tools` | 是 | - | handler/mcp_server.go → FetchTools |
-| POST | `/api/servers/publish` | 否 | - | handler/mcp_server.go → Publish |
+| POST | `/api/servers` | 是 | 是 | handler/mcp_server.go → Create |
+| PUT | `/api/servers/:id` | 是 | 是 | handler/mcp_server.go → Update |
+| DELETE | `/api/servers/:id` | 是 | 是 | handler/mcp_server.go → Delete |
+| POST | `/api/servers/fetch-tools` | 是 | 是 | handler/mcp_server.go → FetchTools |
+| POST | `/api/servers/publish` | 是 | 是 | handler/mcp_server.go → Publish |
 | GET | `/api/roles` | 是 | 是 | handler/role.go → List |
 | POST | `/api/roles` | 是 | 是 | handler/role.go → Create |
 | PUT | `/api/roles/:id` | 是 | 是 | handler/role.go → Update |

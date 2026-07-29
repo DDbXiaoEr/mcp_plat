@@ -130,10 +130,10 @@ export function fetchSettings() {
   return request('/settings')
 }
 
-export function publishServers(serverIds, enableAuth) {
+export function publishServers(serverIds, enableAuth, accesskeyHeader) {
   return request('/servers/publish', {
     method: 'POST',
-    body: JSON.stringify({ server_ids: serverIds, enable_auth: enableAuth })
+    body: JSON.stringify({ server_ids: serverIds, enable_auth: enableAuth, accesskey_header: accesskeyHeader })
   })
 }
 
