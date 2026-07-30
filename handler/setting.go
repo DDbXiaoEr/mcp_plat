@@ -28,6 +28,11 @@ func (h *SettingHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": settings})
 }
 
+func (h *SettingHandler) GatewayStatus(c *gin.Context) {
+	status := service.CheckGatewayStatus()
+	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": status})
+}
+
 func (h *SettingHandler) Save(c *gin.Context) {
 	key := c.Param("key")
 

@@ -37,6 +37,7 @@ func Setup() *gin.Engine {
 		auth.GET("/history", historyHandler.List)
 
 		auth.GET("/servers", serverHandler.List)
+		auth.GET("/settings/gateway-status", settingHandler.GatewayStatus)
 	}
 
 	admin := r.Group("/api")

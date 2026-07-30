@@ -44,6 +44,18 @@ func GetSetting(key string, out any) error {
 	return json.Unmarshal([]byte(setting.Value), out)
 }
 
+type GatewayStatus struct {
+	Configured bool `json:"configured"`
+}
+
+func CheckGatewayStatus() GatewayStatus {
+	var gw ApiGatewaySetting
+	if err := GetSetting("api_gateway", &gw); err != nil {
+		return GatewayStatus{Configured: false}
+	}
+	return GatewayStatus{Configured: gw.AdminURL != "" && gw.AdminKey != ""}
+}
+
 func SaveSetting(key string, value json.RawMessage) error {
 	if !settingKeys[key] {
 		return errors.New("不支持的设置项")

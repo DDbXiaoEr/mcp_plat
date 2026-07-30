@@ -2,7 +2,7 @@
 
 // Author: deepseek-v4-pro / opencode
 import { ref, computed, onMounted } from 'vue'
-import { fetchServers, createServer, fetchServerTools, publishServers, deleteServer, updateServer, fetchSettings } from '../api.js'
+import { fetchServers, createServer, fetchServerTools, publishServers, deleteServer, updateServer, fetchGatewayStatus } from '../api.js'
 
 const servers = ref([])
 const loading = ref(true)
@@ -22,12 +22,10 @@ onMounted(async () => {
 
 async function loadGatewaySettings() {
   try {
-    const data = await fetchSettings()
-    if (data && data.api_gateway && data.api_gateway.adminUrl && data.api_gateway.adminKey) {
-      gatewayConfigured.value = true
-    }
+    const data = await fetchGatewayStatus()
+    gatewayConfigured.value = data.configured
   } catch (e) {
-    console.error('加载 API 网关设置失败:', e)
+    console.error('加载 API 网关状态失败:', e)
   }
 }
 

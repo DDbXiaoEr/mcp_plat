@@ -130,6 +130,10 @@ export function fetchSettings() {
   return request('/settings')
 }
 
+export function fetchGatewayStatus() {
+  return request('/settings/gateway-status')
+}
+
 export function publishServers(serverIds, enableAuth, accesskeyHeader) {
   return request('/servers/publish', {
     method: 'POST',

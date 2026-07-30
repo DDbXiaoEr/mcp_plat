@@ -872,6 +872,31 @@ PUT /api/settings/:key
 
 ---
 
+### 6.3 检查 API 网关配置状态
+
+```
+GET /api/settings/gateway-status
+```
+
+> 无需管理员权限，仅需登录。
+
+**响应示例：**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "configured": true
+  }
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| configured | bool | API 网关 Admin API 地址和 Key 是否均已配置 |
+
+---
+
 ## 7. 数据模型说明
 
 ### 7.1 角色表（roles）

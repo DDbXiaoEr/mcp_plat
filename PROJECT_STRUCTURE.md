@@ -153,6 +153,7 @@ mcp_plat-console/
 | DELETE | `/api/users/:id` | 是 | 是 | handler/rbac_user.go → Delete |
 | GET | `/api/settings` | 是 | 是 | handler/setting.go → Get |
 | PUT | `/api/settings/:key` | 是 | 是 | handler/setting.go → Save |
+| GET | `/api/settings/gateway-status` | 是 | - | handler/setting.go → GatewayStatus |
 
 ## 内嵌版本前端路由（重要）
 
