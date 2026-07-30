@@ -69,17 +69,11 @@ onMounted(() => loadSettings())
 .brand__mark {
   display: grid;
   place-items: center;
-  min-width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--xauat-blue), var(--xauat-cyan));
-  color: #fff;
-  font-weight: 800;
-  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .brand__logo {
-  height: 100%;
+  height: 36px;
   width: auto;
   object-fit: contain;
 }

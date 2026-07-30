@@ -6,7 +6,7 @@ import { fetchServers, createServer, fetchServerTools, publishServers, deleteSer
 
 const servers = ref([])
 const loading = ref(true)
-const accesskeyHeader = ref('X-Access-Key')
+const gatewayConfigured = ref(false)
 
 const editingDesc = ref(false)
 const editDescValue = ref('')
@@ -23,8 +23,8 @@ onMounted(async () => {
 async function loadGatewaySettings() {
   try {
     const data = await fetchSettings()
-    if (data && data.api_gateway && data.api_gateway.accesskeyHeader) {
-      accesskeyHeader.value = data.api_gateway.accesskeyHeader
+    if (data && data.api_gateway && data.api_gateway.adminUrl && data.api_gateway.adminKey) {
+      gatewayConfigured.value = true
     }
   } catch (e) {
     console.error('加载 API 网关设置失败:', e)
@@ -227,7 +227,7 @@ function backToPublish() {
 async function executePublish() {
   publishing.value = true
   try {
-    await publishServers(publishSelected.value, enableAuth.value, accesskeyHeader.value)
+    await publishServers(publishSelected.value, enableAuth.value, '')
     alert('发布成功')
     showingPublishConfirm.value = false
     await loadServers()
@@ -523,6 +523,7 @@ async function executePublish() {
         <div class="dialog">
           <h2 class="dialog__title">发布到 API 网关</h2>
           <p class="dialog__desc">选择要发布的 MCP 服务器：</p>
+          <p v-if="gatewayConfigured" class="publish-gateway__hint">API 网关已配置</p>
           <div class="publish-list">
             <label
               v-for="server in servers"
@@ -593,11 +594,7 @@ async function executePublish() {
                   {{ enableAuth ? '已启用 Access Key 认证' : '未启用' }}
                 </span>
               </div>
-              <div v-if="enableAuth" class="publish-preview__row">
-                <span class="publish-preview__label">Access Key Header</span>
-                <span class="publish-preview__value">{{ accesskeyHeader }}</span>
-              </div>
-            </div>
+          </div>
           </div>
           <div class="dialog__actions">
             <button class="btn btn--ghost" type="button" @click="backToPublish">
@@ -1360,5 +1357,15 @@ async function executePublish() {
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.5;
+}
+
+.publish-gateway__hint {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a7a1a;
+  background: #d4edda;
+  border-radius: 8px;
+  display: inline-block;
 }
 </style>
