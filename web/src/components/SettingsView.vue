@@ -164,8 +164,7 @@ function applySettings(data) {
   if (data.log) Object.assign(logForm.value, data.log)
   if (data.smtp) Object.assign(smtpForm.value, data.smtp)
   if (data.api_gateway) {
-    apiGwConfigured.value = true
-    Object.assign(apiGwForm.value, data.api_gateway)
+    apiGwConfigured.value = data.api_gateway.configured || false
   }
   if (data.network_security && data.network_security.allowlist) {
     networkSecurityForm.value.allowlist = data.network_security.allowlist.join('\n')

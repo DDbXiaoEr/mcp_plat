@@ -30,7 +30,12 @@ func GetSettings() (map[string]json.RawMessage, error) {
 
 	result := make(map[string]json.RawMessage, len(settings))
 	for _, s := range settings {
-		result[s.Key] = json.RawMessage(s.Value)
+		if s.Key == "api_gateway" {
+			status, _ := json.Marshal(CheckGatewayStatus())
+			result[s.Key] = status
+		} else {
+			result[s.Key] = json.RawMessage(s.Value)
+		}
 	}
 
 	return result, nil
@@ -47,6 +52,10 @@ func GetSetting(key string, out any) error {
 func GetSettingByKey(key string) (json.RawMessage, error) {
 	if !settingKeys[key] {
 		return nil, errors.New("不支持的设置项")
+	}
+	if key == "api_gateway" {
+		status, _ := json.Marshal(CheckGatewayStatus())
+		return status, nil
 	}
 	var setting model.Setting
 	if err := database.DB.Where("key = ?", key).First(&setting).Error; err != nil {
