@@ -33,6 +33,16 @@ func (h *SettingHandler) GatewayStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": status})
 }
 
+func (h *SettingHandler) GetByKey(c *gin.Context) {
+	key := c.Param("key")
+	val, err := service.GetSettingByKey(key)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": val})
+}
+
 func (h *SettingHandler) Save(c *gin.Context) {
 	key := c.Param("key")
 

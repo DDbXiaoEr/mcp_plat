@@ -1,6 +1,6 @@
 // Author: deepseek-v4-pro / opencode
 import { reactive, readonly } from 'vue'
-import { fetchSettings } from '../api.js'
+import { fetchSetting } from '../api.js'
 
 const state = reactive({
   platform: {
@@ -14,12 +14,8 @@ const state = reactive({
 async function loadSettings() {
   if (state.loaded) return
   try {
-    const data = await fetchSettings()
-    if (data && data.platform) {
-      if (data.platform.name) state.platform.name = data.platform.name
-      if (data.platform.logoUrl != null) state.platform.logoUrl = data.platform.logoUrl
-      if (data.platform.siteUrl != null) state.platform.siteUrl = data.platform.siteUrl
-    }
+    const data = await fetchSetting('platform')
+    applyPlatform(data)
   } catch (_) { /* ignore */ }
   state.loaded = true
 }

@@ -872,7 +872,36 @@ PUT /api/settings/:key
 
 ---
 
-### 6.3 检查 API 网关配置状态
+### 6.3 获取单个设置项
+
+```
+GET /api/settings/:key
+```
+
+> 仅需登录，无需管理员权限。
+
+**路径参数：**
+
+| 参数 | 说明 |
+|------|------|
+| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `api_gateway` / `network_security` |
+
+**响应示例（`GET /api/settings/platform`）：**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "name": "某某大学",
+    "logoUrl": "https://www.example.edu.cn/logo.png",
+    "siteUrl": "https://www.example.edu.cn"
+  }
+}
+```
+
+---
+
+### 6.4 检查 API 网关配置状态
 
 ```
 GET /api/settings/gateway-status

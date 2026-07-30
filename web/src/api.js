@@ -130,6 +130,10 @@ export function fetchSettings() {
   return request('/settings')
 }
 
+export function fetchSetting(key) {
+  return request(`/settings/${key}`)
+}
+
 export function fetchGatewayStatus() {
   return request('/settings/gateway-status')
 }

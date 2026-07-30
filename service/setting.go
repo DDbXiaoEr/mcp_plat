@@ -44,6 +44,17 @@ func GetSetting(key string, out any) error {
 	return json.Unmarshal([]byte(setting.Value), out)
 }
 
+func GetSettingByKey(key string) (json.RawMessage, error) {
+	if !settingKeys[key] {
+		return nil, errors.New("不支持的设置项")
+	}
+	var setting model.Setting
+	if err := database.DB.Where("key = ?", key).First(&setting).Error; err != nil {
+		return nil, errors.New("设置项不存在")
+	}
+	return json.RawMessage(setting.Value), nil
+}
+
 type GatewayStatus struct {
 	Configured bool `json:"configured"`
 }
