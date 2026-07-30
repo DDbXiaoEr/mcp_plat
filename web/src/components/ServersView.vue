@@ -58,6 +58,7 @@ function normalizeTool(t) {
 }
 
 const PROTOCOLS = ['SSE', 'Streamable HTTP']
+const PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26']
 
 const selectedId = ref('')
 const selected = ref(null)
@@ -116,13 +117,13 @@ function cancelEditDesc() {
 }
 
 const showingCreate = ref(false)
-const createForm = ref({ name: '', address: '', service_address: '', department: '', protocol: 'SSE', tools: '', description: '' })
+const createForm = ref({ name: '', address: '', service_address: '', department: '', protocol: 'SSE', protocol_version: '2025-06-18', tools: '', description: '' })
 const fetchingTools = ref(false)
 const fetchToolsError = ref('')
 const useHttps = ref(false)
 
 function openCreate() {
-  createForm.value = { name: '', address: '', service_address: '', department: '', protocol: 'SSE', tools: '', description: '' }
+  createForm.value = { name: '', address: '', service_address: '', department: '', protocol: 'SSE', protocol_version: '2025-06-18', tools: '', description: '' }
   fetchToolsError.value = ''
   useHttps.value = false
   showingCreate.value = true
@@ -142,7 +143,8 @@ async function fetchTools() {
     const address = scheme + host.replace(/\/+$/, '') + (path.startsWith('/') ? path : '/' + path)
     const data = await fetchServerTools({
       address,
-      protocol: createForm.value.protocol
+      protocol: createForm.value.protocol,
+      protocol_version: createForm.value.protocol_version
     })
     createForm.value.tools = JSON.stringify(data.tools || [])
   } catch (err) {
@@ -173,6 +175,7 @@ async function confirmCreate() {
       service_address: createForm.value.service_address.trim(),
       department: createForm.value.department.trim(),
       protocol: createForm.value.protocol,
+      protocol_version: createForm.value.protocol_version,
       tools: JSON.stringify(tools),
       description: createForm.value.description.trim()
     })
@@ -319,6 +322,10 @@ async function executePublish() {
               <dd>{{ selected.protocol }}</dd>
             </div>
             <div class="server-detail__row">
+              <dt>协议版本</dt>
+              <dd>{{ selected.protocol_version || '2025-06-18' }}</dd>
+            </div>
+            <div class="server-detail__row">
               <dt>工具列表</dt>
               <dd>
                 <ul class="server-detail__tools">
@@ -460,6 +467,20 @@ async function executePublish() {
               <label class="dialog__label">协议类型</label>
               <select v-model="createForm.protocol" class="dialog__input">
                 <option v-for="p in PROTOCOLS" :key="p" :value="p">{{ p }}</option>
+              </select>
+            </div>
+            <div class="dialog__group">
+              <label class="dialog__label">
+                协议版本
+                <span class="dialog__help">
+                  ?
+                  <span class="dialog__tooltip">
+                    MCP 协议规范版本，获取工具列表时用于与服务器协商。默认使用最新版 2025-06-18。
+                  </span>
+                </span>
+              </label>
+              <select v-model="createForm.protocol_version" class="dialog__input">
+                <option v-for="v in PROTOCOL_VERSIONS" :key="v" :value="v">{{ v }}</option>
               </select>
             </div>
             <div class="dialog__group">

@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"mcp_plat-console/plugin"
@@ -56,11 +57,20 @@ func (p *AccessKeyVerify) ParseConf(in []byte) (interface{}, error) {
 	return conf, nil
 }
 
+func extractAccessKey(r runnerHttp.Request, headerName string) string {
+	authHeader := r.Header().Get("Authorization")
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		return strings.TrimPrefix(authHeader, "Bearer ")
+	}
+	return r.Header().Get(headerName)
+}
+
 func (p *AccessKeyVerify) RequestFilter(conf interface{}, w http.ResponseWriter, r runnerHttp.Request) {
 	cfg := conf.(AccessKeyVerifyConf)
 
-	accessKey := r.Header().Get(cfg.HeaderName)
+	accessKey := extractAccessKey(r, cfg.HeaderName)
 	if accessKey == "" {
+		w.Header().Set("WWW-Authenticate", "Bearer")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte(`{"code":401,"message":"缺少 access key"}`))
@@ -93,6 +103,7 @@ func (p *AccessKeyVerify) RequestFilter(conf interface{}, w http.ResponseWriter,
 
 	resp, err := plugin.ValidateAccessKey(ctx, grpcAddr, accessKey, requestPath, cfg.ServerID, toolName)
 	if err != nil || !resp.Valid {
+		w.Header().Set("WWW-Authenticate", "Bearer")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		msg := "access key 校验失败"

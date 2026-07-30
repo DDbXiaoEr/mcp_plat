@@ -10,7 +10,8 @@ type MCPServer struct {
 	Address        string    `gorm:"not null;size:512" json:"address"`
 	ServiceAddress string    `gorm:"size:256" json:"service_address"`
 	Department     string    `gorm:"size:128" json:"department"`
-	Protocol       string    `gorm:"size:32;default:streamable http" json:"protocol"`
+	Protocol        string    `gorm:"size:32;default:streamable http" json:"protocol"`
+	ProtocolVersion string    `gorm:"size:16;default:2025-06-18" json:"protocol_version"`
 	Tools          string    `gorm:"type:text" json:"tools"`
 	Description    string    `gorm:"type:text" json:"description"`
 	Status         string    `gorm:"size:32;default:unpublished" json:"status"`

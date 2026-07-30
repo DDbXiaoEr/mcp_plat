@@ -165,23 +165,25 @@ func validateMCPAddress(raw string, allowedCIDRs []*net.IPNet) (string, error) {
 }
 
 type CreateServerInput struct {
-	Name           string `json:"name" binding:"required"`
-	Address        string `json:"address" binding:"required"`
-	ServiceAddress string `json:"service_address"`
-	Department     string `json:"department"`
-	Protocol       string `json:"protocol"`
-	Tools          string `json:"tools"`
-	Description    string `json:"description"`
+	Name            string `json:"name" binding:"required"`
+	Address         string `json:"address" binding:"required"`
+	ServiceAddress  string `json:"service_address"`
+	Department      string `json:"department"`
+	Protocol        string `json:"protocol"`
+	ProtocolVersion string `json:"protocol_version"`
+	Tools           string `json:"tools"`
+	Description     string `json:"description"`
 }
 
 type UpdateServerInput struct {
-	Name           string `json:"name"`
-	Address        string `json:"address"`
-	ServiceAddress string `json:"service_address"`
-	Department     string `json:"department"`
-	Protocol       string `json:"protocol"`
-	Tools          string `json:"tools"`
-	Description    string `json:"description"`
+	Name            string `json:"name"`
+	Address         string `json:"address"`
+	ServiceAddress  string `json:"service_address"`
+	Department      string `json:"department"`
+	Protocol        string `json:"protocol"`
+	ProtocolVersion string `json:"protocol_version"`
+	Tools           string `json:"tools"`
+	Description     string `json:"description"`
 }
 
 func ListServers() ([]model.MCPServer, error) {
@@ -195,15 +197,20 @@ func CreateServer(input CreateServerInput) (*model.MCPServer, error) {
 	if protocol == "" {
 		protocol = "streamable http"
 	}
+	protocolVersion := input.ProtocolVersion
+	if protocolVersion == "" {
+		protocolVersion = "2025-06-18"
+	}
 	server := model.MCPServer{
-		ID:             uuid.New().String(),
-		Name:           input.Name,
-		Address:        input.Address,
-		ServiceAddress: input.ServiceAddress,
-		Department:     input.Department,
-		Protocol:       protocol,
-		Tools:          input.Tools,
-		Description:    input.Description,
+		ID:              uuid.New().String(),
+		Name:            input.Name,
+		Address:         input.Address,
+		ServiceAddress:  input.ServiceAddress,
+		Department:      input.Department,
+		Protocol:        protocol,
+		ProtocolVersion: protocolVersion,
+		Tools:           input.Tools,
+		Description:     input.Description,
 	}
 	if err := database.DB.Create(&server).Error; err != nil {
 		return nil, err
@@ -233,6 +240,9 @@ func UpdateServer(id string, input UpdateServerInput) error {
 	if input.Protocol != "" {
 		updates["protocol"] = input.Protocol
 	}
+	if input.ProtocolVersion != "" {
+		updates["protocol_version"] = input.ProtocolVersion
+	}
 	if input.Tools != "" {
 		updates["tools"] = input.Tools
 	}
@@ -253,8 +263,9 @@ func DeleteServer(id string) error {
 }
 
 type FetchToolsInput struct {
-	Address  string `json:"address" binding:"required"`
-	Protocol string `json:"protocol"`
+	Address         string `json:"address" binding:"required"`
+	Protocol        string `json:"protocol"`
+	ProtocolVersion string `json:"protocol_version"`
 }
 
 type jsonRPCRequest struct {
@@ -291,6 +302,11 @@ func FetchTools(input FetchToolsInput) ([]toolInfo, error) {
 		protocol = "Streamable HTTP"
 	}
 
+	protocolVersion := input.ProtocolVersion
+	if protocolVersion == "" {
+		protocolVersion = "2025-06-18"
+	}
+
 	allowedCIDRs := loadAllowedCIDRs()
 
 	address := input.Address
@@ -313,9 +329,9 @@ func FetchTools(input FetchToolsInput) ([]toolInfo, error) {
 
 	switch protocol {
 	case "Streamable HTTP":
-		return fetchToolsStreamableHTTP(validatedAddr, allowedCIDRs)
+		return fetchToolsStreamableHTTP(validatedAddr, protocolVersion, allowedCIDRs)
 	case "SSE":
-		return fetchToolsSSE(validatedAddr, allowedCIDRs)
+		return fetchToolsSSE(validatedAddr, protocolVersion, allowedCIDRs)
 	case "stdio":
 		return nil, errors.New("stdio 协议暂不支持远程获取工具列表")
 	default:
@@ -323,7 +339,7 @@ func FetchTools(input FetchToolsInput) ([]toolInfo, error) {
 	}
 }
 
-func fetchToolsStreamableHTTP(address string, allowedCIDRs []*net.IPNet) ([]toolInfo, error) {
+func fetchToolsStreamableHTTP(address string, protocolVersion string, allowedCIDRs []*net.IPNet) ([]toolInfo, error) {
 	client := safeHTTPClient(15*time.Second, allowedCIDRs)
 
 	initReq := jsonRPCRequest{
@@ -331,7 +347,7 @@ func fetchToolsStreamableHTTP(address string, allowedCIDRs []*net.IPNet) ([]tool
 		ID:      1,
 		Method:  "initialize",
 		Params: map[string]interface{}{
-			"protocolVersion": "2025-03-26",
+			"protocolVersion": protocolVersion,
 			"capabilities":    map[string]interface{}{},
 			"clientInfo": map[string]interface{}{
 				"name":    "mcp_plat-console",
@@ -454,7 +470,7 @@ func readSSEData(body io.Reader) ([]byte, error) {
 	return nil, errors.New("未从 SSE 响应中读取到数据")
 }
 
-func fetchToolsSSE(address string, allowedCIDRs []*net.IPNet) ([]toolInfo, error) {
+func fetchToolsSSE(address string, protocolVersion string, allowedCIDRs []*net.IPNet) ([]toolInfo, error) {
 	client := safeHTTPClient(15*time.Second, allowedCIDRs)
 
 	resp, err := client.Get(address)
@@ -506,7 +522,7 @@ func fetchToolsSSE(address string, allowedCIDRs []*net.IPNet) ([]toolInfo, error
 		return nil, errors.New("未能获取 SSE 消息端点")
 	}
 
-	tools, err := fetchToolsStreamableHTTP(messageEndpoint, allowedCIDRs)
+	tools, err := fetchToolsStreamableHTTP(messageEndpoint, protocolVersion, allowedCIDRs)
 	if err != nil {
 		return nil, fmt.Errorf("通过 SSE 端点获取工具列表失败: %w", err)
 	}
