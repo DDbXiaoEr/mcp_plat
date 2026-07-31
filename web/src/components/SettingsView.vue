@@ -11,6 +11,7 @@ const logOpen = ref(true)
 const smtpOpen = ref(true)
 const apiGwOpen = ref(true)
 const networkSecurityOpen = ref(true)
+const auditLogOpen = ref(true)
 const authOpen = ref(true)
 const userOpsOpen = ref(true)
 const platformOpen = ref(true)
@@ -54,6 +55,11 @@ const API_GW_PROVIDERS = [
 
 const networkSecurityForm = ref({
   allowlist: ''
+})
+
+const auditLogForm = ref({
+  enabled: false,
+  grpcAddr: '127.0.0.1:9091'
 })
 
 const authMethod = ref('cas')
@@ -139,6 +145,10 @@ function saveNetworkSecuritySettings() {
   })
 }
 
+function saveAuditLogSettings() {
+  saveSection('audit_log', auditLogForm.value)
+}
+
 function saveAuthSettings() {
   saveSection('auth', {
     method: authMethod.value,
@@ -169,6 +179,7 @@ function applySettings(data) {
   if (data.network_security && data.network_security.allowlist) {
     networkSecurityForm.value.allowlist = data.network_security.allowlist.join('\n')
   }
+  if (data.audit_log) Object.assign(auditLogForm.value, data.audit_log)
   if (data.auth) {
     if (data.auth.method) authMethod.value = data.auth.method
     if (data.auth.cas) Object.assign(casForm.value, data.auth.cas)
@@ -538,6 +549,49 @@ onMounted(async () => {
             <span v-if="tips.network_security" class="save-tip">{{ tips.network_security }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'network_security'" @click="saveNetworkSecuritySettings">
               {{ saving === 'network_security' ? '保存中…' : '保存' }}
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="collapse">
+        <button class="collapse__head" type="button" @click="auditLogOpen = !auditLogOpen">
+          <span class="collapse__title">审计日志</span>
+          <span class="collapse__arrow" :class="{ 'collapse__arrow--open': auditLogOpen }">▾</span>
+        </button>
+        <div v-show="auditLogOpen" class="collapse__body">
+          <div class="field">
+            <span class="field__label">启用审计日志</span>
+            <label class="switch">
+              <input type="checkbox" v-model="auditLogForm.enabled" />
+              <span class="switch__track"><span class="switch__thumb"></span></span>
+              <span class="switch__label">{{ auditLogForm.enabled ? '启用' : '禁用' }}</span>
+            </label>
+          </div>
+
+          <label class="field">
+            <span class="field__label">
+              审计日志 gRPC 地址
+              <span class="field__help">
+                ?
+                <span class="field__tooltip">
+                  对应 audit-log-server 的 gRPC 监听地址，例如
+                  <code>:9091</code> 或 <code>127.0.0.1:9091</code>。
+                  发布 MCP 服务时，将下发此地址到 accesskey_verify 插件。
+                </span>
+              </span>
+            </span>
+            <input
+              v-model="auditLogForm.grpcAddr"
+              class="field__input"
+              type="text"
+              placeholder="127.0.0.1:9091"
+            />
+          </label>
+
+          <div class="collapse__actions">
+            <span v-if="tips.audit_log" class="save-tip">{{ tips.audit_log }}</span>
+            <button class="btn btn--primary" type="button" :disabled="saving === 'audit_log'" @click="saveAuditLogSettings">
+              {{ saving === 'audit_log' ? '保存中…' : '保存' }}
             </button>
           </div>
         </div>

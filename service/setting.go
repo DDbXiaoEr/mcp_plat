@@ -20,6 +20,7 @@ var settingKeys = map[string]bool{
 	"api_gateway":      true,
 	"platform":         true,
 	"network_security": true,
+	"audit_log":        true,
 }
 
 func GetSettings() (map[string]json.RawMessage, error) {

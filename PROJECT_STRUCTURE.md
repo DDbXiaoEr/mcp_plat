@@ -21,6 +21,8 @@ mcp_plat-console/
 │   │   └── plugins/
 │   │       ├── accesskey_verify.go   # AccessKey 校验插件
 │   │       └── apisix_route_example.md
+│   ├── audit-log-server/
+│   │   └── main.go           # 审计日志 gRPC 服务
 │   └── datagen/
 │       └── main.go           # 测试数据生成工具
 │
@@ -41,6 +43,7 @@ mcp_plat-console/
 │   ├── role.go               # Role 模型
 │   ├── role_server.go        # RoleServer 关联模型
 │   └── setting.go            # Setting 键值模型（系统设置）
+│   └── audit_log.go          # AuditLog 模型（审计日志）
 │
 ├── handler/
 │   ├── auth.go               # POST /api/auth/login, GET /api/auth/profile
@@ -70,7 +73,12 @@ mcp_plat-console/
 │   ├── access_key.go         # AccessKey grpc 插件注册
 │   ├── accesskey_client.go   # AccessKey grpc 客户端
 │   ├── accesskey_grpc.pb.go  # gRPC 生成代码
-│   └── accesskey.pb.go       # protobuf 生成代码
+│   ├── accesskey.pb.go       # protobuf 生成代码
+│   ├── accesskey.proto       # AccessKey proto 定义
+│   ├── auditlog_client.go    # AuditLog gRPC 客户端
+│   ├── auditlog_grpc.pb.go   # gRPC 生成代码
+│   ├── auditlog.pb.go        # protobuf 生成代码
+│   └── auditlog.proto        # AuditLog proto 定义
 │
 ├── router/
 │   └── router.go             # Gin 路由注册（仅 main.go 使用，main_embed.go 自行注册）

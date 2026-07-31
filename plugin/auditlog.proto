@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package plugin;
+
+option go_package = "mcp_plat-console/plugin";
+
+service AuditLogService {
+  rpc LogAccess(LogAccessRequest) returns (LogAccessResponse);
+}
+
+message LogAccessRequest {
+  string access_key = 1;
+  uint64 user_id = 2;
+  string server_id = 3;
+  string tool_name = 4;
+  bool success = 5;
+  string message = 6;
+}
+
+message LogAccessResponse {
+  bool ok = 1;
+  string message = 2;
+}

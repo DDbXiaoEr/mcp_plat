@@ -26,9 +26,10 @@ type toolCallParams struct {
 }
 
 type AccessKeyVerifyConf struct {
-	HeaderName string `json:"header_name"`
-	GrpcAddr   string `json:"grpc_addr"`
-	ServerID   string `json:"server_id"`
+	HeaderName    string `json:"header_name"`
+	GrpcAddr      string `json:"grpc_addr"`
+	AuditGrpcAddr string `json:"audit_grpc_addr"`
+	ServerID      string `json:"server_id"`
 }
 
 type AccessKeyVerify struct{}
@@ -70,6 +71,9 @@ func (p *AccessKeyVerify) RequestFilter(conf interface{}, w http.ResponseWriter,
 
 	accessKey := extractAccessKey(r, cfg.HeaderName)
 	if accessKey == "" {
+		if cfg.AuditGrpcAddr != "" {
+			go logAuditAsync(cfg.AuditGrpcAddr, accessKey, 0, cfg.ServerID, "", false, "缺少 access key")
+		}
 		w.Header().Set("WWW-Authenticate", "Bearer")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
@@ -103,9 +107,6 @@ func (p *AccessKeyVerify) RequestFilter(conf interface{}, w http.ResponseWriter,
 
 	resp, err := plugin.ValidateAccessKey(ctx, grpcAddr, accessKey, requestPath, cfg.ServerID, toolName)
 	if err != nil || !resp.Valid {
-		w.Header().Set("WWW-Authenticate", "Bearer")
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
 		msg := "access key 校验失败"
 		if resp != nil && resp.Message != "" {
 			msg = resp.Message
@@ -113,8 +114,39 @@ func (p *AccessKeyVerify) RequestFilter(conf interface{}, w http.ResponseWriter,
 		if err != nil {
 			msg = "access key 校验异常: " + err.Error()
 		}
+		if cfg.AuditGrpcAddr != "" {
+			userID := uint64(0)
+			if resp != nil {
+				userID = resp.UserId
+			}
+			go logAuditAsync(cfg.AuditGrpcAddr, accessKey, userID, cfg.ServerID, toolName, false, msg)
+		}
+		w.Header().Set("WWW-Authenticate", "Bearer")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte(`{"code":401,"message":"` + msg + `"}`))
 		return
+	}
+
+	if cfg.AuditGrpcAddr != "" {
+		go logAuditAsync(cfg.AuditGrpcAddr, accessKey, resp.UserId, cfg.ServerID, toolName, true, "ok")
+	}
+}
+
+func logAuditAsync(grpcAddr string, accessKey string, userID uint64, serverID string, toolName string, success bool, message string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	_, err := plugin.LogAccess(ctx, grpcAddr, &plugin.LogAccessRequest{
+		AccessKey: accessKey,
+		UserId:    userID,
+		ServerId:  serverID,
+		ToolName:  toolName,
+		Success:   success,
+		Message:   message,
+	})
+	if err != nil {
+		log.Warnf("audit log 写入失败: %s", err)
 	}
 }
 

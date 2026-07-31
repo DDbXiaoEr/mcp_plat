@@ -1,0 +1,15 @@
+grpc_addr: "127.0.0.1:9091"
+
+database:
+  type: sqlite
+  sqlite:
+    path: audit_log.db
+
+  # postgres:
+  #   host: "192.168.31.233"
+  #   port: "5433"
+  #   user: "root"
+  #   password: "123456"
+  #   dbname: "mcp_history_db"
+
+# 使用 PostgreSQL：取消 postgres 注释，将 database.type 改为 postgres

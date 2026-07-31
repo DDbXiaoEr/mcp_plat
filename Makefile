@@ -10,6 +10,7 @@ BIN_DIR := $(BUILD_DIR)/bin
 SERVER_OUT := $(BIN_DIR)/mcp_plat-console
 EMBED_OUT := $(BIN_DIR)/mcp_plat
 ACCESSKEY_SERVER_OUT := $(BIN_DIR)/accesskey-auth-server
+AUDIT_LOG_SERVER_OUT := $(BIN_DIR)/audit-log-server
 APISIX_RUNNER_OUT := $(BIN_DIR)/apisix-go-runner
 TOOLS_DIR := $(BIN_DIR)/tools
 ARCH ?= amd64
@@ -32,6 +33,16 @@ build-accesskey-auth-server-linux-amd64: proto
 	@mkdir -p $(BIN_DIR)
 	GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(ACCESSKEY_SERVER_OUT)-linux-amd64 ./cmd/accesskey-auth-server/
 
+build-audit-log-server: proto
+	@echo "==> building audit log gRPC server (current platform)"
+	@mkdir -p $(BIN_DIR)
+	go build -ldflags "$(LDFLAGS)" -o $(AUDIT_LOG_SERVER_OUT) ./cmd/audit-log-server/
+
+build-audit-log-server-linux-amd64: proto
+	@echo "==> building audit log gRPC server (linux/amd64)"
+	@mkdir -p $(BIN_DIR)
+	GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(AUDIT_LOG_SERVER_OUT)-linux-amd64 ./cmd/audit-log-server/
+
 build-apisix-runner: proto
 	@echo "==> building APISIX go plugin runner (linux/$(ARCH))"
 	@mkdir -p $(BIN_DIR)
@@ -40,6 +51,7 @@ build-apisix-runner: proto
 proto:
 	@echo "==> generating protobuf code"
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative plugin/accesskey.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative plugin/auditlog.proto
 
 build-embed: build-web
 	@echo "==> building standalone (embed web) version $(VERSION)"
@@ -81,11 +93,12 @@ build-tool:
 	@mkdir -p $(TOOLS_DIR)
 	go build -o $(TOOLS_DIR)/datagen cmd/datagen/main.go
 	go build -o $(TOOLS_DIR)/accesskey-test cmd/accesskey-test/main.go
+	go build -o $(TOOLS_DIR)/audit-log-server cmd/audit-log-server/main.go
 
 datagen:
 	@go run cmd/datagen/main.go -table $(TABLE) -count $(or $(COUNT),1)
 
 clean:
 	rm -rf $(BIN_DIR)
-	rm -f plugin/accesskey.pb.go plugin/accesskey_grpc.pb.go
+	rm -f plugin/accesskey.pb.go plugin/accesskey_grpc.pb.go plugin/auditlog.pb.go plugin/auditlog_grpc.pb.go
 	$(MAKE) -C $(WEB_DIR) clean
