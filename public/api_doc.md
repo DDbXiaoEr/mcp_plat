@@ -290,7 +290,7 @@ GET /api/servers
       "service_address": "192.168.1.100:8081",
       "department": "教务处",
       "protocol": "SSE",
-      "protocol_version": "2025-06-18",
+      "protocol_version": "2026-07-28",
       "tools": "[{\"name\":\"查询课表\",\"description\":\"查询学期课程安排\"},{\"name\":\"成绩查询\",\"description\":\"查询考试成绩\"}]",
       "description": "教务系统 MCP 服务，提供课表查询与成绩查询能力",
       "status": "published",
@@ -309,7 +309,7 @@ GET /api/servers
 | service_address | string | MCP 服务地址（IP:端口，用于 API 网关路由后端） |
 | department | string | 负责部门 |
 | protocol | string | 协议类型（SSE / Streamable HTTP / stdio） |
-| protocol_version | string | MCP 协议版本（2025-03-26 / 2025-06-18），默认 2025-06-18 |
+| protocol_version | string | MCP 协议版本（2025-03-26 / 2025-06-18 / 2026-07-28），默认 2026-07-28 |
 | tools | string | 工具列表，JSON 字符串数组格式，每个元素为 `{"name":"...","description":"..."}` |
 | description | string | 服务器描述信息 |
 | status | string | 发布状态，`published`（已发布）或 `unpublished`（未发布） |
@@ -329,7 +329,7 @@ POST /api/servers
 | service_address | string | 否 | MCP 服务地址（IP:端口，用于 API 网关路由后端） |
 | department | string | 否 | 负责部门 |
 | protocol | string | 否 | 协议类型，默认 SSE |
-| protocol_version | string | 否 | MCP 协议版本，默认 2025-06-18 |
+| protocol_version | string | 否 | MCP 协议版本，默认 2026-07-28 |
 | tools | string | 否 | 工具列表，JSON 字符串数组格式 |
 | description | string | 否 | 服务器描述信息 |
 
@@ -345,7 +345,7 @@ POST /api/servers
     "service_address": "192.168.1.100:8081",
     "department": "教务处",
     "protocol": "SSE",
-    "protocol_version": "2025-06-18",
+    "protocol_version": "2026-07-28",
     "tools": "[\"查询课表\",\"成绩查询\"]",
     "created_at": "2026-01-01T12:00:00Z",
     "updated_at": "2026-01-01T12:00:00Z"
@@ -401,7 +401,7 @@ POST /api/servers/fetch-tools
 |------|------|------|------|
 | address | string | 是 | MCP 服务器地址 |
 | protocol | string | 否 | 协议类型（SSE / Streamable HTTP / stdio），默认 Streamable HTTP |
-| protocol_version | string | 否 | MCP 协议版本，默认 2025-06-18 |
+| protocol_version | string | 否 | MCP 协议版本，默认 2026-07-28 |
 
 **响应示例：**
 ```json

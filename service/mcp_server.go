@@ -199,7 +199,7 @@ func CreateServer(input CreateServerInput) (*model.MCPServer, error) {
 	}
 	protocolVersion := input.ProtocolVersion
 	if protocolVersion == "" {
-		protocolVersion = "2025-06-18"
+		protocolVersion = "2026-07-28"
 	}
 	server := model.MCPServer{
 		ID:              uuid.New().String(),
@@ -304,7 +304,7 @@ func FetchTools(input FetchToolsInput) ([]toolInfo, error) {
 
 	protocolVersion := input.ProtocolVersion
 	if protocolVersion == "" {
-		protocolVersion = "2025-06-18"
+		protocolVersion = "2026-07-28"
 	}
 
 	allowedCIDRs := loadAllowedCIDRs()

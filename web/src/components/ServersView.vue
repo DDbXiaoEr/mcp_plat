@@ -56,7 +56,7 @@ function normalizeTool(t) {
 }
 
 const PROTOCOLS = ['SSE', 'Streamable HTTP']
-const PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26']
+const PROTOCOL_VERSIONS = ['2026-07-28', '2025-06-18', '2025-03-26']
 
 const selectedId = ref('')
 const selected = ref(null)
@@ -115,13 +115,13 @@ function cancelEditDesc() {
 }
 
 const showingCreate = ref(false)
-const createForm = ref({ name: '', address: '', service_address: '', department: '', protocol: 'SSE', protocol_version: '2025-06-18', tools: '', description: '' })
+const createForm = ref({ name: '', address: '', service_address: '', department: '', protocol: 'SSE', protocol_version: '2026-07-28', tools: '', description: '' })
 const fetchingTools = ref(false)
 const fetchToolsError = ref('')
 const useHttps = ref(false)
 
 function openCreate() {
-  createForm.value = { name: '', address: '', service_address: '', department: '', protocol: 'SSE', protocol_version: '2025-06-18', tools: '', description: '' }
+  createForm.value = { name: '', address: '', service_address: '', department: '', protocol: 'SSE', protocol_version: '2026-07-28', tools: '', description: '' }
   fetchToolsError.value = ''
   useHttps.value = false
   showingCreate.value = true
@@ -321,7 +321,7 @@ async function executePublish() {
             </div>
             <div class="server-detail__row">
               <dt>协议版本</dt>
-              <dd>{{ selected.protocol_version || '2025-06-18' }}</dd>
+              <dd>{{ selected.protocol_version || '2026-07-28' }}</dd>
             </div>
             <div class="server-detail__row">
               <dt>工具列表</dt>
@@ -473,7 +473,7 @@ async function executePublish() {
                 <span class="dialog__help">
                   ?
                   <span class="dialog__tooltip">
-                    MCP 协议规范版本，获取工具列表时用于与服务器协商。默认使用最新版 2025-06-18。
+                    MCP 协议规范版本，获取工具列表时用于与服务器协商。默认使用最新版 2026-07-28。
                   </span>
                 </span>
               </label>
