@@ -85,6 +85,47 @@ const ldapForm = ref({
   userFilter: ''
 })
 
+const PLATFORM_FIELDS = [
+  { key: 'email', label: '邮箱' },
+  { key: 'phone', label: '电话' },
+  { key: 'organization', label: '组织' }
+]
+
+const ldapAttrMapping = ref([])
+
+function addAttrMappingRow() {
+  ldapAttrMapping.value.push({ field: '', ldapAttr: '' })
+}
+
+function removeAttrMappingRow(index) {
+  ldapAttrMapping.value.splice(index, 1)
+}
+
+function mappingToObject() {
+  const obj = {}
+  for (const item of ldapAttrMapping.value) {
+    if (item.field && item.ldapAttr) {
+      obj[item.field] = item.ldapAttr
+    }
+  }
+  return obj
+}
+
+function objectToMapping(obj) {
+  if (!obj) return []
+  return Object.entries(obj).map(([field, ldapAttr]) => ({ field, ldapAttr }))
+}
+
+function unusedFields(rowIndex) {
+  const used = new Set(
+    ldapAttrMapping.value
+      .filter((_, i) => i !== rowIndex)
+      .map(item => item.field)
+      .filter(Boolean)
+  )
+  return PLATFORM_FIELDS.filter(f => !used.has(f.key))
+}
+
 const oauthForm = ref({
   authorizeUrl: '',
   tokenUrl: '',
@@ -153,7 +194,10 @@ function saveAuthSettings() {
   saveSection('auth', {
     method: authMethod.value,
     cas: casForm.value,
-    ldap: ldapForm.value,
+    ldap: {
+      ...ldapForm.value,
+      attrMapping: mappingToObject()
+    },
     oauth: oauthForm.value
   })
 }
@@ -183,7 +227,15 @@ function applySettings(data) {
   if (data.auth) {
     if (data.auth.method) authMethod.value = data.auth.method
     if (data.auth.cas) Object.assign(casForm.value, data.auth.cas)
-    if (data.auth.ldap) Object.assign(ldapForm.value, data.auth.ldap)
+    if (data.auth.ldap) {
+      ldapForm.value.host = data.auth.ldap.host || ''
+      ldapForm.value.port = data.auth.ldap.port ?? 389
+      ldapForm.value.baseDn = data.auth.ldap.baseDn || ''
+      ldapForm.value.bindDn = data.auth.ldap.bindDn || ''
+      ldapForm.value.bindPassword = data.auth.ldap.bindPassword || ''
+      ldapForm.value.userFilter = data.auth.ldap.userFilter || ''
+      ldapAttrMapping.value = objectToMapping(data.auth.ldap.attrMapping)
+    }
     if (data.auth.oauth) Object.assign(oauthForm.value, data.auth.oauth)
   }
   if (data.user_ops) {
@@ -751,6 +803,50 @@ onMounted(async () => {
                 placeholder="(uid=%s)"
               />
             </label>
+
+            <p class="field__section-title">属性映射（平台字段 → LDAP 属性）</p>
+            <div
+              v-for="(item, i) in ldapAttrMapping"
+              :key="i"
+              class="mapping-row"
+            >
+              <select
+                v-model="item.field"
+                class="field__input mapping-row__select"
+              >
+                <option value="" disabled>选择平台字段</option>
+                <option
+                  v-for="f in unusedFields(i)"
+                  :key="f.key"
+                  :value="f.key"
+                >
+                  {{ f.label }}
+                </option>
+              </select>
+              <span class="mapping-row__arrow">→</span>
+              <input
+                v-model="item.ldapAttr"
+                class="field__input mapping-row__input"
+                type="text"
+                placeholder="LDAP 属性名"
+              />
+              <button
+                class="mapping-row__remove"
+                type="button"
+                @click="removeAttrMappingRow(i)"
+                title="移除"
+              >
+                ×
+              </button>
+            </div>
+            <button
+              v-if="ldapAttrMapping.length < PLATFORM_FIELDS.length"
+              class="mapping-row__add"
+              type="button"
+              @click="addAttrMappingRow"
+            >
+              + 添加映射
+            </button>
           </template>
 
           <template v-if="authMethod === 'oauth'">
@@ -1084,6 +1180,79 @@ onMounted(async () => {
 .field__help:hover .field__tooltip {
   opacity: 1;
   visibility: visible;
+}
+
+.field__section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.mapping-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mapping-row__select {
+  width: 160px;
+  flex-shrink: 0;
+}
+
+.mapping-row__arrow {
+  color: var(--text-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.mapping-row__input {
+  flex: 1;
+}
+
+.mapping-row__remove {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  line-height: 1;
+  padding: 0;
+}
+
+.mapping-row__remove:hover {
+  color: #d93025;
+  border-color: #d93025;
+}
+
+.mapping-row__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--xauat-blue);
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.mapping-row__add:hover {
+  border-color: var(--xauat-blue);
+  background: rgba(10, 61, 122, 0.04);
 }
 
 .api-gw-warning {

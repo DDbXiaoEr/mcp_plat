@@ -96,7 +96,8 @@ func Login(input LoginInput) (*LoginOutput, error) {
 	}
 
 	if authCfg.Method == "ldap" {
-		if err := ldapAuthenticate(authCfg.Ldap, input.Username, input.Password); err != nil {
+		ldapAttrs, err := ldapAuthenticate(authCfg.Ldap, input.Username, input.Password)
+		if err != nil {
 			return nil, errors.New("用户名或密码错误")
 		}
 
@@ -107,16 +108,29 @@ func Login(input LoginInput) (*LoginOutput, error) {
 
 		if userNotFound {
 			user = model.User{
-				UID:      generateUID(),
-				Username: input.Username,
-				Password: string(hashedPassword),
-				RoleID:   getDefaultRoleID(),
+				UID:          generateUID(),
+				Username:     input.Username,
+				Password:     string(hashedPassword),
+				RoleID:       getDefaultRoleID(),
+				Email:        ldapAttrs["email"],
+				Phone:        ldapAttrs["phone"],
+				Organization: ldapAttrs["organization"],
 			}
 			if err := database.DB.Create(&user).Error; err != nil {
 				return nil, fmt.Errorf("创建用户失败: %v", err)
 			}
 		} else {
-			database.DB.Model(&user).Update("password", string(hashedPassword))
+			updates := map[string]interface{}{"password": string(hashedPassword)}
+			if v, ok := ldapAttrs["email"]; ok && v != "" {
+				updates["email"] = v
+			}
+			if v, ok := ldapAttrs["phone"]; ok && v != "" {
+				updates["phone"] = v
+			}
+			if v, ok := ldapAttrs["organization"]; ok && v != "" {
+				updates["organization"] = v
+			}
+			database.DB.Model(&user).Updates(updates)
 		}
 
 		token, err := generateToken(user)
