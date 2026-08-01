@@ -78,7 +78,7 @@ func ldapAuthenticate(cfg LdapConfig, username, password string) (map[string]str
 	entry := result.Entries[0]
 	for platformField, ldapAttr := range cfg.AttrMapping {
 		for _, attr := range entry.Attributes {
-			if attr.Name == ldapAttr && len(attr.Values) > 0 {
+			if strings.EqualFold(attr.Name, ldapAttr) && len(attr.Values) > 0 {
 				attrs[platformField] = attr.Values[0]
 				break
 			}
@@ -103,4 +103,101 @@ func ldapAuthenticate(cfg LdapConfig, username, password string) (map[string]str
 	}
 
 	return attrs, nil
+}
+
+type TestLdapInput struct {
+	LdapConfig LdapConfig `json:"ldap"`
+	Username   string     `json:"username"`
+}
+
+type LdapAttributeInfo struct {
+	Name   string   `json:"name"`
+	Values []string `json:"values"`
+}
+
+type TestLdapOutput struct {
+	Success    bool                `json:"success"`
+	Message    string              `json:"message"`
+	UserDn     string              `json:"userDn,omitempty"`
+	Attributes []LdapAttributeInfo `json:"attributes,omitempty"`
+	Mapped     map[string]string   `json:"mapped,omitempty"`
+}
+
+func TestLdapMapping(input TestLdapInput) *TestLdapOutput {
+	cfg := input.LdapConfig
+
+	if cfg.Host == "" || cfg.Port == 0 {
+		return &TestLdapOutput{Success: false, Message: "LDAP 服务未配置"}
+	}
+
+	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+	conn, err := ldap.DialURL(fmt.Sprintf("ldap://%s", addr))
+	if err != nil {
+		return &TestLdapOutput{Success: false, Message: fmt.Sprintf("LDAP 连接失败: %v", err)}
+	}
+	defer conn.Close()
+
+	if cfg.BindDn != "" && cfg.BindPassword != "" {
+		if err := conn.Bind(cfg.BindDn, cfg.BindPassword); err != nil {
+			return &TestLdapOutput{Success: false, Message: fmt.Sprintf("LDAP 管理员绑定失败: %v", err)}
+		}
+	}
+
+	filter := fmt.Sprintf("(uid=%s)", input.Username)
+	if cfg.UserFilter != "" {
+		filter = strings.ReplaceAll(cfg.UserFilter, "%s", input.Username)
+	}
+
+	searchReq := ldap.NewSearchRequest(
+		cfg.BaseDn,
+		ldap.ScopeWholeSubtree,
+		ldap.NeverDerefAliases,
+		0,
+		0,
+		false,
+		filter,
+		[]string{"*"},
+		nil,
+	)
+
+	result, err := conn.Search(searchReq)
+	if err != nil {
+		return &TestLdapOutput{Success: false, Message: fmt.Sprintf("LDAP 搜索失败: %v", err)}
+	}
+
+	if len(result.Entries) == 0 {
+		return &TestLdapOutput{Success: false, Message: fmt.Sprintf("未找到用户 '%s'", input.Username)}
+	}
+
+	if len(result.Entries) > 1 {
+		return &TestLdapOutput{Success: false, Message: fmt.Sprintf("搜索到 %d 个匹配结果，请精确用户过滤器", len(result.Entries))}
+	}
+
+	entry := result.Entries[0]
+
+	attrs := make([]LdapAttributeInfo, 0, len(entry.Attributes))
+	for _, attr := range entry.Attributes {
+		attrs = append(attrs, LdapAttributeInfo{
+			Name:   attr.Name,
+			Values: attr.Values,
+		})
+	}
+
+	mapped := make(map[string]string)
+	for platformField, ldapAttr := range cfg.AttrMapping {
+		for _, attr := range entry.Attributes {
+			if strings.EqualFold(attr.Name, ldapAttr) && len(attr.Values) > 0 {
+				mapped[platformField] = attr.Values[0]
+				break
+			}
+		}
+	}
+
+	return &TestLdapOutput{
+		Success:    true,
+		Message:    "查询成功",
+		UserDn:     entry.DN,
+		Attributes: attrs,
+		Mapped:     mapped,
+	}
 }

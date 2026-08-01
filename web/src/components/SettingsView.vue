@@ -2,7 +2,7 @@
 
 // Author: deepseek-v4-pro / opencode
 import { ref, onMounted } from 'vue'
-import { fetchRoles, fetchSettings, saveSetting } from '../api.js'
+import { fetchRoles, fetchSettings, saveSetting, testLdap } from '../api.js'
 import { applyPlatform } from '../stores/settings.js'
 
 const tab = ref('ops')
@@ -86,6 +86,7 @@ const ldapForm = ref({
 })
 
 const PLATFORM_FIELDS = [
+  { key: 'name', label: '姓名' },
   { key: 'email', label: '邮箱' },
   { key: 'phone', label: '电话' },
   { key: 'organization', label: '组织' }
@@ -126,6 +127,29 @@ function unusedFields(rowIndex) {
   return PLATFORM_FIELDS.filter(f => !used.has(f.key))
 }
 
+const ldapTestUser = ref('')
+const ldapTestResult = ref(null)
+const ldapTesting = ref(false)
+
+async function runLdapTest() {
+  if (!ldapTestUser.value.trim()) return
+  ldapTesting.value = true
+  ldapTestResult.value = null
+  try {
+    const data = await testLdap({
+      ldap: {
+        ...ldapForm.value,
+        attrMapping: mappingToObject()
+      },
+      username: ldapTestUser.value.trim()
+    })
+    ldapTestResult.value = data
+  } catch (e) {
+    ldapTestResult.value = { success: false, message: e.message || '测试失败' }
+  }
+  ldapTesting.value = false
+}
+
 const oauthForm = ref({
   authorizeUrl: '',
   tokenUrl: '',
@@ -145,6 +169,7 @@ const platformForm = ref({
 const roles = ref([])
 const defaultRoleId = ref('')
 const maxAccessKeys = ref(5)
+const accessKeyCron = ref('')
 
 const apiGwConfigured = ref(false)
 
@@ -205,7 +230,8 @@ function saveAuthSettings() {
 function saveUserOpsSettings() {
   saveSection('user_ops', {
     defaultRoleId: defaultRoleId.value === '' ? null : defaultRoleId.value,
-    maxAccessKeys: maxAccessKeys.value
+    maxAccessKeys: maxAccessKeys.value,
+    accessKeyCron: accessKeyCron.value
   })
 }
 
@@ -241,6 +267,7 @@ function applySettings(data) {
   if (data.user_ops) {
     if (data.user_ops.defaultRoleId != null) defaultRoleId.value = data.user_ops.defaultRoleId
     if (data.user_ops.maxAccessKeys != null) maxAccessKeys.value = data.user_ops.maxAccessKeys
+    accessKeyCron.value = data.user_ops.accessKeyCron || ''
   }
   if (data.platform) {
     Object.assign(platformForm.value, data.platform)
@@ -847,6 +874,77 @@ onMounted(async () => {
             >
               + 添加映射
             </button>
+
+            <div class="ldap-test">
+              <p class="field__section-title">测试映射</p>
+              <div class="ldap-test__row">
+                <input
+                  v-model="ldapTestUser"
+                  class="field__input ldap-test__input"
+                  type="text"
+                  placeholder="输入用户名测试映射效果"
+                  @keyup.enter="runLdapTest"
+                />
+                <button
+                  class="btn btn--primary ldap-test__btn"
+                  type="button"
+                  :disabled="!ldapTestUser.trim() || ldapTesting"
+                  @click="runLdapTest"
+                >
+                  {{ ldapTesting ? '测试中…' : '测试映射' }}
+                </button>
+              </div>
+
+              <div v-if="ldapTestResult" class="ldap-result">
+                <div
+                  class="ldap-result__banner"
+                  :class="ldapTestResult.success ? 'ldap-result__banner--ok' : 'ldap-result__banner--err'"
+                >
+                  {{ ldapTestResult.message }}
+                </div>
+
+                <template v-if="ldapTestResult.success">
+                  <div class="ldap-result__section">
+                    <p class="ldap-result__subtitle">LDAP 全部属性（{{ ldapTestResult.attributes.length }} 个）</p>
+                    <div class="ldap-result__tags">
+                      <code
+                        v-for="attr in ldapTestResult.attributes"
+                        :key="attr.name"
+                        class="ldap-result__tag"
+                      >
+                        <strong>{{ attr.name }}</strong>
+                        <span>{{ attr.values.join(', ') || '—' }}</span>
+                      </code>
+                    </div>
+                  </div>
+
+                  <div class="ldap-result__section">
+                    <p class="ldap-result__subtitle">当前映射结果</p>
+                    <div class="ldap-result__table">
+                      <div
+                        v-for="(_v, field) in ldapTestResult.mapped"
+                        :key="field"
+                        class="ldap-result__row"
+                      >
+                        <span class="ldap-result__field">{{ PLATFORM_FIELDS.find(f => f.key === field)?.label || field }}</span>
+                        <span class="ldap-result__arrow">=</span>
+                        <code class="ldap-result__value">{{ _v || '—' }}</code>
+                      </div>
+                      <div
+                        v-if="Object.keys(ldapTestResult.mapped).length === 0"
+                        class="ldap-result__row ldap-result__row--empty"
+                      >
+                        暂无映射配置
+                    </div>
+                  </div>
+                  </div>
+
+                  <div class="ldap-result__hint">
+                    <p>请确保已点击上方「保存」按钮保存认证设置，保存后用户需<span class="ldap-result__em">重新登录</span>才能同步 LDAP 属性到个人信息。</p>
+                  </div>
+                </template>
+              </div>
+            </div>
           </template>
 
           <template v-if="authMethod === 'oauth'">
@@ -952,6 +1050,17 @@ onMounted(async () => {
               min="1"
               placeholder="5"
             />
+          </label>
+
+          <label class="field">
+            <span class="field__label">过期扫描 cron 表达式</span>
+            <input
+              v-model="accessKeyCron"
+              class="field__input"
+              type="text"
+              placeholder="0 */6 * * *"
+            />
+            <span class="field__help-text">每隔一段时间自动扫描过期 AccessKey 并禁用，支持标准 crontab 格式</span>
           </label>
 
           <div class="collapse__actions">
@@ -1106,6 +1215,14 @@ onMounted(async () => {
 .field__input:focus {
   border-color: var(--xauat-blue-light);
   box-shadow: 0 0 0 3px rgba(30, 95, 176, 0.12);
+}
+
+.field__help-text {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 
 .field__textarea {
@@ -1390,5 +1507,148 @@ onMounted(async () => {
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.ldap-test {
+  margin-top: 16px;
+}
+
+.ldap-test__row {
+  display: flex;
+  gap: 8px;
+}
+
+.ldap-test__input {
+  flex: 1;
+}
+
+.ldap-test__btn {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.ldap-result {
+  margin-top: 12px;
+}
+
+.ldap-result__banner {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.ldap-result__banner--ok {
+  color: #1a7d3a;
+  background: #e8f5e9;
+}
+
+.ldap-result__banner--err {
+  color: #b71c1c;
+  background: #fbe9e7;
+}
+
+.ldap-result__section {
+  margin-top: 14px;
+}
+
+.ldap-result__subtitle {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ldap-result__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ldap-result__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.ldap-result__tag strong {
+  color: var(--xauat-blue);
+}
+
+.ldap-result__tag span {
+  color: var(--text-muted);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ldap-result__table {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ldap-result__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ldap-result__row:last-child {
+  border-bottom: none;
+}
+
+.ldap-result__row--empty {
+  color: var(--text-muted);
+  justify-content: center;
+}
+
+.ldap-result__field {
+  width: 80px;
+  flex-shrink: 0;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.ldap-result__arrow {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.ldap-result__value {
+  color: var(--xauat-blue);
+  font-weight: 600;
+}
+
+.ldap-result__hint {
+  margin-top: 14px;
+  padding: 10px 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+}
+
+.ldap-result__hint p {
+  margin: 0;
+}
+
+.ldap-result__em {
+  font-weight: 700;
+  color: #b45309;
 }
 </style>

@@ -9,6 +9,7 @@ type User struct {
 	UID          string    `gorm:"uniqueIndex;size:32" json:"uid"`
 	Username     string    `gorm:"uniqueIndex;not null;size:64" json:"username"`
 	Password     string    `gorm:"not null;size:255" json:"-"`
+	Name         string    `gorm:"size:64" json:"name"`
 	Email        string    `gorm:"size:128" json:"email"`
 	Phone        string    `gorm:"size:32" json:"phone"`
 	Organization string    `gorm:"size:128" json:"organization"`

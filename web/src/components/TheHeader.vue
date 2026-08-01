@@ -30,7 +30,7 @@ onMounted(() => loadSettings())
     <div class="header__actions">
       <span v-if="auth.user" class="header__user">
         <span class="header__role">{{ auth.user.roleLabel }}</span>
-        <span class="header__name">{{ auth.user.username }}</span>
+        <span class="header__name">{{ auth.user.name || auth.user.username }}</span>
       </span>
       <button class="header__logout" type="button" @click="logout">
         退出登录

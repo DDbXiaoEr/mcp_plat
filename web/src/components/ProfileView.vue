@@ -25,7 +25,7 @@ const fields = computed(() => {
   }
   return [
     { label: '学号/工号', value: profile.value.uid },
-    { label: '用户名', value: profile.value.username },
+    { label: '姓名', value: profile.value.name },
     { label: '邮箱', value: profile.value.email },
     { label: '手机', value: profile.value.phone },
     { label: '所属部门/学院', value: profile.value.organization }

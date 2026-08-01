@@ -81,6 +81,7 @@ export async function fetchAuthMethod() {
 function saveLogin(data) {
   const user = {
     username: data.username,
+    name: data.name || data.username,
     role: data.role,
     roleLabel: roleLabel(data.role),
     token: data.token

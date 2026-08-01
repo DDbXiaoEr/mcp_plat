@@ -58,5 +58,20 @@ func (h *SettingHandler) Save(c *gin.Context) {
 		return
 	}
 
+	if key == "user_ops" {
+		service.ReloadAccessKeyCron()
+	}
+
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "保存成功"})
+}
+
+func (h *SettingHandler) TestLdapMapping(c *gin.Context) {
+	var input service.TestLdapInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
+		return
+	}
+
+	output := service.TestLdapMapping(input)
+	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": output})
 }

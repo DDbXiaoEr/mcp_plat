@@ -4,6 +4,8 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"time"
 
 	"mcp_plat-console/config"
@@ -35,10 +37,26 @@ type AccessKeyClaims struct {
 func ListAccessKeys(userID uint) ([]model.AccessKey, error) {
 	var keys []model.AccessKey
 	err := database.DB.Where("user_id = ?", userID).Order("created_at desc").Find(&keys).Error
-	return keys, err
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now()
+	for i := range keys {
+		if keys[i].ExpiredAt != nil && keys[i].ExpiredAt.Before(now) {
+			keys[i].IsExpired = true
+		}
+	}
+	return keys, nil
 }
 
 func CreateAccessKey(userID uint, input CreateAccessKeyInput) (*model.AccessKey, error) {
+	var count int64
+	database.DB.Model(&model.AccessKey{}).Where("user_id = ?", userID).Count(&count)
+	limit := getMaxAccessKeys()
+	if limit > 0 && int(count) >= limit {
+		return nil, fmt.Errorf("AccessKey 数量已达上限（%d 个），请先删除再创建", limit)
+	}
+
 	var user model.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
 		return nil, errors.New("用户不存在")
@@ -121,4 +139,13 @@ func generateAccessKey(userID uint, role string, expiredAt *time.Time) (string, 
 		return "", err
 	}
 	return "ak-" + tokenStr, nil
+}
+
+func DisableExpiredAccessKeys() {
+	result := database.DB.Model(&model.AccessKey{}).
+		Where("enabled = ? AND expired_at IS NOT NULL AND expired_at < ?", true, time.Now()).
+		Update("enabled", false)
+	if result.RowsAffected > 0 {
+		log.Printf("access_key scheduler: disabled %d expired key(s)", result.RowsAffected)
+	}
 }

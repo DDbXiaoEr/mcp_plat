@@ -18,6 +18,7 @@ import (
 	"mcp_plat-console/database"
 	"mcp_plat-console/logging"
 	"mcp_plat-console/router"
+	"mcp_plat-console/service"
 )
 
 func main() {
@@ -27,6 +28,8 @@ func main() {
 
 	database.Init()
 	logging.Setup()
+
+	service.StartScheduler()
 
 	r := router.Setup()
 

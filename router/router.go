@@ -64,6 +64,7 @@ func Setup() *gin.Engine {
 
 		admin.GET("/settings", settingHandler.Get)
 		admin.PUT("/settings/:key", settingHandler.Save)
+		admin.POST("/settings/test-ldap", settingHandler.TestLdapMapping)
 	}
 
 	return r

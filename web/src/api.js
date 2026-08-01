@@ -151,3 +151,10 @@ export function saveSetting(key, body) {
     body: JSON.stringify(body)
   })
 }
+
+export function testLdap(body) {
+  return request('/settings/test-ldap', {
+    method: 'POST',
+    body: JSON.stringify(body)
+  })
+}

@@ -14,4 +14,5 @@ type AccessKey struct {
 	Servers   string     `gorm:"type:text" json:"servers"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
+	IsExpired bool       `gorm:"-" json:"is_expired"`
 }

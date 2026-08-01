@@ -3,7 +3,7 @@
 // Author: deepseek-v4-pro / opencode
 import { ref, onMounted } from 'vue'
 import { setActive } from '../stores/nav.js'
-import { fetchAccessKeys, createAccessKey, updateAccessKey, deleteAccessKey, fetchServers } from '../api.js'
+import { fetchAccessKeys, createAccessKey, updateAccessKey, deleteAccessKey, fetchServers, fetchSetting } from '../api.js'
 import AccessKeyDrawer from './AccessKeyDrawer.vue'
 
 const servers = ref([])
@@ -37,6 +37,8 @@ onMounted(async () => {
     keys.value = await fetchAccessKeys()
     const data = await fetchServers()
     servers.value = data
+    const ops = await fetchSetting('user_ops')
+    if (ops && ops.maxAccessKeys > 0) maxKeys.value = ops.maxAccessKeys
   } catch {
     // ignore load error
   }
@@ -53,6 +55,7 @@ const EXPIRATION_OPTIONS = [
 ]
 
 const keys = ref([])
+const maxKeys = ref(0)
 const loading = ref(true)
 const copiedId = ref(null)
 const editingKey = ref(null)
@@ -82,8 +85,8 @@ async function confirmCreate() {
     const key = await createAccessKey(body)
     createdKey.value = key
     showingCreate.value = false
-  } catch {
-    // ignore
+  } catch (e) {
+    alert(e.message || '创建失败')
   }
 }
 
@@ -181,10 +184,19 @@ function goHistory() {
     <div class="page__head">
       <h1 class="page__title">AccessKey 管理</h1>
       <div class="page__actions">
+        <span v-if="maxKeys > 0" class="keys__limit">
+          {{ keys.length }} / {{ maxKeys }}
+        </span>
         <button class="btn btn--ghost" type="button" @click="goHistory">
           使用历史
         </button>
-        <button class="btn btn--primary" type="button" @click="openCreate">
+        <button
+          class="btn btn--primary"
+          type="button"
+          :disabled="maxKeys > 0 && keys.length >= maxKeys"
+          :title="maxKeys > 0 && keys.length >= maxKeys ? '已达上限' : ''"
+          @click="openCreate"
+        >
           创建 AccessKey
         </button>
       </div>
@@ -257,7 +269,8 @@ function goHistory() {
           </td>
           <td class="keys__col-expire">{{ formatExpire(key) }}</td>
           <td class="keys__col-status">
-            <label class="switch">
+            <span v-if="key.is_expired" class="keys__expired-badge">已过期</span>
+            <label v-else class="switch">
               <input
                 type="checkbox"
                 :checked="key.enabled"
@@ -316,7 +329,18 @@ function goHistory() {
 
 .page__actions {
   display: flex;
+  align-items: center;
   gap: 12px;
+}
+
+.keys__limit {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
 }
 
 .btn {
@@ -462,6 +486,17 @@ function goHistory() {
 
 .keys__col-action {
   width: 150px;
+}
+
+.keys__expired-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b71c1c;
+  background: #fbe9e7;
+  border: 1px solid #ef9a9a;
+  border-radius: 999px;
 }
 
 .keys__key {

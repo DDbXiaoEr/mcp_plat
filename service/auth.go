@@ -25,6 +25,7 @@ type LoginInput struct {
 type LoginOutput struct {
 	Token    string `json:"token"`
 	Username string `json:"username"`
+	Name     string `json:"name"`
 	Role     string `json:"role"`
 }
 
@@ -40,7 +41,9 @@ type authSettings struct {
 }
 
 type userOpsSettings struct {
-	DefaultRoleID *uint `json:"defaultRoleId"`
+	DefaultRoleID *uint  `json:"defaultRoleId"`
+	MaxAccessKeys int    `json:"maxAccessKeys"`
+	AccessKeyCron string `json:"accessKeyCron"`
 }
 
 func getDefaultRoleID() *uint {
@@ -49,6 +52,22 @@ func getDefaultRoleID() *uint {
 		return ops.DefaultRoleID
 	}
 	return nil
+}
+
+func getMaxAccessKeys() int {
+	var ops userOpsSettings
+	if err := GetSetting("user_ops", &ops); err == nil && ops.MaxAccessKeys > 0 {
+		return ops.MaxAccessKeys
+	}
+	return 0
+}
+
+func getAccessKeyCron() string {
+	var ops userOpsSettings
+	if err := GetSetting("user_ops", &ops); err == nil {
+		return ops.AccessKeyCron
+	}
+	return ""
 }
 
 func Login(input LoginInput) (*LoginOutput, error) {
@@ -62,6 +81,7 @@ func Login(input LoginInput) (*LoginOutput, error) {
 		return &LoginOutput{
 			Token:    token,
 			Username: cfg.Admin.Username,
+			Name:     cfg.Admin.Username,
 			Role:     "admin",
 		}, nil
 	}
@@ -90,6 +110,7 @@ func Login(input LoginInput) (*LoginOutput, error) {
 			return &LoginOutput{
 				Token:    token,
 				Username: user.Username,
+				Name:     user.Name,
 				Role:     "user",
 			}, nil
 		}
@@ -108,10 +129,11 @@ func Login(input LoginInput) (*LoginOutput, error) {
 
 		if userNotFound {
 			user = model.User{
-				UID:          generateUID(),
+				UID:          input.Username,
 				Username:     input.Username,
 				Password:     string(hashedPassword),
 				RoleID:       getDefaultRoleID(),
+				Name:         ldapAttrs["name"],
 				Email:        ldapAttrs["email"],
 				Phone:        ldapAttrs["phone"],
 				Organization: ldapAttrs["organization"],
@@ -121,6 +143,17 @@ func Login(input LoginInput) (*LoginOutput, error) {
 			}
 		} else {
 			updates := map[string]interface{}{"password": string(hashedPassword)}
+			if v, ok := ldapAttrs["name"]; ok && v != "" {
+				updates["name"] = v
+				user.Name = v
+			}
+			if v, ok := ldapAttrs["uid"]; ok && v != "" {
+				updates["uid"] = v
+				user.UID = v
+			} else if user.UID != input.Username {
+				updates["uid"] = input.Username
+				user.UID = input.Username
+			}
 			if v, ok := ldapAttrs["email"]; ok && v != "" {
 				updates["email"] = v
 			}
@@ -140,6 +173,7 @@ func Login(input LoginInput) (*LoginOutput, error) {
 		return &LoginOutput{
 			Token:    token,
 			Username: user.Username,
+			Name:     user.Name,
 			Role:     "user",
 		}, nil
 	}
@@ -194,6 +228,7 @@ func CASLogin(input CASValidateInput) (*LoginOutput, error) {
 	return &LoginOutput{
 		Token:    token,
 		Username: user.Username,
+		Name:     user.Name,
 		Role:     "user",
 	}, nil
 }
