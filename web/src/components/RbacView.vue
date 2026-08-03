@@ -116,16 +116,24 @@ async function removeRole(role) {
 const showingAssign = ref(false)
 const assigningRole = ref(null)
 const assignUserIds = ref([])
+const assignSearchLeft = ref('')
+const assignSearchRight = ref('')
 
 const assignableUsers = computed(() => users.value.filter((u) => !u.role_name))
 
-const leftUsers = computed(() =>
-  assignableUsers.value.filter((u) => !assignUserIds.value.includes(u.id))
-)
+const leftUsers = computed(() => {
+  const list = assignableUsers.value.filter((u) => !assignUserIds.value.includes(u.id))
+  const kw = assignSearchLeft.value.trim().toLowerCase()
+  if (!kw) return list
+  return list.filter((u) => (u.uid || '').toLowerCase().startsWith(kw))
+})
 
-const rightUsers = computed(() =>
-  users.value.filter((u) => assignUserIds.value.includes(u.id))
-)
+const rightUsers = computed(() => {
+  const list = users.value.filter((u) => assignUserIds.value.includes(u.id))
+  const kw = assignSearchRight.value.trim().toLowerCase()
+  if (!kw) return list
+  return list.filter((u) => (u.uid || '').toLowerCase().startsWith(kw))
+})
 
 const isAllLeftChecked = computed(() => {
   if (leftUsers.value.length === 0) return false
@@ -186,6 +194,8 @@ async function openAssign(role) {
     assignUserIds.value = []
   }
   assignSelectedIds.value = []
+  assignSearchLeft.value = ''
+  assignSearchRight.value = ''
   await loadUsers()
   showingAssign.value = true
 }
@@ -472,6 +482,14 @@ async function removeUser(user) {
                 <span class="shuttle__label">可选用户</span>
                 <span class="shuttle__count">{{ leftUsers.length }}</span>
               </div>
+              <div class="shuttle__search">
+                <input
+                  v-model="assignSearchLeft"
+                  type="text"
+                  class="shuttle__search-input"
+                  placeholder="过滤账号"
+                />
+              </div>
               <div class="shuttle__list">
                 <label class="shuttle__item shuttle__item--all">
                   <input
@@ -520,6 +538,14 @@ async function removeUser(user) {
               <div class="shuttle__head">
                 <span class="shuttle__label">已选用户</span>
                 <span class="shuttle__count">{{ rightUsers.length }}</span>
+              </div>
+              <div class="shuttle__search">
+                <input
+                  v-model="assignSearchRight"
+                  type="text"
+                  class="shuttle__search-input"
+                  placeholder="过滤账号"
+                />
               </div>
               <div class="shuttle__list">
                 <label class="shuttle__item shuttle__item--all">
@@ -940,6 +966,32 @@ async function removeUser(user) {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-muted);
+}
+
+.shuttle__search {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.shuttle__search-input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+  background: var(--surface);
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.shuttle__search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.shuttle__search-input:focus {
+  border-color: var(--xauat-blue);
 }
 
 .shuttle__count {
