@@ -1,11 +1,19 @@
+# ============================================================
+# 主程序数据库（用户、角色、AccessKey、服务器、系统设置等）
+# ============================================================
 database:
-  # 二选一，取消对应注释即可
-  # -------- SQLite --------
-  # type: sqlite
-  # sqlite:
-  #   path: data.db
+  type: postgres
+  postgres:
+    host: localhost
+    port: 5432
+    user: root
+    password: 123456
+    dbname: mcp_platform
 
-  # -------- PostgreSQL --------
+# ============================================================
+# 审计日志数据库（与 audit-log-server 共用）
+# ============================================================
+audit_log_db:
   type: postgres
   postgres:
     host: localhost

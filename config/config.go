@@ -11,6 +11,7 @@ import (
 
 type Config struct {
 	Database        DatabaseConfig `yaml:"database"`
+	AuditLogDB      DatabaseConfig `yaml:"audit_log_db"`
 	JWTSecret       string         `yaml:"jwt_secret"`
 	AccessKeySecret string         `yaml:"access_key_secret"`
 	ServerPort      string         `yaml:"server_port"`
@@ -69,6 +70,12 @@ func applySoftDefaults() {
 	}
 	if AppConfig.Database.SQLite.Path == "" {
 		AppConfig.Database.SQLite.Path = "data.db"
+	}
+	if AppConfig.AuditLogDB.Type == "" {
+		AppConfig.AuditLogDB.Type = "sqlite"
+	}
+	if AppConfig.AuditLogDB.SQLite.Path == "" {
+		AppConfig.AuditLogDB.SQLite.Path = "audit_log.db"
 	}
 	if AppConfig.ServerPort == "" {
 		AppConfig.ServerPort = "8080"

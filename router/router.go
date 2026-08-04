@@ -15,6 +15,7 @@ func Setup() *gin.Engine {
 	authHandler := handler.NewAuthHandler()
 	accessKeyHandler := handler.NewAccessKeyHandler()
 	historyHandler := handler.NewHistoryHandler()
+	auditLogHandler := handler.NewAuditLogHandler()
 	serverHandler := handler.NewMCPServerHandler()
 	roleHandler := handler.NewRoleHandler()
 	userHandler := handler.NewRBACUserHandler()
@@ -35,6 +36,8 @@ func Setup() *gin.Engine {
 		auth.DELETE("/access-keys/:id", accessKeyHandler.Delete)
 
 		auth.GET("/history", historyHandler.List)
+
+		auth.GET("/audit-logs", auditLogHandler.List)
 
 		auth.GET("/servers", serverHandler.List)
 		auth.GET("/settings/gateway-status", settingHandler.GatewayStatus)

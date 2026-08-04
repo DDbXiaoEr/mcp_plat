@@ -195,6 +195,7 @@ const publishSelected = ref([])
 const showingPublishConfirm = ref(false)
 const publishing = ref(false)
 const enableAuth = ref(false)
+const enableAuditLog = ref(false)
 
 const publishTargets = computed(() =>
   servers.value.filter((s) => publishSelected.value.includes(s.id))
@@ -203,6 +204,7 @@ const publishTargets = computed(() =>
 function openPublish() {
   publishSelected.value = []
   enableAuth.value = false
+  enableAuditLog.value = false
   showingPublish.value = true
 }
 
@@ -225,7 +227,7 @@ function backToPublish() {
 async function executePublish() {
   publishing.value = true
   try {
-    await publishServers(publishSelected.value, enableAuth.value, '')
+    await publishServers(publishSelected.value, enableAuth.value, '', enableAuditLog.value)
     alert('发布成功')
     showingPublishConfirm.value = false
     await loadServers()
@@ -546,6 +548,15 @@ async function executePublish() {
               启用后请求本 MCP 服务时需要携带有效的 access key
             </p>
           </div>
+          <div class="publish-auth">
+            <label class="publish-auth__label">
+              <input type="checkbox" v-model="enableAuditLog" />
+              <span class="publish-auth__text">启用审计日志</span>
+            </label>
+            <p class="publish-auth__hint">
+              启用后记录每次 MCP 服务调用的访问日志
+            </p>
+          </div>
           <div class="dialog__actions">
             <button class="btn btn--ghost" type="button" @click="showingPublish = false">
               取消
@@ -590,6 +601,12 @@ async function executePublish() {
                 <span class="publish-preview__label">认证状态</span>
                 <span class="publish-preview__value" :class="{ 'publish-preview__auth-on': enableAuth }">
                   {{ enableAuth ? '已启用 Access Key 认证' : '未启用' }}
+                </span>
+              </div>
+              <div class="publish-preview__row">
+                <span class="publish-preview__label">审计日志</span>
+                <span class="publish-preview__value" :class="{ 'publish-preview__auth-on': enableAuditLog }">
+                  {{ enableAuditLog ? '已启用' : '未启用' }}
                 </span>
               </div>
           </div>

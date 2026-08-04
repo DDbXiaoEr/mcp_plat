@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"mcp_plat-console/config"
 	"mcp_plat-console/database"
 	"mcp_plat-console/model"
 
@@ -533,6 +534,7 @@ func fetchToolsSSE(address string, protocolVersion string, allowedCIDRs []*net.I
 type PublishInput struct {
 	ServerIDs       []string `json:"server_ids" binding:"required"`
 	EnableAuth      bool     `json:"enable_auth"`
+	EnableAuditLog  bool     `json:"enable_audit_log"`
 	AccesskeyHeader string   `json:"accesskey_header"`
 }
 
@@ -599,11 +601,6 @@ func PublishServers(input PublishInput) error {
 				},
 			}
 		}
-	if input.EnableAuth {
-		if gw.AuthGrpcAddr == "" {
-			errs = append(errs, fmt.Sprintf("%s: 启用认证但未配置 gRPC 校验地址", srv.Name))
-			continue
-		}
 		headerName := input.AccesskeyHeader
 		if headerName == "" {
 			headerName = gw.AccesskeyHeader
@@ -611,15 +608,41 @@ func PublishServers(input PublishInput) error {
 		if headerName == "" {
 			headerName = "X-Access-Key"
 		}
-		authValue := fmt.Sprintf(`{"header_name":"%s","grpc_addr":"%s","server_id":"%s"}`,
-			headerName, gw.AuthGrpcAddr, srv.ID)
+
+		var extPlugins []map[string]interface{}
+
+		if input.EnableAuth {
+			if gw.AuthGrpcAddr == "" {
+				errs = append(errs, fmt.Sprintf("%s: 启用认证但未配置 gRPC 校验地址", srv.Name))
+				continue
+			}
+			authValue := fmt.Sprintf(`{"header_name":"%s","grpc_addr":"%s","server_id":"%s"}`,
+				headerName, gw.AuthGrpcAddr, srv.ID)
+			extPlugins = append(extPlugins, map[string]interface{}{
+				"name":  "accesskey_verify",
+				"value": authValue,
+			})
+		}
+
+		if input.EnableAuditLog {
+			var auditLogSetting struct {
+				GrpcAddr string `json:"grpcAddr"`
+			}
+			if err := GetSetting("audit_log", &auditLogSetting); err != nil || auditLogSetting.GrpcAddr == "" {
+				errs = append(errs, fmt.Sprintf("%s: 启用审计日志但未配置 gRPC 地址，跳过审计日志插件", srv.Name))
+			} else {
+				auditValue := fmt.Sprintf(`{"header_name":"%s","grpc_addr":"%s","server_id":"%s","access_key_secret":"%s"}`,
+					headerName, auditLogSetting.GrpcAddr, srv.ID, config.AppConfig.AccessKeySecret)
+				extPlugins = append(extPlugins, map[string]interface{}{
+					"name":  "audit_log",
+					"value": auditValue,
+				})
+			}
+		}
+
+		if len(extPlugins) > 0 {
 			plugins["ext-plugin-pre-req"] = map[string]interface{}{
-				"conf": []map[string]interface{}{
-					{
-						"name":  "accesskey_verify",
-						"value": authValue,
-					},
-				},
+				"conf": extPlugins,
 			}
 		}
 		if len(plugins) > 0 {

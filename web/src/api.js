@@ -138,10 +138,10 @@ export function fetchGatewayStatus() {
   return request('/settings/gateway-status')
 }
 
-export function publishServers(serverIds, enableAuth, accesskeyHeader) {
+export function publishServers(serverIds, enableAuth, accesskeyHeader, enableAuditLog) {
   return request('/servers/publish', {
     method: 'POST',
-    body: JSON.stringify({ server_ids: serverIds, enable_auth: enableAuth, accesskey_header: accesskeyHeader })
+    body: JSON.stringify({ server_ids: serverIds, enable_auth: enableAuth, accesskey_header: accesskeyHeader, enable_audit_log: enableAuditLog })
   })
 }
 

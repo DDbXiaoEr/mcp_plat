@@ -18,7 +18,7 @@ func main() {
 	fmt.Println("=== apisix-go-runner startup ===")
 	fmt.Printf("APISIX_LISTEN_ADDRESS: %s\n", listenAddr)
 	fmt.Printf("APISIX_CONF_EXPIRE_TIME: %s\n", confTTL)
-	fmt.Printf("registered plugins: [accesskey_verify]\n")
+	fmt.Printf("registered plugins: [accesskey_verify, audit_log]\n")
 	fmt.Println("================================")
 
 	runner.Run(runner.RunnerConfig{})

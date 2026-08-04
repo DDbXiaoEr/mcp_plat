@@ -16,33 +16,13 @@ import (
 )
 
 var DB *gorm.DB
+var AuditLogDB *gorm.DB
 
 func Init() {
 	cfg := config.AppConfig
 
-	var dialector gorm.Dialector
-
-	switch cfg.Database.Type {
-	case "postgres":
-		pg := cfg.Database.Postgres
-		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai",
-			pg.Host, pg.User, pg.Password, pg.DBName, pg.Port)
-		dialector = postgres.Open(dsn)
-	case "sqlite":
-		dialector = sqlite.Open(cfg.Database.SQLite.Path)
-	default:
-		log.Fatalf("unsupported database type: %s", cfg.Database.Type)
-	}
-
-	var err error
-	DB, err = gorm.Open(dialector, &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
-	if err != nil {
-		log.Fatalf("failed to connect database: %v", err)
-	}
-
-	err = DB.AutoMigrate(
+	DB = openDB(cfg.Database)
+	err := DB.AutoMigrate(
 		&model.User{},
 		&model.AccessKey{},
 		&model.UsageHistory{},
@@ -54,4 +34,38 @@ func Init() {
 	if err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
+
+	if cfg.AuditLogDB.Type != "" {
+		AuditLogDB = openDB(cfg.AuditLogDB)
+		err = AuditLogDB.AutoMigrate(
+			&model.AuditLog{},
+		)
+		if err != nil {
+			log.Fatalf("failed to migrate audit_log database: %v", err)
+		}
+	}
+}
+
+func openDB(cfg config.DatabaseConfig) *gorm.DB {
+	var dialector gorm.Dialector
+
+	switch cfg.Type {
+	case "postgres":
+		pg := cfg.Postgres
+		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai",
+			pg.Host, pg.User, pg.Password, pg.DBName, pg.Port)
+		dialector = postgres.Open(dsn)
+	case "sqlite":
+		dialector = sqlite.Open(cfg.SQLite.Path)
+	default:
+		log.Fatalf("unsupported database type: %s", cfg.Type)
+	}
+
+	db, err := gorm.Open(dialector, &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
+	if err != nil {
+		log.Fatalf("failed to connect database: %v", err)
+	}
+	return db
 }
