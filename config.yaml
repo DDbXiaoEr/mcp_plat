@@ -20,7 +20,7 @@ audit_log_db:
     port: 5432
     user: root
     password: 123456
-    dbname: mcp_platform
+    dbname: mcp_history_db
 
 # 密钥需至少 32 字符随机值，生产环境建议通过环境变量注入
 jwt_secret: changeme-please-generate-a-random-32-char-string

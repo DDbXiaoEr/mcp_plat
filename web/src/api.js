@@ -152,6 +152,14 @@ export function saveSetting(key, body) {
   })
 }
 
+export function fetchHistory(params = {}) {
+  const query = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') query.set(k, v)
+  })
+  return request(`/history?${query.toString()}`)
+}
+
 export function testLdap(body) {
   return request('/settings/test-ldap', {
     method: 'POST',
