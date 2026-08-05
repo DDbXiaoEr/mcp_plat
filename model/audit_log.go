@@ -12,3 +12,7 @@ type AuditLog struct {
 	Message   string    `gorm:"type:text" json:"message"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+func (AuditLog) TableName() string {
+	return "audit_logs"
+}

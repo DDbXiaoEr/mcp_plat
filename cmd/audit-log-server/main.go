@@ -34,8 +34,9 @@ type DatabaseConfig struct {
 }
 
 type Config struct {
-	GrpcAddr string         `yaml:"grpc_addr"`
-	Database DatabaseConfig `yaml:"database"`
+	GrpcAddr         string         `yaml:"grpc_addr"`
+	Database         DatabaseConfig `yaml:"database"`
+	AccessKeySecret  string         `yaml:"access_key_secret"`
 }
 
 var AppConfig *Config
@@ -61,6 +62,10 @@ func Load() {
 
 	if AppConfig.GrpcAddr == "" {
 		AppConfig.GrpcAddr = "127.0.0.1:9091"
+	}
+	if AppConfig.AccessKeySecret == "" {
+		fmt.Fprintf(os.Stderr, "config: access_key_secret is required in audit_log_server.yml\n")
+		os.Exit(1)
 	}
 	if AppConfig.Database.Type == "" {
 		AppConfig.Database.Type = "sqlite"
@@ -107,13 +112,22 @@ func initDB(cfg DatabaseConfig) *gorm.DB {
 
 type auditLogServer struct {
 	plugin.UnimplementedAuditLogServiceServer
-	db *gorm.DB
+	db     *gorm.DB
+	secret []byte
 }
 
 func (s *auditLogServer) LogAccess(ctx context.Context, req *plugin.LogAccessRequest) (*plugin.LogAccessResponse, error) {
+	userID := uint(req.UserId)
+
+	if userID == 0 && req.AccessKey != "" {
+		if claims, err := plugin.ParseAccessKeyWithSecret(req.AccessKey, s.secret); err == nil {
+			userID = claims.UserID
+		}
+	}
+
 	entry := model.AuditLog{
 		AccessKey: req.AccessKey,
-		UserID:    uint(req.UserId),
+		UserID:    userID,
 		ServerID:  req.ServerId,
 		ToolName:  req.ToolName,
 		Success:   req.Success,
@@ -148,7 +162,7 @@ func main() {
 		fmt.Printf("[audit-log] 收到请求 method=%s\n", info.FullMethod)
 		return handler(ctx, req)
 	}))
-	plugin.RegisterAuditLogServiceServer(srv, &auditLogServer{db: db})
+	plugin.RegisterAuditLogServiceServer(srv, &auditLogServer{db: db, secret: []byte(AppConfig.AccessKeySecret)})
 
 	go func() {
 		fmt.Printf("gRPC audit-log-server 已启动，监听 %s\n", AppConfig.GrpcAddr)

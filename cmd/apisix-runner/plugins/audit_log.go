@@ -14,10 +14,9 @@ import (
 )
 
 type AuditLogConf struct {
-	GrpcAddr        string `json:"grpc_addr"`
-	HeaderName      string `json:"header_name"`
-	ServerID        string `json:"server_id"`
-	AccessKeySecret string `json:"access_key_secret"`
+	GrpcAddr   string `json:"grpc_addr"`
+	HeaderName string `json:"header_name"`
+	ServerID   string `json:"server_id"`
 }
 
 type AuditLog struct{}
@@ -55,20 +54,12 @@ func (p *AuditLog) RequestFilter(conf interface{}, w http.ResponseWriter, r runn
 	accessKey := extractAccessKey(r, cfg.HeaderName)
 	toolName := extractToolName(r)
 
-	var userID uint64
-	if cfg.AccessKeySecret != "" && accessKey != "" {
-		if claims, err := plugin.ParseAccessKeyWithSecret(accessKey, []byte(cfg.AccessKeySecret)); err == nil {
-			userID = uint64(claims.UserID)
-		}
-	}
-
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
 		_, err := plugin.LogAccess(ctx, cfg.GrpcAddr, &plugin.LogAccessRequest{
 			AccessKey: accessKey,
-			UserId:    userID,
 			ServerId:  cfg.ServerID,
 			ToolName:  toolName,
 			Success:   true,

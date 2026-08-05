@@ -3,6 +3,9 @@
 # 复制为 audit_log_server.yml 后启动
 # ============================================================
 
+# 密钥需至少 32 字符随机值，需与主程序 config.yaml 中 access_key_secret 保持一致
+access_key_secret: changeme-please-generate-a-random-32-char-string
+
 # gRPC 监听地址
 grpc_addr: "127.0.0.1:9091"
 

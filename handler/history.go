@@ -1,7 +1,5 @@
 package handler
 
-// Author: deepseek-v4-pro / opencode
-
 import (
 	"net/http"
 
@@ -19,13 +17,13 @@ func NewHistoryHandler() *HistoryHandler {
 func (h *HistoryHandler) List(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
-	var query service.HistoryQuery
+	var query service.AuditLogQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
 		return
 	}
 
-	output, err := service.ListHistory(userID, query)
+	output, err := service.ListAuditLogs(userID, query)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "查询失败"})
 		return

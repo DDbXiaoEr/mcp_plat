@@ -1,17 +1,20 @@
 package service
 
 import (
+	"log"
+
 	"mcp_plat-console/database"
 	"mcp_plat-console/model"
 )
 
 type AuditLogQuery struct {
-	ServerID string `form:"server_id"`
-	ToolName string `form:"tool_name"`
-	Start    string `form:"start"`
-	End      string `form:"end"`
-	Page     int    `form:"page"`
-	PageSize int    `form:"page_size"`
+	AccessKey string `form:"access_key"`
+	ServerID  string `form:"server_id"`
+	ToolName  string `form:"tool_name"`
+	Start     string `form:"start"`
+	End       string `form:"end"`
+	Page      int    `form:"page"`
+	PageSize  int    `form:"page_size"`
 }
 
 type AuditLogOutput struct {
@@ -22,7 +25,11 @@ type AuditLogOutput struct {
 }
 
 func ListAuditLogs(userID uint, query AuditLogQuery) (*AuditLogOutput, error) {
+	log.Printf("audit_log: query user_id=%d access_key=%s server_id=%s tool_name=%s start=%s end=%s page=%d page_size=%d",
+		userID, query.AccessKey, query.ServerID, query.ToolName, query.Start, query.End, query.Page, query.PageSize)
+
 	if database.AuditLogDB == nil {
+		log.Printf("audit_log: AuditLogDB is nil, returning empty")
 		return &AuditLogOutput{
 			List:     []model.AuditLog{},
 			Total:    0,
@@ -38,8 +45,29 @@ func ListAuditLogs(userID uint, query AuditLogQuery) (*AuditLogOutput, error) {
 		query.PageSize = 20
 	}
 
-	db := database.AuditLogDB.Model(&model.AuditLog{}).Where("user_id = ?", userID)
+	var userAccessKeys []string
+	database.DB.Model(&model.AccessKey{}).Where("user_id = ?", userID).Pluck("access_key", &userAccessKeys)
 
+	db := database.AuditLogDB.Model(&model.AuditLog{})
+
+	if query.AccessKey != "" {
+		belongs := false
+		for _, ak := range userAccessKeys {
+			if ak == query.AccessKey {
+				belongs = true
+				break
+			}
+		}
+		if !belongs {
+			db = db.Where("1 = 0")
+		} else {
+			db = db.Where("access_key = ?", query.AccessKey)
+		}
+	} else if len(userAccessKeys) > 0 {
+		db = db.Where("access_key IN ?", userAccessKeys)
+	} else {
+		db = db.Where("user_id = ?", userID)
+	}
 	if query.ServerID != "" {
 		db = db.Where("server_id = ?", query.ServerID)
 	}
@@ -60,8 +88,11 @@ func ListAuditLogs(userID uint, query AuditLogQuery) (*AuditLogOutput, error) {
 	offset := (query.Page - 1) * query.PageSize
 	err := db.Order("created_at desc").Offset(offset).Limit(query.PageSize).Find(&list).Error
 	if err != nil {
+		log.Printf("audit_log: query error: %v", err)
 		return nil, err
 	}
+
+	log.Printf("audit_log: result total=%d returned=%d", total, len(list))
 
 	return &AuditLogOutput{
 		List:     list,

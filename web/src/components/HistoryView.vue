@@ -9,10 +9,10 @@ const loading = ref(true)
 const page = ref(1)
 
 const filters = ref({
-  start_date: '',
-  end_date: '',
-  access_key_id: '',
-  server: ''
+  start: '',
+  end: '',
+  access_key: '',
+  server_id: ''
 })
 
 function formatTime(dateStr) {
@@ -22,19 +22,24 @@ function formatTime(dateStr) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-function getKeyName(id) {
-  const key = accessKeys.value.find((k) => k.id === id)
-  return key ? key.name : String(id)
+function getKeyNameByKey(keyStr) {
+  const k = accessKeys.value.find((k) => k.key === keyStr)
+  return k ? k.name : (keyStr ? keyStr.substring(0, 16) + '...' : '')
+}
+
+function getServerName(id) {
+  const s = servers.value.find((s) => s.id === id)
+  return s ? s.name : id
 }
 
 async function loadHistory() {
   loading.value = true
   try {
     const params = { page: page.value, page_size: 20 }
-    if (filters.value.access_key_id) params.access_key_id = filters.value.access_key_id
-    if (filters.value.server) params.server = filters.value.server
-    if (filters.value.start_date) params.start_date = filters.value.start_date
-    if (filters.value.end_date) params.end_date = filters.value.end_date
+    if (filters.value.access_key) params.access_key = filters.value.access_key
+    if (filters.value.server_id) params.server_id = filters.value.server_id
+    if (filters.value.start) params.start = filters.value.start
+    if (filters.value.end) params.end = filters.value.end
     history.value = await fetchHistory(params)
   } catch {
     history.value = { list: [], total: 0, page: 1, page_size: 20 }
@@ -48,7 +53,7 @@ function search() {
 }
 
 function reset() {
-  filters.value = { start_date: '', end_date: '', access_key_id: '', server: '' }
+  filters.value = { start: '', end: '', access_key: '', server_id: '' }
   search()
 }
 
@@ -79,26 +84,26 @@ onMounted(async () => {
     <div class="filters">
       <label class="filters__field">
         <span>开始时间</span>
-        <input v-model="filters.start_date" type="date" />
+        <input v-model="filters.start" type="date" />
       </label>
       <label class="filters__field">
         <span>结束时间</span>
-        <input v-model="filters.end_date" type="date" />
+        <input v-model="filters.end" type="date" />
       </label>
       <label class="filters__field">
         <span>AccessKey</span>
-        <select v-model="filters.access_key_id">
+        <select v-model="filters.access_key">
           <option value="">全部</option>
-          <option v-for="key in accessKeys" :key="key.id" :value="key.id">
+          <option v-for="key in accessKeys" :key="key.id" :value="key.key">
             {{ key.name }}
           </option>
         </select>
       </label>
       <label class="filters__field">
         <span>MCP 服务器</span>
-        <select v-model="filters.server">
+        <select v-model="filters.server_id">
           <option value="">全部</option>
-          <option v-for="s in servers" :key="s.id" :value="s.name">{{ s.name }}</option>
+          <option v-for="s in servers" :key="s.id" :value="s.id">{{ s.name }}</option>
         </select>
       </label>
       <button class="filters__reset" type="button" @click="reset">重置</button>
@@ -115,17 +120,19 @@ onMounted(async () => {
             <th>AccessKey</th>
             <th>MCP 服务器</th>
             <th>工具</th>
+            <th>状态</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="r in history.list" :key="r.id">
             <td>{{ formatTime(r.created_at) }}</td>
-            <td>{{ getKeyName(r.access_key_id) }}</td>
-            <td>{{ r.server }}</td>
-            <td>{{ r.endpoint }}</td>
+            <td>{{ getKeyNameByKey(r.access_key) }}</td>
+            <td>{{ getServerName(r.server_id) }}</td>
+            <td>{{ r.tool_name }}</td>
+            <td>{{ r.success ? '成功' : '失败' }}</td>
           </tr>
           <tr v-if="!history.list.length">
-            <td class="history__empty" colspan="4">暂无匹配的记录</td>
+            <td class="history__empty" colspan="5">暂无匹配的记录</td>
           </tr>
         </tbody>
       </table>
