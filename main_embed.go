@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"embed"
+	"flag"
 	"fmt"
 	"io/fs"
 	"log"
@@ -29,7 +30,17 @@ import (
 var dist embed.FS
 
 func main() {
+	port := flag.String("port", "", "server listen port (overrides config.yaml)")
+	ver := flag.Bool("version", false, "print version and exit")
+	flag.Parse()
+
+	if *ver {
+		fmt.Printf("mcp_plat-console version %s (commit %s), built at %s\n", Version, GitCommit, BuildTime)
+		os.Exit(0)
+	}
+
 	config.Load()
+	config.SetServerPort(*port)
 
 	fmt.Printf("mcp_plat-console version %s (commit %s), built at %s\n", Version, GitCommit, BuildTime)
 

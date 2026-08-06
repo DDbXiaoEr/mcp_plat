@@ -103,5 +103,11 @@ func validateRequired() {
 	}
 }
 
+func SetServerPort(port string) {
+	if port != "" {
+		AppConfig.ServerPort = port
+	}
+}
+
 func (c *Config) AdminUsername() string { return c.Admin.Username }
 func (c *Config) AdminPassword() string { return c.Admin.Password }
