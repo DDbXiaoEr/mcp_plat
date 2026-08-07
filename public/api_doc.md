@@ -287,7 +287,7 @@ GET /api/servers
       "id": 1,
       "name": "教务系统 MCP",
       "address": "https://mcp.xauat.edu.cn/jwc",
-      "service_address": "192.168.1.100:8081",
+      "service_address": "[\"192.168.1.100:8081\",\"192.168.1.101:8081\"]",
       "department": "教务处",
       "protocol": "SSE",
       "protocol_version": "2026-07-28",
@@ -306,7 +306,7 @@ GET /api/servers
 | id | uint | 服务器 ID |
 | name | string | 服务器名称 |
 | address | string | MCP 服务器地址（API 网关路径或完整 URL） |
-| service_address | string | MCP 服务地址（IP:端口，用于 API 网关路由后端） |
+| service_address | string | MCP 服务地址，JSON 数组字符串（如 `["192.168.1.100:8081","192.168.1.101:8081"]`），支持多个地址，后端发布时作为 API 网关 upstream 节点 |
 | department | string | 负责部门 |
 | protocol | string | 协议类型（SSE / Streamable HTTP / stdio） |
 | protocol_version | string | MCP 协议版本（2025-03-26 / 2025-06-18 / 2026-07-28），默认 2026-07-28 |
@@ -326,7 +326,7 @@ POST /api/servers
 |------|------|------|------|
 | name | string | 是 | 服务器名称 |
 | address | string | 是 | MCP 服务器地址（API 网关路径或完整 URL） |
-| service_address | string | 否 | MCP 服务地址（IP:端口，用于 API 网关路由后端） |
+| service_address | string | 否 | MCP 服务地址，JSON 数组字符串（如 `["192.168.1.100:8081","192.168.1.101:8081"]`），支持多个地址 |
 | department | string | 否 | 负责部门 |
 | protocol | string | 否 | 协议类型，默认 SSE |
 | protocol_version | string | 否 | MCP 协议版本，默认 2026-07-28 |
@@ -432,7 +432,7 @@ PUT /api/servers/:id
 |------|------|------|------|
 | name | string | 否 | 服务器名称 |
 | address | string | 否 | MCP 服务器地址 |
-| service_address | string | 否 | MCP 服务地址（IP:端口） |
+| service_address | string | 否 | MCP 服务地址，JSON 数组字符串，支持多个地址 |
 | department | string | 否 | 负责部门 |
 | protocol | string | 否 | 协议类型 |
 | protocol_version | string | 否 | MCP 协议版本 |

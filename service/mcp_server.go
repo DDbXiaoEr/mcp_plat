@@ -165,6 +165,20 @@ func validateMCPAddress(raw string, allowedCIDRs []*net.IPNet) (string, error) {
 	return raw, nil
 }
 
+func parseServiceAddresses(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	if strings.HasPrefix(raw, "[") {
+		var arr []string
+		if err := json.Unmarshal([]byte(raw), &arr); err == nil {
+			return arr
+		}
+	}
+	return []string{raw}
+}
+
 type CreateServerInput struct {
 	Name            string `json:"name" binding:"required"`
 	Address         string `json:"address" binding:"required"`
@@ -568,15 +582,21 @@ func PublishServers(input PublishInput) error {
 	var errs []string
 
 	for _, srv := range servers {
-		if srv.ServiceAddress == "" {
+		addresses := parseServiceAddresses(srv.ServiceAddress)
+		if len(addresses) == 0 {
 			errs = append(errs, fmt.Sprintf("%s: 未配置后端服务地址", srv.Name))
 			continue
+		}
+
+		nodes := map[string]int{}
+		for _, addr := range addresses {
+			nodes[addr] = 1
 		}
 
 		upstreamBody := map[string]interface{}{
 			"name":  srv.Name,
 			"type":  "roundrobin",
-			"nodes": map[string]int{srv.ServiceAddress: 1},
+			"nodes": nodes,
 		}
 		if err := putAPISIXAdmin(client, gw.AdminURL, gw.AdminKey, "/apisix/admin/upstreams/"+srv.ID, upstreamBody); err != nil {
 			errs = append(errs, fmt.Sprintf("%s: 创建上游失败: %v", srv.Name, err))

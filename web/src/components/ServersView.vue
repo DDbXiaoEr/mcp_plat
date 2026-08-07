@@ -55,6 +55,28 @@ function normalizeTool(t) {
   return typeof t === 'string' ? { name: t, description: '' } : t
 }
 
+function formatServiceAddresses(raw) {
+  if (!raw) return ''
+  if (raw.startsWith('[')) {
+    try {
+      const arr = JSON.parse(raw)
+      if (Array.isArray(arr)) return arr.join('\n')
+    } catch { /**/ }
+  }
+  return raw
+}
+
+function packServiceAddresses(text) {
+  const lines = text.split('\n').map(s => s.trim()).filter(Boolean)
+  return JSON.stringify(lines)
+}
+
+function pickRandomAddress(text) {
+  const lines = text.split('\n').map(s => s.trim()).filter(Boolean)
+  if (lines.length === 0) return ''
+  return lines[Math.floor(Math.random() * lines.length)]
+}
+
 const PROTOCOLS = ['SSE', 'Streamable HTTP']
 const PROTOCOL_VERSIONS = ['2026-07-28', '2025-06-18', '2025-03-26']
 
@@ -128,7 +150,7 @@ function openCreate() {
 }
 
 async function fetchTools() {
-  const host = createForm.value.service_address.trim()
+  const host = pickRandomAddress(createForm.value.service_address)
   const path = createForm.value.address.trim()
   fetchToolsError.value = ''
   if (!host) {
@@ -170,7 +192,7 @@ async function confirmCreate() {
     const server = await createServer({
       name,
       address: createForm.value.address.trim(),
-      service_address: createForm.value.service_address.trim(),
+      service_address: packServiceAddresses(createForm.value.service_address),
       department: createForm.value.department.trim(),
       protocol: createForm.value.protocol,
       protocol_version: createForm.value.protocol_version,
@@ -311,7 +333,15 @@ async function executePublish() {
             </div>
             <div class="server-detail__row">
               <dt>MCP 服务地址</dt>
-              <dd>{{ selected.service_address || '未填写' }}</dd>
+              <dd>
+                <template v-if="formatServiceAddresses(selected.service_address)">
+                  <div
+                    v-for="(addr, i) in formatServiceAddresses(selected.service_address).split('\n')"
+                    :key="i"
+                  >{{ addr }}</div>
+                </template>
+                <span v-else>未填写</span>
+              </dd>
             </div>
             <div class="server-detail__row">
               <dt>负责部门</dt>
@@ -419,16 +449,17 @@ async function executePublish() {
                   ?
                   <span class="dialog__tooltip">
                     填写 MCP 服务的实际 IP:端口，例如
-                    <code>192.168.1.100:8081</code>，用于在 API 网关创建路由。
+                    <code>192.168.1.100:8081</code>，支持多个地址（每行一个）。
+                    获取工具时从填写的地址列表中随机选择一个。
                   </span>
                 </span>
               </label>
-              <input
+              <textarea
                 v-model="createForm.service_address"
-                class="dialog__input"
-                type="text"
+                class="dialog__input dialog__textarea"
+                rows="3"
                 placeholder="192.168.1.100:8081"
-              />
+              ></textarea>
             </div>
             <div class="dialog__group">
               <label class="dialog__label">连接方式</label>
@@ -595,7 +626,10 @@ async function executePublish() {
               </div>
               <div class="publish-preview__row">
                 <span class="publish-preview__label">后端地址</span>
-                <span class="publish-preview__value">{{ server.service_address || '未填写' }}</span>
+                <span class="publish-preview__value">
+                  <template v-if="formatServiceAddresses(server.service_address)">{{ formatServiceAddresses(server.service_address).split('\n').join(', ') }}</template>
+                  <span v-else>未填写</span>
+                </span>
               </div>
               <div class="publish-preview__row">
                 <span class="publish-preview__label">认证状态</span>
