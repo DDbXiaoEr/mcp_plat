@@ -1,7 +1,7 @@
 <script setup>
 
 // Author: deepseek-v4-pro / opencode
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { fetchServers, createServer, fetchServerTools, publishServers, deleteServer, updateServer, fetchGatewayStatus } from '../api.js'
 
 const servers = ref([])
@@ -71,12 +71,6 @@ function packServiceAddresses(text) {
   return JSON.stringify(lines)
 }
 
-function pickRandomAddress(text) {
-  const lines = text.split('\n').map(s => s.trim()).filter(Boolean)
-  if (lines.length === 0) return ''
-  return lines[Math.floor(Math.random() * lines.length)]
-}
-
 const PROTOCOLS = ['SSE', 'Streamable HTTP']
 const PROTOCOL_VERSIONS = ['2026-07-28', '2025-06-18', '2025-03-26']
 
@@ -142,19 +136,42 @@ const fetchingTools = ref(false)
 const fetchToolsError = ref('')
 const useHttps = ref(false)
 
+const serviceAddressList = computed(() =>
+  createForm.value.service_address.split('\n').map(s => s.trim()).filter(Boolean)
+)
+
+const fetchAddressValue = ref('')
+const customAddressInput = ref('')
+
+const isCustomFetchAddress = computed(() => fetchAddressValue.value === '__custom__')
+
+function randomizeFetchAddress() {
+  const list = serviceAddressList.value
+  fetchAddressValue.value = list.length > 0 ? list[Math.floor(Math.random() * list.length)] : ''
+  customAddressInput.value = ''
+}
+
+watch(() => createForm.value.service_address, () => {
+  if (!serviceAddressList.value.includes(fetchAddressValue.value) && fetchAddressValue.value !== '__custom__') {
+    randomizeFetchAddress()
+  }
+})
+
 function openCreate() {
   createForm.value = { name: '', address: '', service_address: '', department: '', protocol: 'SSE', protocol_version: '2026-07-28', tools: '', description: '' }
   fetchToolsError.value = ''
   useHttps.value = false
+  fetchAddressValue.value = ''
+  customAddressInput.value = ''
   showingCreate.value = true
 }
 
 async function fetchTools() {
-  const host = pickRandomAddress(createForm.value.service_address)
+  const host = (isCustomFetchAddress.value ? customAddressInput.value : fetchAddressValue.value).trim()
   const path = createForm.value.address.trim()
   fetchToolsError.value = ''
   if (!host) {
-    fetchToolsError.value = '请先填写 MCP 服务地址'
+    fetchToolsError.value = '请先选择或输入 MCP 服务地址'
     return
   }
   fetchingTools.value = true
@@ -448,9 +465,8 @@ async function executePublish() {
                 <span class="dialog__help">
                   ?
                   <span class="dialog__tooltip">
-                    填写 MCP 服务的实际 IP:端口，例如
+                     填写 MCP 服务的实际 IP:端口，例如
                     <code>192.168.1.100:8081</code>，支持多个地址（每行一个）。
-                    获取工具时从填写的地址列表中随机选择一个。
                   </span>
                 </span>
               </label>
@@ -460,21 +476,6 @@ async function executePublish() {
                 rows="3"
                 placeholder="192.168.1.100:8081"
               ></textarea>
-            </div>
-            <div class="dialog__group">
-              <label class="dialog__label">连接方式</label>
-              <div class="dialog__toggle">
-                <button
-                  type="button"
-                  :class="['dialog__toggle-btn', { 'dialog__toggle-btn--active': !useHttps }]"
-                  @click="useHttps = false"
-                >HTTP</button>
-                <button
-                  type="button"
-                  :class="['dialog__toggle-btn', { 'dialog__toggle-btn--active': useHttps }]"
-                  @click="useHttps = true"
-                >HTTPS</button>
-              </div>
             </div>
             <div class="dialog__group">
               <label class="dialog__label">负责部门</label>
@@ -493,6 +494,44 @@ async function executePublish() {
                 rows="2"
                 placeholder="请输入服务器描述信息"
               ></textarea>
+            </div>
+            <hr class="dialog__divider" />
+            <p class="dialog__section-label">获取工具</p>
+            <div class="dialog__group">
+              <label class="dialog__label">选择地址</label>
+              <select v-model="fetchAddressValue" class="dialog__input">
+                <option value="" disabled>请选择地址</option>
+                <option
+                  v-for="addr in serviceAddressList"
+                  :key="addr"
+                  :value="addr"
+                >{{ addr }}</option>
+                <option value="__custom__">自定义地址...</option>
+              </select>
+            </div>
+            <div v-if="isCustomFetchAddress" class="dialog__group">
+              <label class="dialog__label">自定义地址</label>
+              <input
+                v-model="customAddressInput"
+                class="dialog__input"
+                type="text"
+                placeholder="IP:端口，例如 192.168.1.100:8081"
+              />
+            </div>
+            <div class="dialog__group">
+              <label class="dialog__label">连接方式</label>
+              <div class="dialog__toggle">
+                <button
+                  type="button"
+                  :class="['dialog__toggle-btn', { 'dialog__toggle-btn--active': !useHttps }]"
+                  @click="useHttps = false"
+                >HTTP</button>
+                <button
+                  type="button"
+                  :class="['dialog__toggle-btn', { 'dialog__toggle-btn--active': useHttps }]"
+                  @click="useHttps = true"
+                >HTTPS</button>
+              </div>
             </div>
             <div class="dialog__group">
               <label class="dialog__label">协议类型</label>
@@ -1083,6 +1122,9 @@ async function executePublish() {
   padding: 32px;
   max-width: 520px;
   width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow);
 }
 
@@ -1091,12 +1133,16 @@ async function executePublish() {
   font-weight: 700;
   color: var(--xauat-blue);
   margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .dialog__form {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .dialog__group {
@@ -1253,11 +1299,24 @@ async function executePublish() {
   color: #c0392b;
 }
 
+.dialog__divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0;
+}
+
+.dialog__section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--xauat-blue);
+}
+
 .dialog__actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 24px;
+  flex-shrink: 0;
 }
 
 .dialog__desc {
