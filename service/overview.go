@@ -75,7 +75,7 @@ func GetCallTrend(days int) (*CallTrendOutput, error) {
 	countByDay := map[string]int64{}
 	if database.AuditLogDB != nil {
 		type row struct {
-			Day   string
+			Day   time.Time
 			Count int64
 		}
 		var rows []row
@@ -87,7 +87,7 @@ func GetCallTrend(days int) (*CallTrendOutput, error) {
 			return nil, err
 		}
 		for _, r := range rows {
-			countByDay[r.Day] = r.Count
+			countByDay[r.Day.Format("2006-01-02")] = r.Count
 		}
 	}
 
