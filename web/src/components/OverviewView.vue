@@ -74,10 +74,19 @@ const trend = ref({ dates: [], counts: [] })
 const chartEl = ref(null)
 let chart = null
 
+function cssVar(name, fallback) {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return value || fallback
+}
+
 function renderChart() {
-  if (!chartEl.value || !trend.value.dates.length) return
+  if (!chartEl.value) return
   if (!chart) {
     chart = echarts.init(chartEl.value)
+  }
+  if (!trend.value.dates.length) {
+    chart.clear()
+    return
   }
   chart.setOption({
     tooltip: { trigger: 'axis' },
@@ -86,25 +95,24 @@ function renderChart() {
       type: 'category',
       boundaryGap: false,
       data: trend.value.dates,
-      axisLine: { lineStyle: { color: 'var(--border)' } },
-      axisLabel: { color: 'var(--text-muted)', fontSize: 12 }
+      axisLine: { lineStyle: { color: cssVar('--border', '#e3e9f2') } },
+      axisLabel: { color: cssVar('--text-muted', '#5b6b80'), fontSize: 12 }
     },
     yAxis: {
       type: 'value',
       minInterval: 1,
       splitLine: { lineStyle: { color: '#eef2f8' } },
-      axisLabel: { color: 'var(--text-muted)', fontSize: 12 }
+      axisLabel: { color: cssVar('--text-muted', '#5b6b80'), fontSize: 12 }
     },
     series: [
       {
         name: 'AI 调用次数',
         type: 'line',
-        smooth: true,
         symbol: 'circle',
         symbolSize: 6,
         data: trend.value.counts,
-        lineStyle: { width: 3, color: 'var(--xauat-blue)' },
-        itemStyle: { color: 'var(--xauat-blue)' },
+        lineStyle: { width: 3, color: cssVar('--xauat-blue', '#0a3d7a') },
+        itemStyle: { color: cssVar('--xauat-blue', '#0a3d7a') },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: 'rgba(10, 61, 122, 0.28)' },
@@ -124,11 +132,12 @@ async function loadTrend() {
 }
 
 async function refreshTrend() {
-  trend.value = { dates: [], counts: [] }
   try {
     await loadTrend()
   } catch {
     trend.value = { dates: [], counts: [] }
+    await nextTick()
+    renderChart()
   }
 }
 
@@ -203,8 +212,10 @@ onBeforeUnmount(() => {
           </button>
         </div>
       </div>
-      <div v-if="trend.dates.length" ref="chartEl" class="trend__canvas"></div>
-      <div v-else class="trend__empty">暂无数据</div>
+      <div class="trend__body">
+        <div ref="chartEl" class="trend__canvas"></div>
+        <div v-show="!trend.dates.length" class="trend__empty">暂无数据</div>
+      </div>
     </div>
   </section>
 </template>
@@ -377,18 +388,23 @@ onBeforeUnmount(() => {
   border-color: var(--xauat-blue);
 }
 
-.trend__canvas {
-  height: 300px;
+.trend__body {
+  position: relative;
   margin-top: 16px;
 }
 
-.trend__empty {
+.trend__canvas {
   height: 300px;
-  margin-top: 16px;
+}
+
+.trend__empty {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
   color: var(--text-muted);
+  background: var(--surface);
 }
 </style>
