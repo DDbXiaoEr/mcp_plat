@@ -138,6 +138,14 @@ export function fetchGatewayStatus() {
   return request('/settings/gateway-status')
 }
 
+export function fetchOverviewStats() {
+  return request('/overview/stats')
+}
+
+export function fetchOverviewCallTrend(days = 30) {
+  return request(`/overview/call-trend?days=${days}`)
+}
+
 export function publishServers(serverIds, enableAuth, accesskeyHeader, enableAuditLog) {
   return request('/servers/publish', {
     method: 'POST',

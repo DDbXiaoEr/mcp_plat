@@ -50,6 +50,7 @@ mcp_plat-console/
 │   ├── access_key.go         # CRUD /api/access-keys
 │   ├── history.go            # GET /api/history
 │   ├── mcp_server.go         # CRUD /api/servers
+│   ├── overview.go           # GET /api/overview/stats（平台概况统计，仅管理员）, GET /api/overview/call-trend（AI 调用历史趋势，仅管理员）
 │   ├── role.go               # CRUD /api/roles（仅管理员）
 │   ├── rbac_user.go          # CRUD /api/users（仅管理员）
 │   └── setting.go            # GET/PUT /api/settings（仅管理员）
@@ -62,6 +63,7 @@ mcp_plat-console/
 │   ├── history.go            # 使用历史业务逻辑
 │   ├── mcp_server.go         # MCPServer 业务逻辑
 │   ├── mcp_server_test.go    # FetchTools 单元测试（mock + 可选真实服务器）
+│   ├── overview.go           # 平台概况统计业务逻辑（用户/服务器/工具/当天调用数）
 │   ├── role.go               # Role 业务逻辑
 │   ├── rbac_user.go          # RBACUser 业务逻辑
 │   └── setting.go            # 系统设置业务逻辑（键值 JSON 存取）
@@ -143,6 +145,8 @@ mcp_plat-console/
 | PUT | `/api/access-keys/:id` | 是 | - | handler/access_key.go → Update |
 | DELETE | `/api/access-keys/:id` | 是 | - | handler/access_key.go → Delete |
 | GET | `/api/history` | 是 | - | handler/history.go → List（⏳ 计划中） |
+| GET | `/api/overview/stats` | 是 | 是 | handler/overview.go → Stats |
+| GET | `/api/overview/call-trend` | 是 | 是 | handler/overview.go → CallTrend |
 | GET | `/api/servers` | 是 | - | handler/mcp_server.go → List |
 | POST | `/api/servers` | 是 | 是 | handler/mcp_server.go → Create |
 | PUT | `/api/servers/:id` | 是 | 是 | handler/mcp_server.go → Update |

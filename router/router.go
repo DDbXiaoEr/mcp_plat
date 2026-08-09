@@ -17,6 +17,7 @@ func Setup() *gin.Engine {
 	historyHandler := handler.NewHistoryHandler()
 	auditLogHandler := handler.NewAuditLogHandler()
 	serverHandler := handler.NewMCPServerHandler()
+	overviewHandler := handler.NewOverviewHandler()
 	roleHandler := handler.NewRoleHandler()
 	userHandler := handler.NewRBACUserHandler()
 	settingHandler := handler.NewSettingHandler()
@@ -64,6 +65,9 @@ func Setup() *gin.Engine {
 		admin.POST("/users", userHandler.Create)
 		admin.PUT("/users/:id", userHandler.Update)
 		admin.DELETE("/users/:id", userHandler.Delete)
+
+		admin.GET("/overview/stats", overviewHandler.Stats)
+		admin.GET("/overview/call-trend", overviewHandler.CallTrend)
 
 		admin.GET("/settings", settingHandler.Get)
 		admin.PUT("/settings/:key", settingHandler.Save)

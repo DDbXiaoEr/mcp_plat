@@ -40,7 +40,7 @@ web/
         ├── AccessKeyView.vue  # AccessKey 列表页（user）
         ├── AccessKeyDrawer.vue# AccessKey 编辑抽屉（user）
         ├── HistoryView.vue    # 使用历史页（user）
-        ├── OverviewView.vue   # 平台概况（admin，四项统计卡片）
+        ├── OverviewView.vue   # 平台概况（admin，四项统计卡片 + AI 调用趋势折线图）
         ├── ServersView.vue    # MCP 服务器管理（admin，列表+详情+新增对话框）
         └── SettingsView.vue   # 系统设置（admin，占位）
 ```

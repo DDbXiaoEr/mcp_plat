@@ -926,7 +926,73 @@ GET /api/settings/gateway-status
 
 ---
 
-## 7. 数据模型说明
+## 7. 平台概况统计
+
+> 仅管理员可调用，需携带 `Authorization: Bearer <token>`。
+
+### 7.1 获取平台概况统计
+
+```
+GET /api/overview/stats
+```
+
+**成功响应：**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "users": 1286,
+    "servers": 24,
+    "tools": 68,
+    "today_calls": 3472
+  }
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| users | int | 平台用户总数 |
+| servers | int | 已注册的 MCP 服务器数 |
+| tools | int | 全部服务器的工具数合计 |
+| today_calls | int | 当天（自然日）AI 调用次数，来自审计日志表（audit_logs），未配置审计库时为 0 |
+
+---
+
+### 7.2 获取 AI 调用历史趋势
+
+```
+GET /api/overview/call-trend
+```
+
+> 仅管理员可调用，需携带 `Authorization: Bearer <token>`。
+
+**请求参数（Query String）：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| days | int | 否 | 统计最近 N 天（含今天），默认 30，取值范围 1~365 |
+
+**成功响应：**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "dates": ["07-11", "07-12", "07-13"],
+    "counts": [1286, 1520, 3472]
+  }
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| dates | []string | 日期标签数组，`MM-DD` 格式，按时间升序，长度恒等于请求的 days（含今天，无调用记录的天数为 0） |
+| counts | []int64 | 每日 AI 调用次数，与 dates 一一对应，统计 audit_logs 全量记录数（含成功与失败），未配置审计库时全为 0 |
+
+---
+
+## 8. 数据模型说明
 
 ### 7.1 角色表（roles）
 
