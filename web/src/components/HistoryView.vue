@@ -64,6 +64,32 @@ function goPage(p) {
 
 const totalPages = computed(() => Math.ceil(history.value.total / history.value.page_size) || 1)
 
+const pageNumbers = computed(() => {
+  const total = totalPages.value
+  const current = page.value
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1)
+  }
+  const set = new Set([1, total, current - 1, current, current + 1])
+  const sorted = [...set].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b)
+  const pages = []
+  let prev = 0
+  for (const p of sorted) {
+    if (p - prev > 1) pages.push('...')
+    pages.push(p)
+    prev = p
+  }
+  return pages
+})
+
+const jumpPage = ref('')
+
+function goJump() {
+  const p = Math.min(totalPages.value, Math.max(1, Number(jumpPage.value) || 1))
+  goPage(p)
+  jumpPage.value = ''
+}
+
 onMounted(async () => {
   try {
     const [keys, svrs] = await Promise.all([fetchAccessKeys(), fetchServers()])
@@ -139,8 +165,25 @@ onMounted(async () => {
 
       <div v-if="totalPages > 1" class="history__pager">
         <button :disabled="page <= 1" @click="goPage(page - 1)">上一页</button>
-        <span>第 {{ page }} / {{ totalPages }} 页（共 {{ history.total }} 条）</span>
+        <template v-for="(p, i) in pageNumbers" :key="i">
+          <span v-if="p === '...'" class="history__ellipsis">…</span>
+          <button
+            v-else
+            class="history__page"
+            :class="{ 'is-active': p === page }"
+            @click="goPage(p)"
+          >
+            {{ p }}
+          </button>
+        </template>
         <button :disabled="page >= totalPages" @click="goPage(page + 1)">下一页</button>
+        <span class="history__jump">
+          前往
+          <input v-model="jumpPage" type="number" min="1" :max="totalPages" @keyup.enter="goJump" />
+          页
+          <button type="button" @click="goJump">跳转</button>
+        </span>
+        <span>共 {{ history.total }} 条</span>
       </div>
     </template>
   </section>
@@ -268,14 +311,15 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 20px;
   font-size: 14px;
   color: var(--text-muted);
 }
 
 .history__pager button {
-  padding: 8px 16px;
+  padding: 8px 14px;
   font-size: 13px;
   font-weight: 600;
   color: var(--xauat-blue);
@@ -293,5 +337,40 @@ onMounted(async () => {
 .history__pager button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.history__ellipsis {
+  padding: 0 2px;
+  color: var(--text-muted);
+}
+
+.history__page.is-active {
+  color: #fff;
+  background: var(--xauat-blue);
+  border-color: var(--xauat-blue);
+}
+
+.history__jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+.history__jump input {
+  width: 56px;
+  padding: 7px 8px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  text-align: center;
+}
+
+.history__jump input:focus {
+  border-color: var(--xauat-blue-light);
+  box-shadow: 0 0 0 3px rgba(30, 95, 176, 0.12);
 }
 </style>
