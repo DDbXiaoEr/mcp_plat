@@ -13,6 +13,7 @@ import (
 	"mcp_plat-console/model"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type CreateAccessKeyInput struct {
@@ -29,6 +30,7 @@ type UpdateAccessKeyInput struct {
 }
 
 type AccessKeyClaims struct {
+	KeyID  uint   `json:"key_id"`
 	UserID uint   `json:"user_id"`
 	Role   string `json:"role"`
 	jwt.RegisteredClaims
@@ -70,15 +72,11 @@ func CreateAccessKey(userID uint, input CreateAccessKeyInput) (*model.AccessKey,
 		}
 	}
 
-	key, err := generateAccessKey(userID, roleName, input.ExpiredAt)
-	if err != nil {
-		return nil, err
-	}
-
+	// 先落库拿到自增 ID，再签发包含 key_id 的 key（审计日志用 ID 存储，减少数据量）
 	ak := model.AccessKey{
 		UserID:    userID,
 		Name:      input.Name,
-		Key:       key,
+		Key:       "pending-" + uuid.NewString(),
 		Enabled:   true,
 		ExpiredAt: input.ExpiredAt,
 		Servers:   input.Servers,
@@ -87,6 +85,15 @@ func CreateAccessKey(userID uint, input CreateAccessKeyInput) (*model.AccessKey,
 	if err := database.DB.Create(&ak).Error; err != nil {
 		return nil, err
 	}
+
+	key, err := generateAccessKey(ak.ID, userID, roleName, input.ExpiredAt)
+	if err != nil {
+		return nil, err
+	}
+	if err := database.DB.Model(&ak).Update("key", key).Error; err != nil {
+		return nil, err
+	}
+	ak.Key = key
 	return &ak, nil
 }
 
@@ -121,8 +128,9 @@ func DeleteAccessKey(id, userID uint) error {
 	return result.Error
 }
 
-func generateAccessKey(userID uint, role string, expiredAt *time.Time) (string, error) {
+func generateAccessKey(keyID, userID uint, role string, expiredAt *time.Time) (string, error) {
 	claims := AccessKeyClaims{
+		KeyID:  keyID,
 		UserID: userID,
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{

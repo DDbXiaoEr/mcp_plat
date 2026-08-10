@@ -30,7 +30,12 @@ mcp_plat-console/
 │   └── config.go             # 配置加载（DB / JWT / 端口 / 管理员账号）
 │
 ├── database/
-│   └── database.go           # GORM 初始化 + AutoMigrate
+│   └── database.go           # GORM 初始化 + AutoMigrate（AuditStore 审计存储抽象入口）
+│
+├── auditstore/               # 审计日志存储抽象层（可配置：关系库 / ClickHouse）
+│   ├── store.go              # Store 接口 + 工厂 New()
+│   ├── gorm_store.go         # 关系库实现（Postgres/SQLite）+ 定期清理
+│   └── clickhouse_store.go   # ClickHouse 实现（MergeTree / ReplicatedMergeTree + TTL）
 │
 ├── logging/
 │   └── logging.go            # 日志初始化（启动时读 log 设置，启用则重定向到 Syslog，否则标准输出）
@@ -42,8 +47,8 @@ mcp_plat-console/
 │   ├── mcp_server.go         # MCPServer 模型
 │   ├── role.go               # Role 模型
 │   ├── role_server.go        # RoleServer 关联模型
+│   ├── audit_log.go          # AuditLog 模型（AccessKey 以 ID 存储，可落 ClickHouse）
 │   └── setting.go            # Setting 键值模型（系统设置）
-│   └── audit_log.go          # AuditLog 模型（审计日志）
 │
 ├── handler/
 │   ├── auth.go               # POST /api/auth/login, GET /api/auth/profile

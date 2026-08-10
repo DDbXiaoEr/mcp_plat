@@ -220,7 +220,7 @@ DELETE /api/access-keys/:id
 
 ## 3. 使用历史
 
-> ⏳ 计划中：存储方案未确定，暂未实现。
+> ✅ 已实现：基于审计日志（audit_logs）。存储后端可配置（关系库 Postgres/SQLite 或 ClickHouse），见 `config.yaml` 的 `audit_log_db`。
 
 ### 3.1 获取使用历史列表
 
@@ -232,12 +232,13 @@ GET /api/history
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| server | string | 否 | 按服务器筛选 |
-| access_key_id | uint | 否 | 按 AccessKey ID 筛选 |
-| start_date | string | 否 | 开始日期（YYYY-MM-DD） |
-| end_date | string | 否 | 结束日期（YYYY-MM-DD） |
+| access_key | string | 否 | 按 AccessKey 筛选（传完整 key，服务端哈希后匹配） |
+| server_id | string | 否 | 按 MCP 服务器筛选 |
+| tool_name | string | 否 | 按工具名筛选 |
+| start | string | 否 | 开始日期（YYYY-MM-DD） |
+| end | string | 否 | 结束日期（YYYY-MM-DD） |
 | page | int | 否 | 页码，默认 1 |
-| page_size | int | 否 | 每页条数，默认 20 |
+| page_size | int | 否 | 每页条数，默认 20（最大 100） |
 
 **成功响应：**
 ```json
@@ -248,11 +249,13 @@ GET /api/history
     "list": [
       {
         "id": 1,
+        "access_key_id": 3,
+        "access_key_name": "我的测试 Key",
         "user_id": 1,
-        "access_key_id": 1,
-        "server": "server1",
-        "endpoint": "/api/tool1",
-        "status": "success",
+        "server_id": "b8a1...",
+        "tool_name": "get_weather",
+        "success": true,
+        "message": "ok",
         "created_at": "2026-01-01T12:00:00Z"
       }
     ],
@@ -262,6 +265,8 @@ GET /api/history
   }
 }
 ```
+
+> 说明：`access_key_id` 为 AccessKey 在数据库中的 ID（不落明文 key，减少数据量）；`access_key_name` 为服务端根据当前用户持有的 Key 反查的名称，Key 已删除时可能为空。
 
 ---
 

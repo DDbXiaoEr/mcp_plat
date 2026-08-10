@@ -235,22 +235,85 @@ const showingPublishConfirm = ref(false)
 const publishing = ref(false)
 const enableAuth = ref(false)
 const enableAuditLog = ref(false)
+const publishSearchLeft = ref('')
+const publishSearchRight = ref('')
+const publishSelectedIds = ref([])
 
 const publishTargets = computed(() =>
   servers.value.filter((s) => publishSelected.value.includes(s.id))
 )
 
+const leftPublishServers = computed(() => {
+  const list = servers.value.filter((s) => !publishSelected.value.includes(s.id))
+  const kw = publishSearchLeft.value.trim().toLowerCase()
+  if (!kw) return list
+  return list.filter((s) =>
+    (s.name || '').toLowerCase().includes(kw) || (s.id || '').toLowerCase().includes(kw)
+  )
+})
+
+const rightPublishServers = computed(() => {
+  const list = servers.value.filter((s) => publishSelected.value.includes(s.id))
+  const kw = publishSearchRight.value.trim().toLowerCase()
+  if (!kw) return list
+  return list.filter((s) =>
+    (s.name || '').toLowerCase().includes(kw) || (s.id || '').toLowerCase().includes(kw)
+  )
+})
+
+const isAllLeftPublishChecked = computed(() => {
+  if (leftPublishServers.value.length === 0) return false
+  return leftPublishServers.value.every((s) => publishSelectedIds.value.includes(s.id))
+})
+
+const isAllRightPublishChecked = computed(() => {
+  if (rightPublishServers.value.length === 0) return false
+  return rightPublishServers.value.every((s) => publishSelectedIds.value.includes(s.id))
+})
+
 function openPublish() {
   publishSelected.value = []
+  publishSelectedIds.value = []
+  publishSearchLeft.value = ''
+  publishSearchRight.value = ''
   enableAuth.value = false
   enableAuditLog.value = false
   showingPublish.value = true
 }
 
-function togglePublishServer(id) {
-  const i = publishSelected.value.indexOf(id)
-  if (i === -1) publishSelected.value.push(id)
-  else publishSelected.value.splice(i, 1)
+function togglePublishSelect(id) {
+  const idx = publishSelectedIds.value.indexOf(id)
+  if (idx >= 0) publishSelectedIds.value.splice(idx, 1)
+  else publishSelectedIds.value.push(id)
+}
+
+function togglePublishSelectAll(list) {
+  const ids = list.map((s) => s.id)
+  if (ids.every((id) => publishSelectedIds.value.includes(id))) {
+    publishSelectedIds.value = publishSelectedIds.value.filter((id) => !ids.includes(id))
+  } else {
+    ids.forEach((id) => {
+      if (!publishSelectedIds.value.includes(id)) publishSelectedIds.value.push(id)
+    })
+  }
+}
+
+function movePublishRight() {
+  const selected = publishSelectedIds.value.filter((id) =>
+    leftPublishServers.value.some((s) => s.id === id)
+  )
+  selected.forEach((id) => {
+    if (!publishSelected.value.includes(id)) publishSelected.value.push(id)
+  })
+  publishSelectedIds.value = publishSelectedIds.value.filter((id) => !selected.includes(id))
+}
+
+function movePublishLeft() {
+  const selected = publishSelectedIds.value.filter((id) =>
+    rightPublishServers.value.some((s) => s.id === id)
+  )
+  publishSelected.value = publishSelected.value.filter((id) => !selected.includes(id))
+  publishSelectedIds.value = publishSelectedIds.value.filter((id) => !selected.includes(id))
 }
 
 function confirmPublish() {
@@ -590,24 +653,109 @@ async function executePublish() {
       </div>
 
       <div v-if="showingPublish" class="dialog-overlay" @click.self="showingPublish = false">
-        <div class="dialog">
+        <div class="dialog dialog--wide dialog--publish">
           <h2 class="dialog__title">发布到 API 网关</h2>
           <p class="dialog__desc">选择要发布的 MCP 服务器：</p>
           <p v-if="gatewayConfigured" class="publish-gateway__hint">API 网关已配置</p>
-          <div class="publish-list">
-            <label
-              v-for="server in servers"
-              :key="server.id"
-              class="publish-list__item"
-            >
-              <input
-                type="checkbox"
-                :checked="publishSelected.includes(server.id)"
-                @change="togglePublishServer(server.id)"
-              />
-              <span class="publish-list__name">{{ server.name }}</span>
-              <span class="publish-list__addr">{{ server.address }}</span>
-             </label>
+          <div class="shuttle">
+            <div class="shuttle__panel">
+              <div class="shuttle__head">
+                <span class="shuttle__label">可选服务器</span>
+                <span class="shuttle__count">{{ leftPublishServers.length }}</span>
+              </div>
+              <div class="shuttle__search">
+                <input
+                  v-model="publishSearchLeft"
+                  type="text"
+                  class="shuttle__search-input"
+                  placeholder="过滤名称/UUID"
+                />
+              </div>
+              <div class="shuttle__list">
+                <label class="shuttle__item shuttle__item--all">
+                  <input
+                    type="checkbox"
+                    :checked="isAllLeftPublishChecked"
+                    @change="togglePublishSelectAll(leftPublishServers)"
+                  />
+                  <span>全选</span>
+                </label>
+                <label
+                  v-for="server in leftPublishServers"
+                  :key="server.id"
+                  class="shuttle__item"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="publishSelectedIds.includes(server.id)"
+                    @change="togglePublishSelect(server.id)"
+                  />
+                  <span class="shuttle__name">{{ server.name }}</span>
+                  <span class="shuttle__meta">{{ server.address }}</span>
+                </label>
+                <span v-if="leftPublishServers.length === 0" class="table__muted shuttle__empty">
+                  暂无可选服务器
+                </span>
+              </div>
+            </div>
+            <div class="shuttle__actions">
+              <button
+                class="shuttle__btn"
+                type="button"
+                :disabled="!publishSelectedIds.some((id) => leftPublishServers.some((s) => s.id === id))"
+                @click="movePublishRight"
+              >
+                &gt;
+              </button>
+              <button
+                class="shuttle__btn"
+                type="button"
+                :disabled="!publishSelectedIds.some((id) => rightPublishServers.some((s) => s.id === id))"
+                @click="movePublishLeft"
+              >
+                &lt;
+              </button>
+            </div>
+            <div class="shuttle__panel">
+              <div class="shuttle__head">
+                <span class="shuttle__label">已选服务器</span>
+                <span class="shuttle__count">{{ rightPublishServers.length }}</span>
+              </div>
+              <div class="shuttle__search">
+                <input
+                  v-model="publishSearchRight"
+                  type="text"
+                  class="shuttle__search-input"
+                  placeholder="过滤名称/UUID"
+                />
+              </div>
+              <div class="shuttle__list">
+                <label class="shuttle__item shuttle__item--all">
+                  <input
+                    type="checkbox"
+                    :checked="isAllRightPublishChecked"
+                    @change="togglePublishSelectAll(rightPublishServers)"
+                  />
+                  <span>全选</span>
+                </label>
+                <label
+                  v-for="server in rightPublishServers"
+                  :key="server.id"
+                  class="shuttle__item"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="publishSelectedIds.includes(server.id)"
+                    @change="togglePublishSelect(server.id)"
+                  />
+                  <span class="shuttle__name">{{ server.name }}</span>
+                  <span class="shuttle__meta">{{ server.address }}</span>
+                </label>
+                <span v-if="rightPublishServers.length === 0" class="table__muted shuttle__empty">
+                  暂未选择
+                </span>
+              </div>
+            </div>
           </div>
           <div class="publish-auth">
             <label class="publish-auth__label">
@@ -1336,52 +1484,176 @@ async function executePublish() {
   margin-bottom: 8px;
 }
 
-.publish-list {
+.dialog--publish,
+.dialog--wide {
+  max-width: 640px;
+}
+
+.dialog--publish {
+  height: 560px;
+}
+
+.shuttle {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.shuttle__panel {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.publish-list__item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+  overflow: hidden;
 }
 
-.publish-list__item:hover {
-  background: rgba(10, 61, 122, 0.04);
-  border-color: rgba(10, 61, 122, 0.25);
-}
-
-.publish-list__item input {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--xauat-blue);
-  cursor: pointer;
+.shuttle__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
-.publish-list__name {
-  font-size: 14px;
+.shuttle__label {
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--text-muted);
 }
 
-.publish-list__addr {
+.shuttle__search {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.shuttle__search-input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+  background: var(--surface);
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.shuttle__search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.shuttle__search-input:focus {
+  border-color: var(--xauat-blue);
+}
+
+.shuttle__count {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--surface);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.shuttle__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shuttle__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.shuttle__item:hover {
+  background: var(--bg);
+}
+
+.shuttle__item input {
+  accent-color: var(--xauat-blue);
+  flex-shrink: 0;
+}
+
+.shuttle__item--all {
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.shuttle__name {
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shuttle__meta {
   font-size: 12px;
   color: var(--text-muted);
   margin-left: auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 200px;
+  max-width: 120px;
+  flex-shrink: 0;
+}
+
+.shuttle__empty {
+  padding: 16px 0;
+  text-align: center;
+}
+
+.shuttle__actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.shuttle__btn {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--xauat-blue);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.shuttle__btn:hover:not(:disabled) {
+  background: rgba(10, 61, 122, 0.06);
+  border-color: rgba(10, 61, 122, 0.25);
+}
+
+.shuttle__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .publish-preview {

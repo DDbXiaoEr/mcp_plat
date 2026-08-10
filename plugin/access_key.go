@@ -12,6 +12,7 @@ import (
 )
 
 type AccessKeyClaims struct {
+	KeyID  uint   `json:"key_id"`
 	UserID uint   `json:"user_id"`
 	Role   string `json:"role"`
 	jwt.RegisteredClaims

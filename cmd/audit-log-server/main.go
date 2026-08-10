@@ -7,36 +7,28 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"mcp_plat-console/auditstore"
+	"mcp_plat-console/config"
 	"mcp_plat-console/model"
 	"mcp_plat-console/plugin"
 
 	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
-	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
-type DatabaseConfig struct {
-	Type     string `yaml:"type"`
-	SQLite   struct {
-		Path string `yaml:"path"`
-	} `yaml:"sqlite"`
-	Postgres struct {
-		Host     string `yaml:"host"`
-		Port     string `yaml:"port"`
-		User     string `yaml:"user"`
-		Password string `yaml:"password"`
-		DBName   string `yaml:"dbname"`
-	} `yaml:"postgres"`
+type WriterConfig struct {
+	BatchSize       int `yaml:"batch_size"`
+	FlushIntervalMS int `yaml:"flush_interval_ms"`
 }
 
 type Config struct {
-	GrpcAddr         string         `yaml:"grpc_addr"`
-	Database         DatabaseConfig `yaml:"database"`
-	AccessKeySecret  string         `yaml:"access_key_secret"`
+	GrpcAddr        string                `yaml:"grpc_addr"`
+	Database        config.DatabaseConfig `yaml:"database"`
+	AccessKeySecret string                `yaml:"access_key_secret"`
+	Writer          WriterConfig          `yaml:"writer"`
+	RetentionDays   int                   `yaml:"retention_days"`
 }
 
 var AppConfig *Config
@@ -73,73 +65,138 @@ func Load() {
 	if AppConfig.Database.SQLite.Path == "" {
 		AppConfig.Database.SQLite.Path = "audit_log.db"
 	}
+	if AppConfig.Writer.BatchSize <= 0 {
+		AppConfig.Writer.BatchSize = 200
+	}
+	if AppConfig.Writer.FlushIntervalMS <= 0 {
+		AppConfig.Writer.FlushIntervalMS = 1000
+	}
 }
 
-func initDB(cfg DatabaseConfig) *gorm.DB {
-	var dialector gorm.Dialector
+func initStore(cfg config.DatabaseConfig) auditstore.Store {
+	store, err := auditstore.New(cfg)
+	if err != nil {
+		fmt.Printf("failed to init audit store: %v\n", err)
+		os.Exit(1)
+	}
+	return store
+}
 
-	switch cfg.Type {
-	case "postgres":
-		pg := cfg.Postgres
-		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai",
-			pg.Host, pg.User, pg.Password, pg.DBName, pg.Port)
-		dialector = postgres.Open(dsn)
-	case "sqlite":
-		dialector = sqlite.Open(cfg.SQLite.Path)
+// auditWriter 内部缓冲批量写入，降低高频单条落库压力
+type auditWriter struct {
+	store         auditstore.Store
+	ch            chan model.AuditLog
+	batchSize     int
+	flushInterval time.Duration
+}
+
+func newAuditWriter(store auditstore.Store, batchSize int, flushInterval time.Duration) *auditWriter {
+	w := &auditWriter{
+		store:         store,
+		ch:            make(chan model.AuditLog, 4096),
+		batchSize:     batchSize,
+		flushInterval: flushInterval,
+	}
+	go w.run()
+	return w
+}
+
+func (w *auditWriter) submit(entry model.AuditLog) {
+	select {
+	case w.ch <- entry:
 	default:
-		fmt.Printf("unsupported database type: %s\n", cfg.Type)
-		os.Exit(1)
+		fmt.Println("audit-log: 写入缓冲已满，丢弃一条日志")
+	}
+}
+
+func (w *auditWriter) run() {
+	buf := make([]model.AuditLog, 0, w.batchSize)
+	ticker := time.NewTicker(w.flushInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case e := <-w.ch:
+			buf = append(buf, e)
+			if len(buf) >= w.batchSize {
+				w.flush(buf)
+				buf = buf[:0]
+			}
+		case <-ticker.C:
+			if len(buf) > 0 {
+				w.flush(buf)
+				buf = buf[:0]
+			}
+		}
+	}
+}
+
+func (w *auditWriter) flush(logs []model.AuditLog) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := w.store.Append(ctx, logs); err != nil {
+		fmt.Printf("audit-log: flush %d entries failed: %v\n", len(logs), err)
+	}
+}
+
+// startRetention 定期清理关系库中的过期审计日志（ClickHouse 由表 TTL 负责，无需此逻辑）
+func startRetention(store auditstore.Store, retentionDays int) {
+	if retentionDays <= 0 {
+		return
+	}
+	p, ok := store.(auditstore.Purgable)
+	if !ok {
+		return
 	}
 
-	db, err := gorm.Open(dialector, &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
-	if err != nil {
-		fmt.Printf("failed to connect database: %v\n", err)
-		os.Exit(1)
-	}
-
-	err = db.AutoMigrate(
-		&model.AuditLog{},
-	)
-	if err != nil {
-		fmt.Printf("failed to migrate database: %v\n", err)
-		os.Exit(1)
-	}
-
-	return db
+	go func() {
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			before := time.Now().AddDate(0, 0, -retentionDays)
+			n, err := p.Purge(ctx, before)
+			cancel()
+			if err != nil {
+				fmt.Printf("audit-log: retention purge error: %v\n", err)
+			} else if n > 0 {
+				fmt.Printf("audit-log: retention purged %d entries\n", n)
+			}
+		}
+	}()
 }
 
 type auditLogServer struct {
 	plugin.UnimplementedAuditLogServiceServer
-	db     *gorm.DB
+	writer *auditWriter
 	secret []byte
 }
 
 func (s *auditLogServer) LogAccess(ctx context.Context, req *plugin.LogAccessRequest) (*plugin.LogAccessResponse, error) {
 	userID := uint(req.UserId)
+	var keyID uint
 
-	if userID == 0 && req.AccessKey != "" {
+	if req.AccessKey != "" {
 		if claims, err := plugin.ParseAccessKeyWithSecret(req.AccessKey, s.secret); err == nil {
-			userID = claims.UserID
+			if userID == 0 {
+				userID = claims.UserID
+			}
+			keyID = claims.KeyID
 		}
 	}
 
 	entry := model.AuditLog{
-		AccessKey: req.AccessKey,
-		UserID:    userID,
-		ServerID:  req.ServerId,
-		ToolName:  req.ToolName,
-		Success:   req.Success,
-		Message:   req.Message,
+		AccessKeyID: keyID,
+		UserID:      userID,
+		ServerID:    req.ServerId,
+		ToolName:    req.ToolName,
+		Success:     req.Success,
+		Message:     req.Message,
+		CreatedAt:   time.Now(),
 	}
 
-	if err := s.db.Create(&entry).Error; err != nil {
-		return &plugin.LogAccessResponse{
-			Ok:      false,
-			Message: fmt.Sprintf("写入审计日志失败: %v", err),
-		}, nil
-	}
+	s.writer.submit(entry)
 
 	return &plugin.LogAccessResponse{
 		Ok:      true,
@@ -150,7 +207,9 @@ func (s *auditLogServer) LogAccess(ctx context.Context, req *plugin.LogAccessReq
 func main() {
 	Load()
 
-	db := initDB(AppConfig.Database)
+	store := initStore(AppConfig.Database)
+	writer := newAuditWriter(store, AppConfig.Writer.BatchSize, time.Duration(AppConfig.Writer.FlushIntervalMS)*time.Millisecond)
+	startRetention(store, AppConfig.RetentionDays)
 
 	lis, err := net.Listen("tcp", AppConfig.GrpcAddr)
 	if err != nil {
@@ -162,10 +221,10 @@ func main() {
 		fmt.Printf("[audit-log] 收到请求 method=%s\n", info.FullMethod)
 		return handler(ctx, req)
 	}))
-	plugin.RegisterAuditLogServiceServer(srv, &auditLogServer{db: db, secret: []byte(AppConfig.AccessKeySecret)})
+	plugin.RegisterAuditLogServiceServer(srv, &auditLogServer{writer: writer, secret: []byte(AppConfig.AccessKeySecret)})
 
 	go func() {
-		fmt.Printf("gRPC audit-log-server 已启动，监听 %s\n", AppConfig.GrpcAddr)
+		fmt.Printf("gRPC audit-log-server 已启动，监听 %s（存储类型=%s）\n", AppConfig.GrpcAddr, AppConfig.Database.Type)
 		if err := srv.Serve(lis); err != nil {
 			fmt.Printf("gRPC server 异常: %v\n", err)
 			os.Exit(1)

@@ -1,8 +1,13 @@
 package service
 
-import (
-	"log"
+// Author: deepseek-v4-pro / opencode
 
+import (
+	"context"
+	"log"
+	"time"
+
+	"mcp_plat-console/auditstore"
 	"mcp_plat-console/database"
 	"mcp_plat-console/model"
 )
@@ -25,11 +30,8 @@ type AuditLogOutput struct {
 }
 
 func ListAuditLogs(userID uint, query AuditLogQuery) (*AuditLogOutput, error) {
-	log.Printf("audit_log: query user_id=%d access_key=%s server_id=%s tool_name=%s start=%s end=%s page=%d page_size=%d",
-		userID, query.AccessKey, query.ServerID, query.ToolName, query.Start, query.End, query.Page, query.PageSize)
-
-	if database.AuditLogDB == nil {
-		log.Printf("audit_log: AuditLogDB is nil, returning empty")
+	if database.AuditStore == nil {
+		log.Printf("audit_log: AuditStore is nil, returning empty")
 		return &AuditLogOutput{
 			List:     []model.AuditLog{},
 			Total:    0,
@@ -38,66 +40,75 @@ func ListAuditLogs(userID uint, query AuditLogQuery) (*AuditLogOutput, error) {
 		}, nil
 	}
 
-	if query.Page <= 0 {
-		query.Page = 1
-	}
-	if query.PageSize <= 0 || query.PageSize > 100 {
-		query.PageSize = 20
+	var keys []model.AccessKey
+	if err := database.DB.Where("user_id = ?", userID).Find(&keys).Error; err != nil {
+		log.Printf("audit_log: query access keys error: %v", err)
+		return nil, err
 	}
 
-	var userAccessKeys []string
-	database.DB.Model(&model.AccessKey{}).Where("user_id = ?", userID).Pluck("access_key", &userAccessKeys)
+	idToName := make(map[uint]string, len(keys))
+	keyIDs := make([]uint, 0, len(keys))
+	for _, k := range keys {
+		idToName[k.ID] = k.Name
+		keyIDs = append(keyIDs, k.ID)
+	}
 
-	db := database.AuditLogDB.Model(&model.AuditLog{})
+	storeQuery := auditstore.Query{
+		UserID:       userID,
+		AccessKeyIDs: keyIDs,
+		ServerID:     query.ServerID,
+		ToolName:     query.ToolName,
+		Page:         query.Page,
+		PageSize:     query.PageSize,
+	}
+
+	if query.Start != "" {
+		if t, err := time.ParseInLocation("2006-01-02", query.Start, time.Local); err == nil {
+			storeQuery.Start = t
+		}
+	}
+	if query.End != "" {
+		if t, err := time.ParseInLocation("2006-01-02", query.End, time.Local); err == nil {
+			storeQuery.End = t.AddDate(0, 0, 1)
+		}
+	}
 
 	if query.AccessKey != "" {
-		belongs := false
-		for _, ak := range userAccessKeys {
-			if ak == query.AccessKey {
-				belongs = true
+		var matched *model.AccessKey
+		for i := range keys {
+			if keys[i].Key == query.AccessKey {
+				matched = &keys[i]
 				break
 			}
 		}
-		if !belongs {
-			db = db.Where("1 = 0")
-		} else {
-			db = db.Where("access_key = ?", query.AccessKey)
+		if matched == nil {
+			return &AuditLogOutput{
+				List:     []model.AuditLog{},
+				Total:    0,
+				Page:     query.Page,
+				PageSize: query.PageSize,
+			}, nil
 		}
-	} else if len(userAccessKeys) > 0 {
-		db = db.Where("access_key IN ?", userAccessKeys)
-	} else {
-		db = db.Where("user_id = ?", userID)
-	}
-	if query.ServerID != "" {
-		db = db.Where("server_id = ?", query.ServerID)
-	}
-	if query.ToolName != "" {
-		db = db.Where("tool_name = ?", query.ToolName)
-	}
-	if query.Start != "" {
-		db = db.Where("created_at >= ?", query.Start)
-	}
-	if query.End != "" {
-		db = db.Where("created_at <= ?", query.End+" 23:59:59")
+		storeQuery.AccessKeyID = matched.ID
 	}
 
-	var total int64
-	db.Count(&total)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	var list []model.AuditLog
-	offset := (query.Page - 1) * query.PageSize
-	err := db.Order("created_at desc").Offset(offset).Limit(query.PageSize).Find(&list).Error
+	list, total, err := database.AuditStore.List(ctx, storeQuery)
 	if err != nil {
 		log.Printf("audit_log: query error: %v", err)
 		return nil, err
 	}
 
-	log.Printf("audit_log: result total=%d returned=%d", total, len(list))
+	for i := range list {
+		list[i].AccessKeyName = idToName[list[i].AccessKeyID]
+	}
 
 	return &AuditLogOutput{
 		List:     list,
 		Total:    total,
-		Page:     query.Page,
-		PageSize: query.PageSize,
+		Page:     storeQuery.Page,
+		PageSize: storeQuery.PageSize,
 	}, nil
 }

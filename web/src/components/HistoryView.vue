@@ -22,9 +22,8 @@ function formatTime(dateStr) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-function getKeyNameByKey(keyStr) {
-  const k = accessKeys.value.find((k) => k.key === keyStr)
-  return k ? k.name : (keyStr ? keyStr.substring(0, 16) + '...' : '')
+function getKeyLabel(r) {
+  return r.access_key_name || '—'
 }
 
 function getServerName(id) {
@@ -152,7 +151,7 @@ onMounted(async () => {
         <tbody>
           <tr v-for="r in history.list" :key="r.id">
             <td>{{ formatTime(r.created_at) }}</td>
-            <td>{{ getKeyNameByKey(r.access_key) }}</td>
+            <td>{{ getKeyLabel(r) }}</td>
             <td>{{ getServerName(r.server_id) }}</td>
             <td>{{ r.tool_name }}</td>
             <td>{{ r.success ? '成功' : '失败' }}</td>

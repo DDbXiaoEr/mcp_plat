@@ -9,7 +9,9 @@ access_key_secret: changeme-please-generate-a-random-32-char-string
 # gRPC 监听地址
 grpc_addr: "127.0.0.1:9091"
 
-# 审计日志数据库（与主程序 config.yaml 中 audit_log_db 共用）
+# 审计日志存储（与主程序 config.yaml 中 audit_log_db 保持一致）
+# type 可选：postgres / sqlite / clickhouse
+# 注意：主程序读取端也必须配置相同的存储类型，否则查不到数据。
 database:
   type: postgres
   postgres:
@@ -17,4 +19,24 @@ database:
     port: 5432
     user: root
     password: 123456
-    dbname: mcp_platform
+    dbname: mcp_history_db
+  # 切换为 ClickHouse 时，请启用下方配置并删除上方 postgres 配置：
+  # type: clickhouse
+  # clickhouse:
+  #   addr: 127.0.0.1:9000
+  #   user: default
+  #   password: ""
+  #   db: mcp_platform
+  #   table: audit_logs
+  #   engine: merge_tree            # 单机：merge_tree；集群：replicated_merge_tree
+  #   cluster: ""                   # replicated_merge_tree 时必填
+  #   ttl_days: 90                  # 数据保留天数（ClickHouse 原生 TTL，自动清理）
+
+# 写入缓冲（gRPC 收到单条日志后，缓冲满或到间隔再批量落库）
+writer:
+  batch_size: 200          # 单批最大条数
+  flush_interval_ms: 1000   # 批量刷新间隔（毫秒）
+
+# 关系库（postgres/sqlite）旧数据保留天数；超过则自动清理。
+# 设为 0 表示不清理。ClickHouse 无需配置（由表 TTL 负责）。
+retention_days: 90

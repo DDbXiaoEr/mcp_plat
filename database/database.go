@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"mcp_plat-console/auditstore"
 	"mcp_plat-console/config"
 	"mcp_plat-console/model"
 
@@ -16,7 +17,7 @@ import (
 )
 
 var DB *gorm.DB
-var AuditLogDB *gorm.DB
+var AuditStore auditstore.Store
 
 func Init() {
 	cfg := config.AppConfig
@@ -36,12 +37,9 @@ func Init() {
 	}
 
 	if cfg.AuditLogDB.Type != "" {
-		AuditLogDB = openDB(cfg.AuditLogDB)
-		err = AuditLogDB.AutoMigrate(
-			&model.AuditLog{},
-		)
+		AuditStore, err = auditstore.New(cfg.AuditLogDB)
 		if err != nil {
-			log.Fatalf("failed to migrate audit_log database: %v", err)
+			log.Fatalf("failed to init audit store: %v", err)
 		}
 	}
 }

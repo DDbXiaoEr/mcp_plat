@@ -19,9 +19,10 @@ type Config struct {
 }
 
 type DatabaseConfig struct {
-	Type     string       `yaml:"type"`
-	SQLite   SQLiteConfig `yaml:"sqlite"`
-	Postgres PostgresConfig `yaml:"postgres"`
+	Type       string           `yaml:"type"`
+	SQLite     SQLiteConfig     `yaml:"sqlite"`
+	Postgres   PostgresConfig   `yaml:"postgres"`
+	ClickHouse ClickHouseConfig `yaml:"clickhouse"`
 }
 
 type SQLiteConfig struct {
@@ -34,6 +35,18 @@ type PostgresConfig struct {
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
 	DBName   string `yaml:"dbname"`
+}
+
+// ClickHouseConfig 审计日志存储引擎（仅 audit_log_db 支持）
+type ClickHouseConfig struct {
+	Addr     string `yaml:"addr"` // 例如 127.0.0.1:9000
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	DB       string `yaml:"db"`       // ClickHouse 库名，默认 default
+	Table    string `yaml:"table"`    // 表名，默认 audit_logs
+	Engine   string `yaml:"engine"`   // merge_tree（单机）| replicated_merge_tree（集群）
+	Cluster  string `yaml:"cluster"`  // 集群名，replicated_merge_tree 必填
+	TTLDays  int    `yaml:"ttl_days"` // 数据保留天数，默认 90
 }
 
 type AdminConfig struct {
@@ -76,6 +89,21 @@ func applySoftDefaults() {
 	}
 	if AppConfig.AuditLogDB.SQLite.Path == "" {
 		AppConfig.AuditLogDB.SQLite.Path = "audit_log.db"
+	}
+	if AppConfig.AuditLogDB.Type == "clickhouse" {
+		ck := &AppConfig.AuditLogDB.ClickHouse
+		if ck.Addr == "" {
+			ck.Addr = "127.0.0.1:9000"
+		}
+		if ck.DB == "" {
+			ck.DB = "default"
+		}
+		if ck.Table == "" {
+			ck.Table = "audit_logs"
+		}
+		if ck.TTLDays <= 0 {
+			ck.TTLDays = 90
+		}
 	}
 	if AppConfig.ServerPort == "" {
 		AppConfig.ServerPort = "8080"

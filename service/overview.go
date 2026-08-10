@@ -3,6 +3,7 @@ package service
 // Author: deepseek-v4-pro / opencode
 
 import (
+	"context"
 	"encoding/json"
 	"time"
 
@@ -42,14 +43,12 @@ func GetOverviewStats() (*OverviewStats, error) {
 	}
 	stats.Tools = toolCount
 
-	if database.AuditLogDB != nil {
+	if database.AuditStore != nil {
 		now := time.Now()
 		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 		end := start.AddDate(0, 0, 1)
-		var todayCalls int64
-		if err := database.AuditLogDB.Model(&model.AuditLog{}).
-			Where("created_at >= ? AND created_at < ?", start, end).
-			Count(&todayCalls).Error; err != nil {
+		todayCalls, err := database.AuditStore.CountRange(context.Background(), start, end)
+		if err != nil {
 			return nil, err
 		}
 		stats.TodayCalls = todayCalls
@@ -70,24 +69,17 @@ func GetCallTrend(days int) (*CallTrendOutput, error) {
 	}
 
 	now := time.Now()
-	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -(days - 1))
 
 	countByDay := map[string]int64{}
-	if database.AuditLogDB != nil {
-		type row struct {
-			Day   time.Time
-			Count int64
-		}
-		var rows []row
-		if err := database.AuditLogDB.Model(&model.AuditLog{}).
-			Select("DATE(created_at) AS day, COUNT(*) AS count").
-			Where("created_at >= ?", start).
-			Group("DATE(created_at)").
-			Scan(&rows).Error; err != nil {
+	if database.AuditStore != nil {
+		now := time.Now()
+		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -(days - 1))
+		dayCounts, err := database.AuditStore.CountByDay(context.Background(), start, now)
+		if err != nil {
 			return nil, err
 		}
-		for _, r := range rows {
-			countByDay[r.Day.Format("2006-01-02")] = r.Count
+		for _, dc := range dayCounts {
+			countByDay[dc.Day] = dc.Count
 		}
 	}
 
