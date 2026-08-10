@@ -137,7 +137,9 @@ func (w *auditWriter) flush(logs []model.AuditLog) {
 
 	if err := w.store.Append(ctx, logs); err != nil {
 		fmt.Printf("audit-log: flush %d entries failed: %v\n", len(logs), err)
+		return
 	}
+	fmt.Printf("audit-log: flushed %d entries at %s\n", len(logs), time.Now().Format("2006-01-02 15:04:05"))
 }
 
 // startRetention 定期清理关系库中的过期审计日志（ClickHouse 由表 TTL 负责，无需此逻辑）
