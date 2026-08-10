@@ -103,6 +103,10 @@ func ListAuditLogs(userID uint, query AuditLogQuery) (*AuditLogOutput, error) {
 
 	for i := range list {
 		list[i].AccessKeyName = idToName[list[i].AccessKeyID]
+		if list[i].AccessKeyName == "" && len(keys) == 1 {
+			// 旧版 access key 无 key_id 声明，记录 access_key_id=0，单 key 用户可直接归因
+			list[i].AccessKeyName = keys[0].Name
+		}
 	}
 
 	return &AuditLogOutput{

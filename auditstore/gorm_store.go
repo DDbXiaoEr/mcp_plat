@@ -71,9 +71,18 @@ func (s *gormStore) List(ctx context.Context, q Query) ([]model.AuditLog, int64,
 	db := s.db.WithContext(ctx).Model(&model.AuditLog{})
 
 	if q.AccessKeyID > 0 {
-		db = db.Where("access_key_id = ?", q.AccessKeyID)
+		if q.UserID > 0 {
+			db = db.Where("(access_key_id = ? OR access_key_id = 0) AND user_id = ?", q.AccessKeyID, q.UserID)
+		} else {
+			db = db.Where("access_key_id = ?", q.AccessKeyID)
+		}
 	} else if len(q.AccessKeyIDs) > 0 {
-		db = db.Where("access_key_id IN ?", q.AccessKeyIDs)
+		keyIDs := q.AccessKeyIDs
+		if q.UserID > 0 {
+			db = db.Where("(access_key_id IN ? OR access_key_id = 0) AND user_id = ?", keyIDs, q.UserID)
+		} else {
+			db = db.Where("access_key_id IN ?", keyIDs)
+		}
 	} else if q.UserID > 0 {
 		db = db.Where("user_id = ?", q.UserID)
 	}

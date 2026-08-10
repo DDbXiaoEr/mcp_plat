@@ -174,14 +174,16 @@ func (s *clickHouseStore) List(ctx context.Context, q Query) ([]model.AuditLog, 
 	list := []model.AuditLog{}
 	for rows.Next() {
 		var (
-			log       model.AuditLog
-			successU8 uint8
-			createdAt time.Time
+			log        model.AuditLog
+			id, akID   uint64
+			userID     uint64
+			successU8  uint8
+			createdAt  time.Time
 		)
 		if err := rows.Scan(
-			&log.ID,
-			&log.AccessKeyID,
-			&log.UserID,
+			&id,
+			&akID,
+			&userID,
 			&log.ServerID,
 			&log.ToolName,
 			&successU8,
@@ -190,6 +192,9 @@ func (s *clickHouseStore) List(ctx context.Context, q Query) ([]model.AuditLog, 
 		); err != nil {
 			return nil, 0, err
 		}
+		log.ID = uint(id)
+		log.AccessKeyID = uint(akID)
+		log.UserID = uint(userID)
 		log.Success = successU8 != 0
 		log.CreatedAt = createdAt
 		list = append(list, log)
@@ -233,13 +238,25 @@ func buildWhere(q Query) (string, []interface{}) {
 	var args []interface{}
 
 	if q.AccessKeyID > 0 {
-		conds = append(conds, "access_key_id = ?")
-		args = append(args, q.AccessKeyID)
+		if q.UserID > 0 {
+			// 兼容旧版 access key（JWT 无 key_id 声明，落库 access_key_id=0），按用户收敛
+			conds = append(conds, "(access_key_id = ? OR access_key_id = 0) AND user_id = ?")
+			args = append(args, q.AccessKeyID, q.UserID)
+		} else {
+			conds = append(conds, "access_key_id = ?")
+			args = append(args, q.AccessKeyID)
+		}
 	} else if len(q.AccessKeyIDs) > 0 {
 		ph := strings.TrimSuffix(strings.Repeat("?,", len(q.AccessKeyIDs)), ",")
-		conds = append(conds, "access_key_id IN ("+ph+")")
 		for _, id := range q.AccessKeyIDs {
 			args = append(args, id)
+		}
+		if q.UserID > 0 {
+			// 兼容 access_key_id=0 的记录，同时必须限定 user_id 防止跨用户泄漏
+			conds = append(conds, "(access_key_id IN ("+ph+") OR access_key_id = 0) AND user_id = ?")
+			args = append(args, q.UserID)
+		} else {
+			conds = append(conds, "access_key_id IN ("+ph+")")
 		}
 	} else if q.UserID > 0 {
 		conds = append(conds, "user_id = ?")
