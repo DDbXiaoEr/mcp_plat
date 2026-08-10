@@ -7,12 +7,15 @@
 | 模块 | 接口 | 状态 | 备注 |
 |------|------|------|------|
 | 认证 | POST /api/auth/login | ✅ 已完成 | |
+| 认证 | GET /api/auth/method | ✅ 已完成 | 前端登录页按返回方式渲染 |
+| 认证 | POST /api/auth/cas/validate | ✅ 已完成 | CAS ticket 验证 |
 | 认证 | GET /api/auth/profile | ✅ 已完成 | |
 | AccessKey | GET /api/access-keys | ✅ 已完成 | |
 | AccessKey | POST /api/access-keys | ✅ 已完成 | |
 | AccessKey | PUT /api/access-keys/:id | ✅ 已完成 | |
 | AccessKey | DELETE /api/access-keys/:id | ✅ 已完成 | |
 | 使用历史 | GET /api/history | ✅ 已完成 | 审计日志存储可配置（关系库 / ClickHouse），AccessKey 以 ID 存储减少数据量 |
+| 使用历史 | GET /api/audit-logs | ✅ 已完成 | 审计日志列表查询 |
 | MCP 服务器 | GET /api/servers | ✅ 已完成 | 新增 description、status 字段 |
 | MCP 服务器 | POST /api/servers | ✅ 已完成 | 新增 description 字段 |
 | MCP 服务器 | PUT /api/servers/:id | ✅ 已完成 | 新增 description 字段 |
@@ -32,7 +35,10 @@
 | 平台概况 | GET /api/overview/stats | ✅ 已完成 | 统计卡片已接入（用户/服务器/工具/当天调用数） |
 | 平台概况 | GET /api/overview/call-trend | ✅ 已完成 | AI 调用历史趋势已接入（近 7/30 天，audit_logs 按天分组统计） |
 | 系统设置 | GET /api/settings | ✅ 已完成 | 前端已接入 |
-| 系统设置 | PUT /api/settings/:key | ✅ 已完成 | key: log / smtp / auth / user_ops / platform / api_gateway / network_security |
+| 系统设置 | PUT /api/settings/:key | ✅ 已完成 | key: log / smtp / auth / user_ops / platform / api_gateway / network_security / audit_log |
+| 系统设置 | GET /api/settings/:key | ✅ 已完成 | 仅需登录 |
+| 系统设置 | GET /api/settings/gateway-status | ✅ 已完成 | 网关配置状态检测，不泄露管理配置 |
+| 系统设置 | POST /api/settings/test-ldap | ✅ 已完成 | LDAP 连接与属性映射测试 |
 
 - ✅ 已完成
 - 🚧 开发中
