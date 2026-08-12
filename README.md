@@ -22,8 +22,8 @@ MCP 服务平台 · 管理控制台
 
 ## 技术栈
 
-- **后端**: Go 1.25 + Gin + GORM + PostgreSQL/SQLite + JWT + gRPC
-- **审计日志存储**: 关系库（PostgreSQL/SQLite）或 ClickHouse（可选，两库分离）
+- **后端**: Go 1.25 + Gin + GORM + PostgreSQL/MySQL + JWT + gRPC
+- **审计日志存储**: 关系库（PostgreSQL/MySQL）或 ClickHouse（可选，两库分离）
 - **前端**: Vue 3 + Vite（`web/` 目录）
 
 ## 快速开始
@@ -32,7 +32,7 @@ MCP 服务平台 · 管理控制台
 
 ```bash
 # 编辑 config.yaml 填写数据库、JWT 等配置
-# 主库支持 PostgreSQL 和 SQLite 两种数据库
+# 主库支持 PostgreSQL 和 MySQL 两种数据库
 ```
 
 `config.yaml` 关键配置：
@@ -40,7 +40,7 @@ MCP 服务平台 · 管理控制台
 ```yaml
 # 主库（用户、角色、AccessKey、服务器、系统设置等）
 database:
-  type: postgres           # 或 sqlite
+  type: postgres           # 或 mysql
   postgres:
     host: localhost
     port: 5432
@@ -49,7 +49,7 @@ database:
     dbname: mcp_platform
 
 # 审计日志库（与 audit-log-server 共用），与主库分离
-# type 可选：postgres / sqlite / clickhouse
+# type 可选：postgres / mysql / clickhouse
 audit_log_db:
   type: postgres
   postgres:
@@ -179,7 +179,7 @@ mcp_plat-console version v1.0.0 (commit abc1234), built at 2026-07-11_06:42:21
 
 ### 审计日志
 
-- 审计日志存储抽象层（`auditstore/`），支持关系库（PostgreSQL/SQLite）与 ClickHouse 两种实现
+- 审计日志存储抽象层（`auditstore/`），支持关系库（PostgreSQL/MySQL）与 ClickHouse 两种实现
 - **两库分离**：主业务库与审计库独立配置（`audit_log_db`），互不影响
 - ClickHouse 支持 MergeTree / ReplicatedMergeTree 引擎与 TTL 数据保留，关系库支持定期清理
 - 审计日志以 AccessKey ID 存储（不落明文 Key），减少数据量

@@ -29,7 +29,7 @@ type DayCount struct {
 	Count int64
 }
 
-// Store 审计日志存储抽象，支持关系库（Postgres/SQLite）与 ClickHouse 两种实现
+// Store 审计日志存储抽象，支持关系库（Postgres/MySQL）与 ClickHouse 两种实现
 type Store interface {
 	// Append 批量写入审计日志
 	Append(ctx context.Context, logs []model.AuditLog) error

@@ -34,7 +34,7 @@ mcp_plat-console/
 │
 ├── auditstore/               # 审计日志存储抽象层（可配置：关系库 / ClickHouse）
 │   ├── store.go              # Store 接口 + 工厂 New()
-│   ├── gorm_store.go         # 关系库实现（Postgres/SQLite）+ 定期清理
+│   ├── gorm_store.go         # 关系库实现（Postgres/MySQL）+ 定期清理
 │   └── clickhouse_store.go   # ClickHouse 实现（MergeTree / ReplicatedMergeTree + TTL）
 │
 ├── logging/

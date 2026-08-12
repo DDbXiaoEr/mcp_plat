@@ -33,6 +33,4 @@ build/*
 # web dist archive
 web/dist.zip
 
-# sqlite database
-data.db
 build/

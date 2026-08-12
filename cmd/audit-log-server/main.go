@@ -60,10 +60,7 @@ func Load() {
 		os.Exit(1)
 	}
 	if AppConfig.Database.Type == "" {
-		AppConfig.Database.Type = "sqlite"
-	}
-	if AppConfig.Database.SQLite.Path == "" {
-		AppConfig.Database.SQLite.Path = "audit_log.db"
+		AppConfig.Database.Type = "postgres"
 	}
 	if AppConfig.Writer.BatchSize <= 0 {
 		AppConfig.Writer.BatchSize = 200

@@ -20,16 +20,20 @@ type Config struct {
 
 type DatabaseConfig struct {
 	Type       string           `yaml:"type"`
-	SQLite     SQLiteConfig     `yaml:"sqlite"`
 	Postgres   PostgresConfig   `yaml:"postgres"`
+	MySQL      MySQLConfig      `yaml:"mysql"`
 	ClickHouse ClickHouseConfig `yaml:"clickhouse"`
 }
 
-type SQLiteConfig struct {
-	Path string `yaml:"path"`
+type PostgresConfig struct {
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	DBName   string `yaml:"dbname"`
 }
 
-type PostgresConfig struct {
+type MySQLConfig struct {
 	Host     string `yaml:"host"`
 	Port     string `yaml:"port"`
 	User     string `yaml:"user"`
@@ -79,16 +83,10 @@ func Load() {
 
 func applySoftDefaults() {
 	if AppConfig.Database.Type == "" {
-		AppConfig.Database.Type = "sqlite"
-	}
-	if AppConfig.Database.SQLite.Path == "" {
-		AppConfig.Database.SQLite.Path = "data.db"
+		AppConfig.Database.Type = "postgres"
 	}
 	if AppConfig.AuditLogDB.Type == "" {
-		AppConfig.AuditLogDB.Type = "sqlite"
-	}
-	if AppConfig.AuditLogDB.SQLite.Path == "" {
-		AppConfig.AuditLogDB.SQLite.Path = "audit_log.db"
+		AppConfig.AuditLogDB.Type = "postgres"
 	}
 	if AppConfig.AuditLogDB.Type == "clickhouse" {
 		ck := &AppConfig.AuditLogDB.ClickHouse

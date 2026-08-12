@@ -19,17 +19,14 @@ import (
 
 	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
+	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
 type DatabaseConfig struct {
 	Type     string `yaml:"type"`
-	SQLite   struct {
-		Path string `yaml:"path"`
-	} `yaml:"sqlite"`
 	Postgres struct {
 		Host     string `yaml:"host"`
 		Port     string `yaml:"port"`
@@ -37,6 +34,13 @@ type DatabaseConfig struct {
 		Password string `yaml:"password"`
 		DBName   string `yaml:"dbname"`
 	} `yaml:"postgres"`
+	MySQL struct {
+		Host     string `yaml:"host"`
+		Port     string `yaml:"port"`
+		User     string `yaml:"user"`
+		Password string `yaml:"password"`
+		DBName   string `yaml:"dbname"`
+	} `yaml:"mysql"`
 }
 
 type Config struct {
@@ -70,10 +74,7 @@ func Load() {
 		AppConfig.GrpcAddr = "127.0.0.1:9090"
 	}
 	if AppConfig.Database.Type == "" {
-		AppConfig.Database.Type = "sqlite"
-	}
-	if AppConfig.Database.SQLite.Path == "" {
-		AppConfig.Database.SQLite.Path = "data.db"
+		AppConfig.Database.Type = "postgres"
 	}
 
 	if AppConfig.AccessKeySecret == "" {
@@ -305,8 +306,11 @@ func initDB(cfg DatabaseConfig) *gorm.DB {
 		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai",
 			pg.Host, pg.User, pg.Password, pg.DBName, pg.Port)
 		dialector = postgres.Open(dsn)
-	case "sqlite":
-		dialector = sqlite.Open(cfg.SQLite.Path)
+	case "mysql":
+		my := cfg.MySQL
+		dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+			my.User, my.Password, my.Host, my.Port, my.DBName)
+		dialector = mysql.Open(dsn)
 	default:
 		fmt.Printf("unsupported database type: %s\n", cfg.Type)
 		os.Exit(1)

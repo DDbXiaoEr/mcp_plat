@@ -220,7 +220,7 @@ DELETE /api/access-keys/:id
 
 ## 3. 使用历史
 
-> ✅ 已实现：基于审计日志（audit_logs）。存储后端可配置（关系库 Postgres/SQLite 或 ClickHouse），见 `config.yaml` 的 `audit_log_db`。
+> ✅ 已实现：基于审计日志（audit_logs）。存储后端可配置（关系库 Postgres/MySQL 或 ClickHouse），见 `config.yaml` 的 `audit_log_db`。
 
 ### 3.1 获取使用历史列表
 

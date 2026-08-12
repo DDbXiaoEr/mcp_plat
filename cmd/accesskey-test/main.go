@@ -13,8 +13,8 @@ import (
 	"mcp_plat-console/model"
 
 	"gopkg.in/yaml.v3"
+	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -39,10 +39,12 @@ func run() error {
 
 	type dbConfig struct {
 		Type     string `yaml:"type"`
-		SQLite   struct{ Path string } `yaml:"sqlite"`
 		Postgres struct {
 			Host, Port, User, Password, DBName string
 		} `yaml:"postgres"`
+		MySQL struct {
+			Host, Port, User, Password, DBName string
+		} `yaml:"mysql"`
 	}
 	type config struct {
 		AccessKeySecret string   `yaml:"access_key_secret"`
@@ -65,8 +67,11 @@ func run() error {
 		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai",
 			pg.Host, pg.User, pg.Password, pg.DBName, pg.Port)
 		dial = postgres.Open(dsn)
-	case "sqlite":
-		dial = sqlite.Open(cfg.Database.SQLite.Path)
+	case "mysql":
+		my := cfg.Database.MySQL
+		dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+			my.User, my.Password, my.Host, my.Port, my.DBName)
+		dial = mysql.Open(dsn)
 	default:
 		return fmt.Errorf("不支持的数据库类型: %s", cfg.Database.Type)
 	}

@@ -1,5 +1,6 @@
 # ============================================================
 # 主程序数据库（用户、角色、AccessKey、服务器、系统设置等）
+# type 可选：postgres / mysql
 # ============================================================
 database:
   type: postgres
@@ -9,12 +10,19 @@ database:
     user: root
     password: 123456
     dbname: mcp_platform
+  # 切换为 MySQL 时，请启用下方配置并删除上方 postgres 配置，将 type 改为 mysql：
+  # mysql:
+  #   host: localhost
+  #   port: 3306
+  #   user: root
+  #   password: 123456
+  #   dbname: mcp_platform
 
 # ============================================================
 # 审计日志数据库（与 audit-log-server 共用）
 # type 可选：
-#   - postgres / sqlite : 关系库存储（低/中量级）
-#   - clickhouse        : ClickHouse 时序存储（高量级），读取端也必须保持一致
+#   - postgres / mysql : 关系库存储（低/中量级）
+#   - clickhouse       : ClickHouse 时序存储（高量级），读取端也必须保持一致
 # ============================================================
 audit_log_db:
   type: postgres
@@ -24,6 +32,13 @@ audit_log_db:
     user: root
     password: 123456
     dbname: mcp_history_db
+  # 切换为 MySQL 时，请启用下方配置并删除上方 postgres 配置，将 type 改为 mysql：
+  # mysql:
+  #   host: localhost
+  #   port: 3306
+  #   user: root
+  #   password: 123456
+  #   dbname: mcp_history_db
   # 切换为 ClickHouse 时，请启用下方配置并删除上方 postgres 配置：
   # type: clickhouse
   # clickhouse:

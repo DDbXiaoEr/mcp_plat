@@ -11,8 +11,8 @@ import (
 	"mcp_plat-console/config"
 	"mcp_plat-console/model"
 
+	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -44,11 +44,13 @@ func openGORM(cfg config.DatabaseConfig) *gorm.DB {
 		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai",
 			pg.Host, pg.User, pg.Password, pg.DBName, pg.Port)
 		dialector = postgres.Open(dsn)
+	case "mysql":
+		my := cfg.MySQL
+		dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+			my.User, my.Password, my.Host, my.Port, my.DBName)
+		dialector = mysql.Open(dsn)
 	default:
-		if cfg.SQLite.Path == "" {
-			cfg.SQLite.Path = "audit_log.db"
-		}
-		dialector = sqlite.Open(cfg.SQLite.Path)
+		log.Fatalf("unsupported audit database type: %s", cfg.Type)
 	}
 
 	db, err := gorm.Open(dialector, &gorm.Config{
