@@ -66,6 +66,7 @@ mcp_plat-console/
 │   ├── cas.go                # CAS 认证业务逻辑
 │   ├── ldap.go               # LDAP 认证业务逻辑
 │   ├── history.go            # 使用历史业务逻辑
+│   ├── kong.go               # Kong 网关发布（仅上游/Service/路由，不下发插件）
 │   ├── mcp_server.go         # MCPServer 业务逻辑
 │   ├── mcp_server_test.go    # FetchTools 单元测试（mock + 可选真实服务器）
 │   ├── overview.go           # 平台概况统计业务逻辑（用户/服务器/工具/当天调用数）

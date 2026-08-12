@@ -1,7 +1,7 @@
 <script setup>
 
 // Author: deepseek-v4-pro / opencode
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { fetchRoles, fetchSettings, saveSetting, testLdap } from '../api.js'
 import { applyPlatform } from '../stores/settings.js'
 
@@ -52,6 +52,17 @@ const API_GW_PROVIDERS = [
   { key: 'kong', label: 'Kong' },
   { key: 'tyk', label: 'Tyk' }
 ]
+
+const showKongNotice = ref(false)
+
+watch(
+  () => apiGwForm.value.provider,
+  (val, oldVal) => {
+    if (val === 'kong' && oldVal !== 'kong') {
+      showKongNotice.value = true
+    }
+  }
+)
 
 const networkSecurityForm = ref({
   allowlist: ''
@@ -245,6 +256,7 @@ function applySettings(data) {
   if (data.smtp) Object.assign(smtpForm.value, data.smtp)
   if (data.api_gateway) {
     apiGwConfigured.value = data.api_gateway.configured || false
+    if (data.api_gateway.provider) apiGwForm.value.provider = data.api_gateway.provider
   }
   if (data.network_security && data.network_security.allowlist) {
     networkSecurityForm.value.allowlist = data.network_security.allowlist.join('\n')
@@ -508,6 +520,10 @@ onMounted(async () => {
                 {{ gw.label }}
               </option>
             </select>
+            <span v-if="apiGwForm.provider === 'kong'" class="field__help-text">
+              Kong 仅发布上游与服务路由，不下发插件；本地 Docker 测试时 Admin API 默认
+              <code>http://127.0.0.1:8001</code>，未启用 RBAC 时 Admin Key 可留空。
+            </span>
           </label>
 
           <label class="field">
@@ -516,8 +532,14 @@ onMounted(async () => {
               <span class="field__help">
                 ?
                 <span class="field__tooltip">
-                  填写网关 Admin API 的基础地址，不要附带路径。例如填写
-                  <code>http://127.0.0.1:9180</code> 而非 <code>http://127.0.0.1:9180/apisix/admin</code>。
+                  <template v-if="apiGwForm.provider === 'kong'">
+                    填写 Kong Admin API 的基础地址，不要附带路径，例如
+                    <code>http://127.0.0.1:8001</code>。
+                  </template>
+                  <template v-else>
+                    填写网关 Admin API 的基础地址，不要附带路径，例如
+                    <code>http://127.0.0.1:9180</code>（而非 .../apisix/admin）。
+                  </template>
                 </span>
               </span>
             </span>
@@ -525,7 +547,7 @@ onMounted(async () => {
               v-model="apiGwForm.adminUrl"
               class="field__input"
               type="text"
-              placeholder="http://127.0.0.1:9180"
+              :placeholder="apiGwForm.provider === 'kong' ? 'http://127.0.0.1:8001' : 'http://127.0.0.1:9180'"
             />
           </label>
 
@@ -547,6 +569,9 @@ onMounted(async () => {
               type="password"
               placeholder="请输入管理员 API Key"
             />
+            <span v-if="apiGwForm.provider === 'kong'" class="field__help-text">
+              Kong 未启用 RBAC 时可不填；启用后填写 RBAC Admin 令牌。
+            </span>
           </label>
 
           <label class="field">
@@ -593,6 +618,29 @@ onMounted(async () => {
             <span v-if="tips.api_gateway" class="save-tip">{{ tips.api_gateway }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'api_gateway'" @click="saveApiGwSettings">
               {{ saving === 'api_gateway' ? '保存中…' : '保存' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="showKongNotice" class="dialog-overlay" @click.self="showKongNotice = false">
+        <div class="dialog">
+          <h2 class="dialog__title">Kong 网关接入说明</h2>
+          <p class="dialog__desc">
+            当前 API 网关已切换为 <strong>Kong</strong>，发布 MCP 服务时请注意以下限制：
+          </p>
+          <ul class="kong-notice__list">
+            <li>仅发布「上游（Upstream）」「Service」「路由（Route）」，<strong>不会下发任何插件</strong>。</li>
+            <li>Access Key 认证、审计日志、路径重写等能力在 Kong 下不生效。</li>
+            <li>发布后的网关路径使用 MCP 服务器配置的 URI 路径（address），而非服务器 UUID。</li>
+          </ul>
+          <p class="dialog__desc">
+            本地 Docker 测试：Admin API 默认 <code>http://127.0.0.1:8001</code>，
+            未启用 RBAC 时 Admin API Key 可留空。
+          </p>
+          <div class="dialog__actions">
+            <button class="btn btn--primary" type="button" @click="showKongNotice = false">
+              知道了
             </button>
           </div>
         </div>
@@ -1384,6 +1432,74 @@ onMounted(async () => {
   background: #fef3c7;
   border: 1px solid #f59e0b;
   border-radius: 10px;
+}
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 32px;
+  max-width: 520px;
+  width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+}
+
+.dialog__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--xauat-blue);
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.dialog__desc {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  line-height: 1.7;
+}
+
+.dialog__desc code {
+  padding: 1px 5px;
+  font-size: 12px;
+  color: var(--xauat-blue);
+  background: rgba(30, 95, 176, 0.1);
+  border-radius: 4px;
+}
+
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  flex-shrink: 0;
+}
+
+.kong-notice__list {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.kong-notice__list strong {
+  color: #d93025;
 }
 
 .api-gw-warning__icon {

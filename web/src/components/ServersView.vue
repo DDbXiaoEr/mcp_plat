@@ -7,6 +7,9 @@ import { fetchServers, createServer, fetchServerTools, publishServers, deleteSer
 const servers = ref([])
 const loading = ref(true)
 const gatewayConfigured = ref(false)
+const gatewayProvider = ref('apisix')
+
+const isKongGateway = computed(() => gatewayProvider.value === 'kong')
 
 const editingDesc = ref(false)
 const editDescValue = ref('')
@@ -24,6 +27,7 @@ async function loadGatewaySettings() {
   try {
     const data = await fetchGatewayStatus()
     gatewayConfigured.value = data.configured
+    gatewayProvider.value = data.provider || 'apisix'
   } catch (e) {
     console.error('加载 API 网关状态失败:', e)
   }
@@ -656,7 +660,12 @@ async function executePublish() {
         <div class="dialog dialog--wide dialog--publish">
           <h2 class="dialog__title">发布到 API 网关</h2>
           <p class="dialog__desc">选择要发布的 MCP 服务器：</p>
-          <p v-if="gatewayConfigured" class="publish-gateway__hint">API 网关已配置</p>
+          <p v-if="gatewayConfigured" class="publish-gateway__hint">
+            API 网关已配置{{ gatewayProvider === 'kong' ? '（Kong）' : '' }}
+          </p>
+          <p v-if="isKongGateway" class="publish-gateway__hint publish-gateway__hint--warn">
+            Kong 仅发布上游与路由，不会下发认证/审计插件，以下开关在 Kong 下不生效。
+          </p>
           <div class="shuttle">
             <div class="shuttle__panel">
               <div class="shuttle__head">
@@ -759,7 +768,7 @@ async function executePublish() {
           </div>
           <div class="publish-auth">
             <label class="publish-auth__label">
-              <input type="checkbox" v-model="enableAuth" />
+              <input type="checkbox" v-model="enableAuth" :disabled="isKongGateway" />
               <span class="publish-auth__text">启用 Access Key 认证</span>
             </label>
             <p class="publish-auth__hint">
@@ -768,7 +777,7 @@ async function executePublish() {
           </div>
           <div class="publish-auth">
             <label class="publish-auth__label">
-              <input type="checkbox" v-model="enableAuditLog" />
+              <input type="checkbox" v-model="enableAuditLog" :disabled="isKongGateway" />
               <span class="publish-auth__text">启用审计日志</span>
             </label>
             <p class="publish-auth__hint">
@@ -1490,19 +1499,28 @@ async function executePublish() {
 }
 
 .dialog--publish {
-  height: 560px;
+  min-height: 620px;
+  height: auto;
+}
+
+.dialog--publish .dialog__title,
+.dialog--publish .dialog__desc,
+.dialog--publish .publish-gateway__hint,
+.dialog--publish .publish-auth {
+  flex-shrink: 0;
 }
 
 .shuttle {
   display: flex;
   gap: 12px;
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
 .shuttle__panel {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border);
@@ -1747,5 +1765,10 @@ async function executePublish() {
   background: #d4edda;
   border-radius: 8px;
   display: inline-block;
+}
+
+.publish-gateway__hint--warn {
+  color: #92400e;
+  background: #fef3c7;
 }
 </style>

@@ -372,6 +372,7 @@ POST /api/servers/publish
 |------|------|------|------|
 | server_ids | []string | 是 | 要发布的 MCP 服务器 ID 列表 |
 | enable_auth | bool | 否 | 是否启用 Access Key 认证（默认 false），启用后路由会下发 accesskey_verify 插件 |
+| enable_audit_log | bool | 否 | 是否启用审计日志（默认 false），启用后路由会下发 audit_log 插件 |
 | accesskey_header | string | 否 | 自定义 Access Key 的 HTTP Header 名称，未传时优先使用网关设置中配置的值，均未配置时默认 `X-Access-Key` |
 
 **请求示例：**
@@ -390,7 +391,9 @@ POST /api/servers/publish
 }
 ```
 
-**说明：** 后端根据已配置的 API 网关设置（`api_gateway` 分组），将选中的 MCP 服务器路由注册到 API 网关中。需先配置网关的 Admin API 地址和 Key。若启用认证，还需配置 `authGrpcAddr` 指向 accesskey-auth-server 的 gRPC 地址。
+**说明：** 后端根据已配置的 API 网关设置（`api_gateway` 分组，`provider` 字段），将选中的 MCP 服务器路由注册到对应网关中。需先配置网关的 Admin API 地址（APISIX 还需 Key）。
+- `provider=apisix`（默认）：创建 上游 + 路由，可按需下发 `accesskey_verify` / `audit_log` / `proxy-rewrite` 等插件。若启用认证，还需配置 `authGrpcAddr` 指向 accesskey-auth-server 的 gRPC 地址。
+- `provider=kong`：仅创建 上游（Upstream）+ Service + 路由（Route），**不下发任何插件**，因此认证、审计、路径重写等能力在 Kong 下不生效；网关路径使用服务器配置的 URI 路径（address）。Admin API Key 仅在 Kong 启用 RBAC 时需要。
 
 ### 4.6 获取 MCP 服务器工具列表
 
@@ -920,14 +923,18 @@ GET /api/settings/gateway-status
   "code": 200,
   "message": "success",
   "data": {
-    "configured": true
+    "configured": true,
+    "provider": "kong",
+    "adminUrl": "http://127.0.0.1:8001"
   }
 }
 ```
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| configured | bool | API 网关 Admin API 地址和 Key 是否均已配置 |
+| configured | bool | 网关是否已配置（APISIX 需地址 + Key；Kong 仅需地址） |
+| provider | string | 当前网关类型，`apisix` / `kong` / `tyk` |
+| adminUrl | string | 已配置的 Admin API 基础地址 |
 
 ---
 

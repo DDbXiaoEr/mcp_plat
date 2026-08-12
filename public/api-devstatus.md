@@ -21,7 +21,7 @@
 | MCP 服务器 | PUT /api/servers/:id | ✅ 已完成 | 新增 description 字段 |
 | MCP 服务器 | DELETE /api/servers/:id | ✅ 已完成 | |
 | MCP 服务器 | POST /api/servers/fetch-tools | ✅ 已完成 | 前端已接入，返回 `[{name, description}]` 格式 |
-| MCP 服务器 | POST /api/servers/publish | ✅ 已完成 | 新增 accesskey_header 参数；发布成功后自动标记 status=published |
+| MCP 服务器 | POST /api/servers/publish | ✅ 已完成 | 新增 accesskey_header 参数；发布成功后自动标记 status=published；支持 provider=kong 时仅发布上游/Service/路由（不下发插件） |
 | RBAC | GET /api/roles | ✅ 已完成 | |
 | RBAC | POST /api/roles | ✅ 已完成 | |
 | RBAC | PUT /api/roles/:id | ✅ 已完成 | |
@@ -37,7 +37,7 @@
 | 系统设置 | GET /api/settings | ✅ 已完成 | 前端已接入 |
 | 系统设置 | PUT /api/settings/:key | ✅ 已完成 | key: log / smtp / auth / user_ops / platform / api_gateway / network_security / audit_log |
 | 系统设置 | GET /api/settings/:key | ✅ 已完成 | 仅需登录 |
-| 系统设置 | GET /api/settings/gateway-status | ✅ 已完成 | 网关配置状态检测，不泄露管理配置 |
+| 系统设置 | GET /api/settings/gateway-status | ✅ 已完成 | 网关配置状态检测，不泄露管理配置；返回 provider / adminUrl |
 | 系统设置 | POST /api/settings/test-ldap | ✅ 已完成 | LDAP 连接与属性映射测试 |
 
 - ✅ 已完成

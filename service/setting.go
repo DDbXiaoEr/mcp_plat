@@ -66,7 +66,9 @@ func GetSettingByKey(key string) (json.RawMessage, error) {
 }
 
 type GatewayStatus struct {
-	Configured bool `json:"configured"`
+	Configured bool   `json:"configured"`
+	Provider   string `json:"provider"`
+	AdminURL   string `json:"adminUrl"`
 }
 
 func CheckGatewayStatus() GatewayStatus {
@@ -74,7 +76,15 @@ func CheckGatewayStatus() GatewayStatus {
 	if err := GetSetting("api_gateway", &gw); err != nil {
 		return GatewayStatus{Configured: false}
 	}
-	return GatewayStatus{Configured: gw.AdminURL != "" && gw.AdminKey != ""}
+	configured := gw.AdminURL != ""
+	if gw.Provider != "kong" {
+		configured = configured && gw.AdminKey != ""
+	}
+	return GatewayStatus{
+		Configured: configured,
+		Provider:   gw.Provider,
+		AdminURL:   gw.AdminURL,
+	}
 }
 
 func SaveSetting(key string, value json.RawMessage) error {

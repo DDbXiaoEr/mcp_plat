@@ -177,6 +177,13 @@ mcp_plat-console version v1.0.0 (commit abc1234), built at 2026-07-11_06:42:21
 - **gRPC 审计服务**（`cmd/audit-log-server`）：独立的审计日志采集服务，负责写入审计库
 - MCP 服务发布时自动向 APISIX Admin API 注册路由和上游
 
+### Kong 网关接入（测试中）
+
+- 在系统设置中切换网关类型为 **Kong**，即可通过 Kong Admin API 发布 MCP 服务
+- 仅创建/更新 **上游（Upstream）、Service、路由（Route）**，**不下发任何插件**
+- 因此 Kong 场景下 Access Key 认证、审计日志、路径重写等能力不生效；网关路径使用服务器配置的 URI 路径（address）
+- 本地 Docker 测试：Admin API 默认 `http://127.0.0.1:8001`，未启用 RBAC 时 Admin API Key 可留空
+
 ### 审计日志
 
 - 审计日志存储抽象层（`auditstore/`），支持关系库（PostgreSQL/MySQL）与 ClickHouse 两种实现

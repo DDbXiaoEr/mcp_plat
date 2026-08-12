@@ -566,8 +566,11 @@ func PublishServers(input PublishInput) error {
 	if err := GetSetting("api_gateway", &gw); err != nil {
 		return errors.New("请先在系统设置中配置 API 网关参数")
 	}
-	if gw.AdminURL == "" || gw.AdminKey == "" {
-		return errors.New("API 网关 Admin API 地址和 Key 未配置")
+	if gw.AdminURL == "" {
+		return errors.New("API 网关 Admin API 地址未配置")
+	}
+	if gw.Provider != "kong" && gw.AdminKey == "" {
+		return errors.New("API 网关 Admin API Key 未配置")
 	}
 
 	var servers []model.MCPServer
@@ -582,6 +585,13 @@ func PublishServers(input PublishInput) error {
 	var errs []string
 
 	for _, srv := range servers {
+		if gw.Provider == "kong" {
+			if err := publishKongServer(client, gw, srv); err != nil {
+				errs = append(errs, fmt.Sprintf("%s: %v", srv.Name, err))
+			}
+			continue
+		}
+
 		addresses := parseServiceAddresses(srv.ServiceAddress)
 		if len(addresses) == 0 {
 			errs = append(errs, fmt.Sprintf("%s: 未配置后端服务地址", srv.Name))
