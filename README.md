@@ -241,3 +241,9 @@ mcp_plat-console version v1.0.0 (commit abc1234), built at 2026-07-11_06:42:21
 
 > 详细请求/响应字段见 `public/api_doc.md`，开发进度见 `public/api-devstatus.md`
 
+## 许可证
+
+本项目采用 [GNU Affero General Public License v3.0](LICENSE)（AGPL-3.0）开源协议。
+
+Copyright (C) 2026 Zhaoquan Wang
+
