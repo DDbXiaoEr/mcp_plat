@@ -22,7 +22,8 @@ mcp_plat-console
 mcp_plat_console
 accesskey-auth-server-*
 apisix-go-runner-*
-datagen
+/datagen
+/auditgen
 tools/
 
 # build directory (track configs only)

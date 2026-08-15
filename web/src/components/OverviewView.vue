@@ -18,12 +18,12 @@
 <script setup>
 import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts/core'
-import { LineChart } from 'echarts/charts'
-import { GridComponent, TooltipComponent } from 'echarts/components'
+import { LineChart, BarChart, PieChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { fetchOverviewStats, fetchOverviewCallTrend } from '../api.js'
 
-echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer])
+echarts.use([LineChart, BarChart, PieChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer])
 
 // Author: deepseek-v4-pro / opencode
 const stats = ref([])
@@ -87,14 +87,21 @@ const periods = [
   { key: '30', label: '近30天' }
 ]
 const period = ref('30')
-const trend = ref({ dates: [], counts: [] })
+const trend = ref({ dates: [], counts: [], server_calls: [], user_groups: [], server_names: [], server_counts_by_day: [] })
 const chartEl = ref(null)
 let chart = null
+
+const serverPieEl = ref(null)
+const groupPieEl = ref(null)
+const serverPieChart = ref(null)
+const groupPieChart = ref(null)
 
 function cssVar(name, fallback) {
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
   return value || fallback
 }
+
+const SERVER_BAR_PALETTE = ['#0a3d7a', '#4a90d9', '#7fb4ea', '#35a08f', '#e09b3d', '#c25e5e', '#9b6bb8', '#5b6b80', '#8a97a6']
 
 function renderChart() {
   if (!chartEl.value) return
@@ -105,12 +112,54 @@ function renderChart() {
     chart.clear()
     return
   }
+  const serverNames = trend.value.server_names || []
+  const byDay = trend.value.server_counts_by_day || []
+  const series = []
+  serverNames.forEach((name, idx) => {
+    const isLast = idx === serverNames.length - 1
+    series.push({
+      name,
+      type: 'bar',
+      stack: 'calls',
+      barMaxWidth: 28,
+      itemStyle: {
+        color: SERVER_BAR_PALETTE[idx % SERVER_BAR_PALETTE.length],
+        borderRadius: isLast ? [3, 3, 0, 0] : 0,
+        borderColor: '#fff',
+        borderWidth: 1
+      },
+      data: byDay.map((row) => row[idx] || 0)
+    })
+  })
+  series.push({
+    name: 'AI 调用次数',
+    type: 'line',
+    symbol: 'circle',
+    symbolSize: 6,
+    data: trend.value.counts,
+    lineStyle: { width: 3, color: cssVar('--xauat-blue', '#0a3d7a') },
+    itemStyle: { color: cssVar('--xauat-blue', '#0a3d7a') },
+    areaStyle: {
+      color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+        { offset: 0, color: 'rgba(10, 61, 122, 0.28)' },
+        { offset: 1, color: 'rgba(10, 61, 122, 0.02)' }
+      ])
+    }
+  })
   chart.setOption({
-    tooltip: { trigger: 'axis' },
-    grid: { left: 12, right: 16, top: 24, bottom: 8, containLabel: true },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: {
+      top: 0,
+      icon: 'circle',
+      itemWidth: 10,
+      itemHeight: 10,
+      itemGap: 12,
+      textStyle: { color: cssVar('--text-muted', '#5b6b80'), fontSize: 12 }
+    },
+    grid: { left: 12, right: 16, top: 36, bottom: 8, containLabel: true },
     xAxis: {
       type: 'category',
-      boundaryGap: false,
+      boundaryGap: true,
       data: trend.value.dates,
       axisLine: { lineStyle: { color: cssVar('--border', '#e3e9f2') } },
       axisLabel: { color: cssVar('--text-muted', '#5b6b80'), fontSize: 12 }
@@ -121,24 +170,48 @@ function renderChart() {
       splitLine: { lineStyle: { color: '#eef2f8' } },
       axisLabel: { color: cssVar('--text-muted', '#5b6b80'), fontSize: 12 }
     },
+    series
+  })
+}
+
+function renderPie(el, holder, data) {
+  if (!el) return
+  if (!holder.value) holder.value = echarts.init(el)
+  if (!data.length) {
+    holder.value.clear()
+    return
+  }
+  holder.value.setOption({
+    tooltip: { trigger: 'item', formatter: '{b}: {c}（{d}%）' },
+    legend: {
+      bottom: 0,
+      icon: 'circle',
+      itemWidth: 10,
+      itemHeight: 10,
+      itemGap: 12,
+      textStyle: { color: cssVar('--text-muted', '#5b6b80'), fontSize: 12 }
+    },
     series: [
       {
-        name: 'AI 调用次数',
-        type: 'line',
-        symbol: 'circle',
-        symbolSize: 6,
-        data: trend.value.counts,
-        lineStyle: { width: 3, color: cssVar('--xauat-blue', '#0a3d7a') },
-        itemStyle: { color: cssVar('--xauat-blue', '#0a3d7a') },
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(10, 61, 122, 0.28)' },
-            { offset: 1, color: 'rgba(10, 61, 122, 0.02)' }
-          ])
-        }
+        type: 'pie',
+        radius: ['42%', '68%'],
+        center: ['50%', '44%'],
+        avoidLabelOverlap: true,
+        itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+        label: { color: cssVar('--text', '#1f2d3d'), fontSize: 12, formatter: '{b} {d}%' },
+        labelLine: { length: 12, length2: 8 },
+        data: data.map((d) => ({ name: d.name, value: d.count }))
       }
     ]
   })
+}
+
+function renderServerPie() {
+  renderPie(serverPieEl.value, serverPieChart, trend.value.server_calls || [])
+}
+
+function renderGroupPie() {
+  renderPie(groupPieEl.value, groupPieChart, trend.value.user_groups || [])
 }
 
 async function loadTrend() {
@@ -146,20 +219,26 @@ async function loadTrend() {
   trend.value = data
   await nextTick()
   renderChart()
+  renderServerPie()
+  renderGroupPie()
 }
 
 async function refreshTrend() {
   try {
     await loadTrend()
   } catch {
-    trend.value = { dates: [], counts: [] }
+    trend.value = { dates: [], counts: [], server_calls: [], user_groups: [], server_names: [], server_counts_by_day: [] }
     await nextTick()
     renderChart()
+    renderServerPie()
+    renderGroupPie()
   }
 }
 
 function handleResize() {
   chart && chart.resize()
+  serverPieChart.value && serverPieChart.value.resize()
+  groupPieChart.value && groupPieChart.value.resize()
 }
 
 watch(period, refreshTrend)
@@ -188,6 +267,10 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
   chart && chart.dispose()
   chart = null
+  serverPieChart.value && serverPieChart.value.dispose()
+  serverPieChart.value = null
+  groupPieChart.value && groupPieChart.value.dispose()
+  groupPieChart.value = null
 })
 </script>
 
@@ -232,6 +315,22 @@ onBeforeUnmount(() => {
       <div class="trend__body">
         <div ref="chartEl" class="trend__canvas"></div>
         <div v-show="!trend.dates.length" class="trend__empty">暂无数据</div>
+      </div>
+      <div class="trend__pies">
+        <div class="pie-card">
+          <h3 class="pie-card__title">服务器调用量占比</h3>
+          <div class="pie-card__body">
+            <div ref="serverPieEl" class="pie-card__canvas"></div>
+            <div v-show="!trend.server_calls?.length" class="pie-card__empty">暂无数据</div>
+          </div>
+        </div>
+        <div class="pie-card">
+          <h3 class="pie-card__title">用户组用户数占比</h3>
+          <div class="pie-card__body">
+            <div ref="groupPieEl" class="pie-card__canvas"></div>
+            <div v-show="!trend.user_groups?.length" class="pie-card__empty">暂无数据</div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -423,5 +522,51 @@ onBeforeUnmount(() => {
   font-size: 14px;
   color: var(--text-muted);
   background: var(--surface);
+}
+
+.trend__pies {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .trend__pies {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pie-card {
+  padding: 16px;
+  background: #f7fafd;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.pie-card__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pie-card__body {
+  position: relative;
+  margin-top: 8px;
+}
+
+.pie-card__canvas {
+  height: 280px;
+}
+
+.pie-card__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--text-muted);
+  background: #f7fafd;
 }
 </style>

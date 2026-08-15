@@ -33,7 +33,7 @@
 | RBAC | PUT /api/users/:id | ✅ 已完成 | |
 | RBAC | DELETE /api/users/:id | ✅ 已完成 | |
 | 平台概况 | GET /api/overview/stats | ✅ 已完成 | 统计卡片已接入（用户/服务器/工具/当天调用数） |
-| 平台概况 | GET /api/overview/call-trend | ✅ 已完成 | AI 调用历史趋势已接入（近 7/30 天，audit_logs 按天分组统计） |
+| 平台概况 | GET /api/overview/call-trend | ✅ 已完成 | AI 调用历史趋势已接入（近 7/30 天，audit_logs 按天分组统计）；含服务器调用量占比、用户组用户数占比饼图数据，及按天×服务器堆叠柱状图数据（Top 8 + 其他） |
 | 系统设置 | GET /api/settings | ✅ 已完成 | 前端已接入 |
 | 系统设置 | PUT /api/settings/:key | ✅ 已完成 | key: log / smtp / auth / user_ops / platform / api_gateway / network_security / audit_log |
 | 系统设置 | GET /api/settings/:key | ✅ 已完成 | 仅需登录 |

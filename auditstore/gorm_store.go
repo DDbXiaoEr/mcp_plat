@@ -162,6 +162,52 @@ func (s *gormStore) CountByDay(ctx context.Context, start, end time.Time) ([]Day
 	return out, nil
 }
 
+func (s *gormStore) CountByServer(ctx context.Context, start, end time.Time) ([]ServerCount, error) {
+	type row struct {
+		ServerID string
+		Count    int64
+	}
+	var rows []row
+	err := s.db.WithContext(ctx).Model(&model.AuditLog{}).
+		Select("server_id, COUNT(*) AS count").
+		Where("created_at >= ? AND created_at < ?", start, end).
+		Group("server_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]ServerCount, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, ServerCount{ServerID: r.ServerID, Count: r.Count})
+	}
+	return out, nil
+}
+
+func (s *gormStore) CountByDayServer(ctx context.Context, start, end time.Time) ([]DayServerCount, error) {
+	type row struct {
+		Day      string
+		ServerID string
+		Count    int64
+	}
+	var rows []row
+	err := s.db.WithContext(ctx).Model(&model.AuditLog{}).
+		Select("DATE(created_at) AS day, server_id, COUNT(*) AS count").
+		Where("created_at >= ? AND created_at < ?", start, end).
+		Group("DATE(created_at), server_id").
+		Order("day, server_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]DayServerCount, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, DayServerCount{Day: r.Day, ServerID: r.ServerID, Count: r.Count})
+	}
+	return out, nil
+}
+
 func (s *gormStore) Purge(ctx context.Context, before time.Time) (int64, error) {
 	var deleted int64
 	for {

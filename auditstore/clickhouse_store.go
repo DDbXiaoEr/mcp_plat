@@ -248,6 +248,53 @@ func (s *clickHouseStore) CountByDay(ctx context.Context, start, end time.Time) 
 	return out, rows.Err()
 }
 
+func (s *clickHouseStore) CountByServer(ctx context.Context, start, end time.Time) ([]ServerCount, error) {
+	rows, err := s.conn.Query(ctx,
+		fmt.Sprintf("SELECT server_id, count() FROM %s WHERE created_at >= ? AND created_at < ? GROUP BY server_id", s.tableName()),
+		start, end)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []ServerCount{}
+	for rows.Next() {
+		var (
+			serverID string
+			count    uint64
+		)
+		if err := rows.Scan(&serverID, &count); err != nil {
+			return nil, err
+		}
+		out = append(out, ServerCount{ServerID: serverID, Count: int64(count)})
+	}
+	return out, rows.Err()
+}
+
+func (s *clickHouseStore) CountByDayServer(ctx context.Context, start, end time.Time) ([]DayServerCount, error) {
+	rows, err := s.conn.Query(ctx,
+		fmt.Sprintf("SELECT toDate(created_at) AS day, server_id, count() FROM %s WHERE created_at >= ? AND created_at < ? GROUP BY day, server_id ORDER BY day, server_id", s.tableName()),
+		start, end)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []DayServerCount{}
+	for rows.Next() {
+		var (
+			day      time.Time
+			serverID string
+			count    uint64
+		)
+		if err := rows.Scan(&day, &serverID, &count); err != nil {
+			return nil, err
+		}
+		out = append(out, DayServerCount{Day: day.Format("2006-01-02"), ServerID: serverID, Count: int64(count)})
+	}
+	return out, rows.Err()
+}
+
 func buildWhere(q Query) (string, []interface{}) {
 	var conds []string
 	var args []interface{}

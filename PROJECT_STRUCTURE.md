@@ -23,6 +23,8 @@ mcp_plat-console/
 │   │       └── apisix_route_example.md
 │   ├── audit-log-server/
 │   │   └── main.go           # 审计日志 gRPC 服务
+│   ├── auditgen/
+│   │   └── main.go           # 审计数据生成器（基于现有数据生成近 N 天审计日志）
 │   └── datagen/
 │       └── main.go           # 测试数据生成工具
 │

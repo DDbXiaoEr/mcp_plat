@@ -105,7 +105,9 @@ make dev
 | `make build-accesskey-auth-server` | 构建 AccessKey gRPC 鉴权服务 |
 | `make build-audit-log-server` | 构建审计日志 gRPC 服务 |
 | `make build-apisix-plugin` | 构建 APISIX Go 插件运行器（linux/$(ARCH)） |
-| `make build-tools` | 构建工具集（datagen / accesskey-test 等） |
+| `make build-tools` | 构建工具集（datagen / accesskey-test / auditgen 等） |
+| `make build-auditgen` | 构建审计数据生成器（`build/bin/tools/auditgen`） |
+| `make auditgen` | 运行审计数据生成器（`DAYS=30 PER_DAY=200`） |
 
 构建时自动注入 Git 版本信息：
 

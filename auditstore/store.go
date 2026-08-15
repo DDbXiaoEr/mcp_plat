@@ -44,6 +44,19 @@ type DayCount struct {
 	Count int64
 }
 
+// ServerCount 按服务器调用数
+type ServerCount struct {
+	ServerID string
+	Count    int64
+}
+
+// DayServerCount 按天+服务器调用数
+type DayServerCount struct {
+	Day      string // YYYY-MM-DD
+	ServerID string
+	Count    int64
+}
+
 // Store 审计日志存储抽象，支持关系库（Postgres/MySQL）与 ClickHouse 两种实现
 type Store interface {
 	// Append 批量写入审计日志
@@ -54,6 +67,10 @@ type Store interface {
 	CountRange(ctx context.Context, start, end time.Time) (int64, error)
 	// CountByDay 按天分组统计 [start, end) 区间内的记录数
 	CountByDay(ctx context.Context, start, end time.Time) ([]DayCount, error)
+	// CountByServer 按服务器分组统计 [start, end) 区间内的记录数
+	CountByServer(ctx context.Context, start, end time.Time) ([]ServerCount, error)
+	// CountByDayServer 按天+服务器分组统计 [start, end) 区间内的记录数
+	CountByDayServer(ctx context.Context, start, end time.Time) ([]DayServerCount, error)
 }
 
 // Purgable 支持按时间清理旧数据（ClickHouse 用原生 TTL，无需实现）

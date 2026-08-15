@@ -6,8 +6,8 @@
         build-accesskey-auth-server-linux-amd64 build-audit-log-server-linux-amd64 \
         build-embed-linux-arm64 \
         build-accesskey-auth-server-linux-arm64 build-audit-log-server-linux-arm64 \
-        build-tools build-apisix-plugin build-web \
-        proto run dev datagen clean
+        build-tools build-auditgen build-apisix-plugin build-web \
+        proto run dev datagen auditgen clean
 
 VERSION := $(shell git describe --tags --always 2>/dev/null || echo "dev")
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -133,6 +133,7 @@ build-tools:
 	go build -o $(TOOLS_DIR)/datagen cmd/datagen/main.go
 	go build -o $(TOOLS_DIR)/accesskey-test cmd/accesskey-test/main.go
 	go build -o $(TOOLS_DIR)/audit-log-server cmd/audit-log-server/main.go
+	go build -o $(TOOLS_DIR)/auditgen cmd/auditgen/main.go
 
 build-apisix-plugin: proto
 	@echo "==> building APISIX go plugin runner (linux/$(ARCH))"
@@ -163,6 +164,14 @@ dev:
 
 datagen:
 	@go run cmd/datagen/main.go -table $(TABLE) -count $(or $(COUNT),1)
+
+auditgen:
+	@go run ./cmd/auditgen -days $(or $(DAYS),30) -per-day $(or $(PER_DAY),200)
+
+build-auditgen:
+	@echo "==> building auditgen"
+	@mkdir -p $(TOOLS_DIR)
+	go build -o $(TOOLS_DIR)/auditgen cmd/auditgen/main.go
 
 clean:
 	rm -rf $(BIN_DIR)

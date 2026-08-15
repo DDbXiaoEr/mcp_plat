@@ -992,7 +992,22 @@ GET /api/overview/call-trend
   "message": "success",
   "data": {
     "dates": ["07-11", "07-12", "07-13"],
-    "counts": [1286, 1520, 3472]
+    "counts": [1286, 1520, 3472],
+    "server_calls": [
+      { "name": "统一身份认证", "count": 3210 },
+      { "name": "教务管理系统", "count": 2458 }
+    ],
+    "server_names": ["统一身份认证", "教务管理系统", "其他"],
+    "server_counts_by_day": [
+      [1024, 220, 42],
+      [1180, 300, 40],
+      [1006, 310, 46]
+    ],
+    "user_groups": [
+      { "name": "普通用户", "count": 980 },
+      { "name": "管理员", "count": 5 },
+      { "name": "未分组", "count": 12 }
+    ]
   }
 }
 ```
@@ -1001,6 +1016,10 @@ GET /api/overview/call-trend
 |------|------|------|
 | dates | []string | 日期标签数组，`MM-DD` 格式，按时间升序，长度恒等于请求的 days（含今天，无调用记录的天数为 0） |
 | counts | []int64 | 每日 AI 调用次数，与 dates 一一对应，统计 audit_logs 全量记录数（含成功与失败），未配置审计库时全为 0 |
+| server_calls | []{name,count} | 统计周期内各服务器（MCP 服务器）的 AI 调用量，name 为服务器名（server_id 在 servers 表查不到时显示「未知服务器」），按调用量降序，未配置审计库时为空数组 |
+| server_names | []string | 堆叠柱状图系列名称，按周期总调用量取前 8 个服务器，其余合并为「其他」（不足 8 个或无「其他」时相应缩短），未配置审计库时为空数组 |
+| server_counts_by_day | [][]int64 | 每日各服务器的调用量矩阵，行数与 dates 一致，列数与 server_names 一致，`server_counts_by_day[i][j]` 表示第 i 天第 j 个系列的调用量；未配置审计库时为空数组 |
+| user_groups | []{name,count} | 按角色（roles）统计的用户数量分布，未分配角色的用户归入「未分组」，按用户数降序 |
 
 ---
 
