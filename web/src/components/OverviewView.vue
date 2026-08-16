@@ -22,6 +22,7 @@ import { LineChart, BarChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { fetchOverviewStats, fetchOverviewCallTrend } from '../api.js'
+import { theme } from '../stores/theme.js'
 
 echarts.use([LineChart, BarChart, PieChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer])
 
@@ -101,7 +102,20 @@ function cssVar(name, fallback) {
   return value || fallback
 }
 
-const SERVER_BAR_PALETTE = ['#0a3d7a', '#4a90d9', '#7fb4ea', '#35a08f', '#e09b3d', '#c25e5e', '#9b6bb8', '#5b6b80', '#8a97a6']
+function hexToRgba(hex, alpha) {
+  const m = hex.replace('#', '')
+  const parts = m.length === 3
+    ? [m[0] + m[0], m[1] + m[1], m[2] + m[2]].map((v) => parseInt(v, 16))
+    : [m.slice(0, 2), m.slice(2, 4), m.slice(4, 6)].map((v) => parseInt(v, 16))
+  return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`
+}
+
+const CHART_PALETTE_LIGHT = ['#0a3d7a', '#4a90d9', '#7fb4ea', '#35a08f', '#e09b3d', '#c25e5e', '#9b6bb8', '#5b6b80', '#8a97a6']
+const CHART_PALETTE_DARK = ['#7fb3e8', '#4a90d9', '#a5c8ee', '#4fd0b8', '#f2b24a', '#e88a8a', '#b89bd4', '#93a1b5', '#aab6c4']
+
+function chartPalette() {
+  return theme.theme === 'dark' ? CHART_PALETTE_DARK : CHART_PALETTE_LIGHT
+}
 
 function renderChart() {
   if (!chartEl.value) return
@@ -112,8 +126,11 @@ function renderChart() {
     chart.clear()
     return
   }
+  const lineColor = cssVar('--chart-line', '#0a3d7a')
+  const textColor = cssVar('--chart-text', '#5b6b80')
   const serverNames = trend.value.server_names || []
   const byDay = trend.value.server_counts_by_day || []
+  const palette = chartPalette()
   const series = []
   serverNames.forEach((name, idx) => {
     const isLast = idx === serverNames.length - 1
@@ -123,9 +140,9 @@ function renderChart() {
       stack: 'calls',
       barMaxWidth: 28,
       itemStyle: {
-        color: SERVER_BAR_PALETTE[idx % SERVER_BAR_PALETTE.length],
+        color: palette[idx % palette.length],
         borderRadius: isLast ? [3, 3, 0, 0] : 0,
-        borderColor: '#fff',
+        borderColor: cssVar('--surface', '#fff'),
         borderWidth: 1
       },
       data: byDay.map((row) => row[idx] || 0)
@@ -137,12 +154,12 @@ function renderChart() {
     symbol: 'circle',
     symbolSize: 6,
     data: trend.value.counts,
-    lineStyle: { width: 3, color: cssVar('--xauat-blue', '#0a3d7a') },
-    itemStyle: { color: cssVar('--xauat-blue', '#0a3d7a') },
+    lineStyle: { width: 3, color: lineColor },
+    itemStyle: { color: lineColor },
     areaStyle: {
       color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-        { offset: 0, color: 'rgba(10, 61, 122, 0.28)' },
-        { offset: 1, color: 'rgba(10, 61, 122, 0.02)' }
+        { offset: 0, color: hexToRgba(lineColor, 0.28) },
+        { offset: 1, color: hexToRgba(lineColor, 0.02) }
       ])
     }
   })
@@ -154,7 +171,7 @@ function renderChart() {
       itemWidth: 10,
       itemHeight: 10,
       itemGap: 12,
-      textStyle: { color: cssVar('--text-muted', '#5b6b80'), fontSize: 12 }
+      textStyle: { color: textColor, fontSize: 12 }
     },
     grid: { left: 12, right: 16, top: 36, bottom: 8, containLabel: true },
     xAxis: {
@@ -162,13 +179,13 @@ function renderChart() {
       boundaryGap: true,
       data: trend.value.dates,
       axisLine: { lineStyle: { color: cssVar('--border', '#e3e9f2') } },
-      axisLabel: { color: cssVar('--text-muted', '#5b6b80'), fontSize: 12 }
+      axisLabel: { color: textColor, fontSize: 12 }
     },
     yAxis: {
       type: 'value',
       minInterval: 1,
-      splitLine: { lineStyle: { color: '#eef2f8' } },
-      axisLabel: { color: cssVar('--text-muted', '#5b6b80'), fontSize: 12 }
+      splitLine: { lineStyle: { color: cssVar('--border', '#eef2f8') } },
+      axisLabel: { color: textColor, fontSize: 12 }
     },
     series
   })
@@ -189,7 +206,7 @@ function renderPie(el, holder, data) {
       itemWidth: 10,
       itemHeight: 10,
       itemGap: 12,
-      textStyle: { color: cssVar('--text-muted', '#5b6b80'), fontSize: 12 }
+      textStyle: { color: cssVar('--chart-text', '#5b6b80'), fontSize: 12 }
     },
     series: [
       {
@@ -197,7 +214,7 @@ function renderPie(el, holder, data) {
         radius: ['42%', '68%'],
         center: ['50%', '44%'],
         avoidLabelOverlap: true,
-        itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+        itemStyle: { borderRadius: 6, borderColor: cssVar('--surface', '#fff'), borderWidth: 2 },
         label: { color: cssVar('--text', '#1f2d3d'), fontSize: 12, formatter: '{b} {d}%' },
         labelLine: { length: 12, length2: 8 },
         data: data.map((d) => ({ name: d.name, value: d.count }))
@@ -242,6 +259,15 @@ function handleResize() {
 }
 
 watch(period, refreshTrend)
+
+watch(
+  () => theme.theme,
+  () => {
+    renderChart()
+    renderServerPie()
+    renderGroupPie()
+  }
+)
 
 watch(autoRefresh, (ms) => {
   if (refreshTimer) {
@@ -499,9 +525,9 @@ onBeforeUnmount(() => {
 }
 
 .trend__tab.is-active {
-  color: #fff;
-  background: var(--xauat-blue);
-  border-color: var(--xauat-blue);
+  color: var(--xauat-blue);
+  background: var(--active-bg);
+  border-color: var(--active-bg);
 }
 
 .trend__body {
@@ -539,7 +565,7 @@ onBeforeUnmount(() => {
 
 .pie-card {
   padding: 16px;
-  background: #f7fafd;
+  background: var(--panel-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
@@ -567,6 +593,6 @@ onBeforeUnmount(() => {
   justify-content: center;
   font-size: 14px;
   color: var(--text-muted);
-  background: #f7fafd;
+  background: var(--panel-bg);
 }
 </style>

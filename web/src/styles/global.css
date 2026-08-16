@@ -17,6 +17,7 @@
 
 /* Author: deepseek-v4-pro / opencode */
 :root {
+  color-scheme: light;
   --xauat-blue: #0a3d7a;
   --xauat-blue-light: #1e5fb0;
   --xauat-accent: #f2a900;
@@ -27,9 +28,35 @@
   --text-muted: #5b6b80;
   --border: #e3e9f2;
   --shadow: 0 8px 30px rgba(10, 61, 122, 0.08);
+  --hover-bg: rgba(10, 61, 122, 0.06);
+  --active-bg: rgba(30, 95, 176, 0.1);
+  --panel-bg: #f7fafd;
+  --chart-line: #0a3d7a;
+  --chart-text: #5b6b80;
+  --placeholder-color: #8a97a6;
   --radius: 16px;
   --header-height: 64px;
   --sidebar-width: 240px;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --xauat-blue: #6ea8e0;
+  --xauat-blue-light: #8fc1f0;
+  --xauat-accent: #f2a900;
+  --xauat-cyan: #4fd0e0;
+  --bg: #0f1520;
+  --surface: #182130;
+  --text: #e6ecf5;
+  --text-muted: #92a1b5;
+  --border: #2b3648;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  --active-bg: rgba(110, 168, 224, 0.16);
+  --panel-bg: #141c29;
+  --chart-line: #7fb3e8;
+  --chart-text: #b8c4d4;
+  --placeholder-color: #b8c4d4;
 }
 
 * {
@@ -58,6 +85,28 @@ img {
 
 button {
   font-family: inherit;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--placeholder-color);
+  opacity: 1;
+}
+
+select {
+  color: var(--text);
+  background-color: var(--surface);
+}
+
+select option {
+  color: var(--text);
+  background-color: var(--surface);
 }
 
 .page__title {

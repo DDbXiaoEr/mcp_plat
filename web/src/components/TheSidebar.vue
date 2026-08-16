@@ -21,6 +21,7 @@
 import { computed } from 'vue'
 import { auth } from '../stores/auth.js'
 import { nav, menusFor, setActive } from '../stores/nav.js'
+import { theme, toggleTheme } from '../stores/theme.js'
 
 const menus = computed(() => menusFor(auth.user?.role))
 </script>
@@ -39,6 +40,22 @@ const menus = computed(() => menusFor(auth.user?.role))
         {{ item.label }}
       </button>
     </nav>
+    <div class="sidebar__footer">
+      <button
+        class="theme-toggle"
+        type="button"
+        role="switch"
+        :aria-checked="theme.theme === 'dark'"
+        @click="toggleTheme()"
+      >
+        <span class="theme-toggle__track">
+          <span class="theme-toggle__thumb"></span>
+        </span>
+        <span class="theme-toggle__label">
+          {{ theme.theme === 'dark' ? '暗色模式' : '亮色模式' }}
+        </span>
+      </button>
+    </div>
   </aside>
 </template>
 
@@ -49,17 +66,20 @@ const menus = computed(() => menusFor(auth.user?.role))
   left: 0;
   bottom: 0;
   z-index: 90;
+  display: flex;
+  flex-direction: column;
   width: var(--sidebar-width);
   background: var(--surface);
   border-right: 1px solid var(--border);
-  overflow-y: auto;
 }
 
 .sidebar__nav {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 16px 12px;
+  overflow-y: auto;
 }
 
 .sidebar__item {
@@ -77,12 +97,71 @@ const menus = computed(() => menusFor(auth.user?.role))
 }
 
 .sidebar__item:hover {
-  background: rgba(10, 61, 122, 0.06);
+  background: var(--hover-bg);
 }
 
 .sidebar__item--active {
   color: var(--xauat-blue);
   font-weight: 600;
-  background: rgba(30, 95, 176, 0.1);
+  background: var(--active-bg);
+}
+
+.sidebar__footer {
+  padding: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--text);
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.theme-toggle:hover {
+  background: var(--hover-bg);
+}
+
+.theme-toggle__track {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background 0.2s;
+}
+
+.theme-toggle__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s;
+}
+
+.theme-toggle[aria-checked="true"] .theme-toggle__track {
+  background: var(--xauat-blue-light);
+}
+
+.theme-toggle[aria-checked="true"] .theme-toggle__thumb {
+  transform: translateX(18px);
+}
+
+.theme-toggle__label {
+  color: var(--text-muted);
 }
 </style>
