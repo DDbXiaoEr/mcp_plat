@@ -32,6 +32,7 @@ import SettingsView from './components/SettingsView.vue'
 import RbacView from './components/RbacView.vue'
 import OverviewView from './components/OverviewView.vue'
 import ServersView from './components/ServersView.vue'
+import QuickAccessView from './components/QuickAccessView.vue'
 
 const views = {
   profile: ProfileView,
@@ -40,7 +41,8 @@ const views = {
   settings: SettingsView,
   rbac: RbacView,
   overview: OverviewView,
-  servers: ServersView
+  servers: ServersView,
+  quickaccess: QuickAccessView
 }
 
 const currentView = computed(() => views[nav.active] || WelcomeView)

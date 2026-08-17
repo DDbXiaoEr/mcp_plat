@@ -113,6 +113,8 @@ const ldapForm = ref({
   userFilter: ''
 })
 
+const savedLdap = ref({})
+
 const PLATFORM_FIELDS = [
   { key: 'name', label: '姓名' },
   { key: 'email', label: '邮箱' },
@@ -194,6 +196,17 @@ const platformForm = ref({
   siteUrl: ''
 })
 
+const quickAccessOpen = ref(true)
+
+const QUICK_ACCESS_CLIENTS = [
+  { key: 'cherrystudio', label: 'CherryStudio' }
+]
+
+const quickAccessForm = ref({
+  enabledClients: ['cherrystudio'],
+  scheme: 'https'
+})
+
 const roles = ref([])
 const defaultRoleId = ref('')
 const maxAccessKeys = ref(5)
@@ -244,13 +257,17 @@ function saveAuditLogSettings() {
 }
 
 function saveAuthSettings() {
+  const saved = savedLdap.value || {}
+  const ldap = {}
+  for (const key of ['host', 'baseDn', 'bindDn', 'bindPassword', 'userFilter']) {
+    ldap[key] = ldapForm.value[key] !== '' ? ldapForm.value[key] : (saved[key] || '')
+  }
+  ldap.port = ldapForm.value.port !== '' && ldapForm.value.port != null ? ldapForm.value.port : (saved.port ?? 389)
+  ldap.attrMapping = mappingToObject()
   saveSection('auth', {
     method: authMethod.value,
     cas: casForm.value,
-    ldap: {
-      ...ldapForm.value,
-      attrMapping: mappingToObject()
-    },
+    ldap,
     oauth: oauthForm.value
   })
 }
@@ -268,6 +285,17 @@ function savePlatformSettings() {
   applyPlatform(platformForm.value)
 }
 
+function saveQuickAccessSettings() {
+  saveSection('quick_access', quickAccessForm.value)
+}
+
+function toggleQuickAccessClient(key) {
+  const list = quickAccessForm.value.enabledClients
+  const idx = list.indexOf(key)
+  if (idx === -1) list.push(key)
+  else list.splice(idx, 1)
+}
+
 function applySettings(data) {
   if (data.log) Object.assign(logForm.value, data.log)
   if (data.smtp) Object.assign(smtpForm.value, data.smtp)
@@ -283,12 +311,22 @@ function applySettings(data) {
     if (data.auth.method) authMethod.value = data.auth.method
     if (data.auth.cas) Object.assign(casForm.value, data.auth.cas)
     if (data.auth.ldap) {
-      ldapForm.value.host = data.auth.ldap.host || ''
-      ldapForm.value.port = data.auth.ldap.port ?? 389
-      ldapForm.value.baseDn = data.auth.ldap.baseDn || ''
-      ldapForm.value.bindDn = data.auth.ldap.bindDn || ''
-      ldapForm.value.bindPassword = data.auth.ldap.bindPassword || ''
-      ldapForm.value.userFilter = data.auth.ldap.userFilter || ''
+      savedLdap.value = { ...data.auth.ldap }
+      if (authMethod.value === 'ldap') {
+        ldapForm.value.host = ''
+        ldapForm.value.port = ''
+        ldapForm.value.baseDn = ''
+        ldapForm.value.bindDn = ''
+        ldapForm.value.bindPassword = ''
+        ldapForm.value.userFilter = ''
+      } else {
+        ldapForm.value.host = data.auth.ldap.host || ''
+        ldapForm.value.port = data.auth.ldap.port ?? 389
+        ldapForm.value.baseDn = data.auth.ldap.baseDn || ''
+        ldapForm.value.bindDn = data.auth.ldap.bindDn || ''
+        ldapForm.value.bindPassword = data.auth.ldap.bindPassword || ''
+        ldapForm.value.userFilter = data.auth.ldap.userFilter || ''
+      }
       ldapAttrMapping.value = objectToMapping(data.auth.ldap.attrMapping)
     }
     if (data.auth.oauth) Object.assign(oauthForm.value, data.auth.oauth)
@@ -301,6 +339,14 @@ function applySettings(data) {
   if (data.platform) {
     Object.assign(platformForm.value, data.platform)
     applyPlatform(data.platform)
+  }
+  if (data.quick_access) {
+    if (Array.isArray(data.quick_access.enabledClients)) {
+      quickAccessForm.value.enabledClients = data.quick_access.enabledClients
+    }
+    if (data.quick_access.scheme) {
+      quickAccessForm.value.scheme = data.quick_access.scheme
+    }
   }
 }
 
@@ -839,6 +885,9 @@ onMounted(async () => {
           </template>
 
           <template v-if="authMethod === 'ldap'">
+            <div class="ldap-notice">
+              LDAP 认证已启用。出于安全考虑，不显示当前已配置的值；输入框留空表示保持现有配置不变。
+            </div>
             <div class="field-row">
               <label class="field">
                 <span class="field__label">服务器地址</span>
@@ -1136,6 +1185,57 @@ onMounted(async () => {
           </div>
         </div>
       </div>
+
+      <div class="collapse">
+        <button class="collapse__head" type="button" @click="quickAccessOpen = !quickAccessOpen">
+          <span class="collapse__title">快速接入</span>
+          <span class="collapse__arrow" :class="{ 'collapse__arrow--open': quickAccessOpen }">▾</span>
+        </button>
+        <div v-show="quickAccessOpen" class="collapse__body">
+          <div class="field">
+            <span class="field__label">支持的客户端</span>
+            <span class="field__help-text">控制用户「快速接入」页可选用的客户端，勾选后该客户端对用户开放。</span>
+            <div class="qa-clients">
+              <label
+                v-for="c in QUICK_ACCESS_CLIENTS"
+                :key="c.key"
+                class="qa-client"
+              >
+                <input
+                  type="checkbox"
+                  :checked="quickAccessForm.enabledClients.includes(c.key)"
+                  @change="toggleQuickAccessClient(c.key)"
+                />
+                <span>{{ c.label }}</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="field">
+            <span class="field__label">接入协议</span>
+            <span class="field__help-text">决定生成接入地址使用的协议（HTTP 或 HTTPS）。</span>
+            <div class="seg">
+              <button
+                type="button"
+                :class="['seg__item', { 'seg__item--active': quickAccessForm.scheme === 'http' }]"
+                @click="quickAccessForm.scheme = 'http'"
+              >HTTP</button>
+              <button
+                type="button"
+                :class="['seg__item', { 'seg__item--active': quickAccessForm.scheme === 'https' }]"
+                @click="quickAccessForm.scheme = 'https'"
+              >HTTPS</button>
+            </div>
+          </div>
+
+          <div class="collapse__actions">
+            <span v-if="tips.quick_access" class="save-tip">{{ tips.quick_access }}</span>
+            <button class="btn btn--primary" type="button" :disabled="saving === 'quick_access'" @click="saveQuickAccessSettings">
+              {{ saving === 'quick_access' ? '保存中…' : '保存' }}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </template>
@@ -1302,6 +1402,16 @@ onMounted(async () => {
   color: var(--text-muted);
 }
 
+.ldap-notice {
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+}
+
 .field__help {
   position: relative;
   display: inline-flex;
@@ -1449,6 +1559,37 @@ onMounted(async () => {
   background: #fef3c7;
   border: 1px solid #f59e0b;
   border-radius: 10px;
+}
+
+.qa-clients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.qa-client {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.qa-client:hover {
+  border-color: var(--xauat-blue-light);
+}
+
+.qa-client input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--xauat-blue);
+  cursor: pointer;
 }
 
 .dialog-overlay {

@@ -43,13 +43,13 @@ type NetworkSecuritySetting struct {
 }
 
 var privateNetworks = []*net.IPNet{
-	{IP: net.IPv4(127, 0, 0, 0), Mask: net.CIDRMask(8, 32)},     // loopback IPv4
-	{IP: net.IPv4(10, 0, 0, 0), Mask: net.CIDRMask(8, 32)},      // private A
-	{IP: net.IPv4(172, 16, 0, 0), Mask: net.CIDRMask(12, 32)},   // private B
-	{IP: net.IPv4(192, 168, 0, 0), Mask: net.CIDRMask(16, 32)},  // private C
-	{IP: net.IPv4(169, 254, 0, 0), Mask: net.CIDRMask(16, 32)},  // link-local
-	{IP: net.IPv4(224, 0, 0, 0), Mask: net.CIDRMask(4, 32)},     // multicast
-	{IP: net.IPv4(0, 0, 0, 0), Mask: net.CIDRMask(8, 32)},       // current network
+	{IP: net.IPv4(127, 0, 0, 0), Mask: net.CIDRMask(8, 32)},    // loopback IPv4
+	{IP: net.IPv4(10, 0, 0, 0), Mask: net.CIDRMask(8, 32)},     // private A
+	{IP: net.IPv4(172, 16, 0, 0), Mask: net.CIDRMask(12, 32)},  // private B
+	{IP: net.IPv4(192, 168, 0, 0), Mask: net.CIDRMask(16, 32)}, // private C
+	{IP: net.IPv4(169, 254, 0, 0), Mask: net.CIDRMask(16, 32)}, // link-local
+	{IP: net.IPv4(224, 0, 0, 0), Mask: net.CIDRMask(4, 32)},    // multicast
+	{IP: net.IPv4(0, 0, 0, 0), Mask: net.CIDRMask(8, 32)},      // current network
 }
 
 func loadAllowedCIDRs() []*net.IPNet {
@@ -704,7 +704,13 @@ func PublishServers(input PublishInput) error {
 		return fmt.Errorf("部分发布失败: %s", strings.Join(errs, "; "))
 	}
 
-	if err := database.DB.Model(&model.MCPServer{}).Where("id IN ?", input.ServerIDs).Update("status", "published").Error; err != nil {
+	authEnabled := input.EnableAuth
+	if gw.Provider == "kong" {
+		authEnabled = false
+	}
+
+	if err := database.DB.Model(&model.MCPServer{}).Where("id IN ?", input.ServerIDs).
+		Updates(map[string]interface{}{"status": "published", "auth_enabled": authEnabled}).Error; err != nil {
 		return fmt.Errorf("更新发布状态失败: %w", err)
 	}
 

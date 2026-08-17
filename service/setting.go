@@ -36,6 +36,7 @@ var settingKeys = map[string]bool{
 	"platform":         true,
 	"network_security": true,
 	"audit_log":        true,
+	"quick_access":     true,
 }
 
 func GetSettings() (map[string]json.RawMessage, error) {
@@ -81,9 +82,11 @@ func GetSettingByKey(key string) (json.RawMessage, error) {
 }
 
 type GatewayStatus struct {
-	Configured bool   `json:"configured"`
-	Provider   string `json:"provider"`
-	AdminURL   string `json:"adminUrl"`
+	Configured           bool   `json:"configured"`
+	Provider             string `json:"provider"`
+	AdminURL             string `json:"adminUrl"`
+	DefaultPublishDomain string `json:"defaultPublishDomain"`
+	AccesskeyHeader      string `json:"accesskeyHeader"`
 }
 
 func CheckGatewayStatus() GatewayStatus {
@@ -96,9 +99,11 @@ func CheckGatewayStatus() GatewayStatus {
 		configured = configured && gw.AdminKey != ""
 	}
 	return GatewayStatus{
-		Configured: configured,
-		Provider:   gw.Provider,
-		AdminURL:   gw.AdminURL,
+		Configured:           configured,
+		Provider:             gw.Provider,
+		AdminURL:             gw.AdminURL,
+		DefaultPublishDomain: gw.DefaultPublishDomain,
+		AccesskeyHeader:      gw.AccesskeyHeader,
 	}
 }
 

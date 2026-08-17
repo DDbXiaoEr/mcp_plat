@@ -318,6 +318,7 @@ GET /api/servers
 | tools | string | 工具列表，JSON 字符串数组格式，每个元素为 `{"name":"...","description":"..."}` |
 | description | string | 服务器描述信息 |
 | status | string | 发布状态，`published`（已发布）或 `unpublished`（未发布） |
+| auth_enabled | bool | 是否启用了 Access Key 认证（发布时根据 `enable_auth` 记录；Kong 网关发布时不生效，恒为 `false`；未发布服务器为默认值 `true`） |
 
 ### 4.2 新增 MCP 服务器
 
@@ -391,7 +392,7 @@ POST /api/servers/publish
 }
 ```
 
-**说明：** 后端根据已配置的 API 网关设置（`api_gateway` 分组，`provider` 字段），将选中的 MCP 服务器路由注册到对应网关中。需先配置网关的 Admin API 地址（APISIX 还需 Key）。
+**说明：** 后端根据已配置的 API 网关设置（`api_gateway` 分组，`provider` 字段），将选中的 MCP 服务器路由注册到对应网关中。需先配置网关的 Admin API 地址（APISIX 还需 Key）。发布成功后会将服务器标记为 `published`，并根据 `enable_auth` 记录 `auth_enabled`（Kong 网关恒为 `false`）。
 - `provider=apisix`（默认）：创建 上游 + 路由，可按需下发 `accesskey_verify` / `audit_log` / `proxy-rewrite` 等插件。若启用认证，还需配置 `authGrpcAddr` 指向 accesskey-auth-server 的 gRPC 地址。
 - `provider=kong`：仅创建 上游（Upstream）+ Service + 路由（Route），**不下发任何插件**，因此认证、审计、路径重写等能力在 Kong 下不生效；网关路径使用服务器配置的 URI 路径（address）。Admin API Key 仅在 Kong 启用 RBAC 时需要。
 
@@ -854,7 +855,7 @@ PUT /api/settings/:key
 
 | 参数 | 说明 |
 |------|------|
-| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `api_gateway` / `network_security` |
+| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `api_gateway` / `network_security` / `quick_access` |
 
 **请求参数（JSON Body）：**
 
@@ -892,7 +893,7 @@ GET /api/settings/:key
 
 | 参数 | 说明 |
 |------|------|
-| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `api_gateway` / `network_security` |
+| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `api_gateway` / `network_security` / `quick_access` |
 
 **响应示例（`GET /api/settings/platform`）：**
 ```json
@@ -925,7 +926,9 @@ GET /api/settings/gateway-status
   "data": {
     "configured": true,
     "provider": "kong",
-    "adminUrl": "http://127.0.0.1:8001"
+    "adminUrl": "http://127.0.0.1:8001",
+    "defaultPublishDomain": "mcp.xauat.edu.cn",
+    "accesskeyHeader": "X-Access-Key"
   }
 }
 ```
@@ -935,6 +938,29 @@ GET /api/settings/gateway-status
 | configured | bool | 网关是否已配置（APISIX 需地址 + Key；Kong 仅需地址） |
 | provider | string | 当前网关类型，`apisix` / `kong` / `tyk` |
 | adminUrl | string | 已配置的 Admin API 基础地址 |
+| defaultPublishDomain | string | 默认发布域名，用于拼接 MCP 接入地址（未配置时为空字符串） |
+| accesskeyHeader | string | Access Key 鉴权使用的 HTTP Header 名称（未配置时为空字符串，前端回退默认 `X-Access-Key`） |
+
+> 注意：接口不返回网关管理凭据（如 adminKey），仅暴露拼接接入地址所需字段。
+
+---
+
+### 6.5 快速接入设置（quick_access）
+
+> 需管理员权限保存（`PUT /api/settings/quick_access`）；普通用户可通过 `GET /api/settings/quick_access` 读取（仅需登录）。
+
+**保存示例（JSON Body）：**
+```json
+{
+  "enabledClients": ["cherrystudio"],
+  "scheme": "https"
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| enabledClients | []string | 用户「快速接入」页开放的客户端列表，当前支持 `cherrystudio`；为空表示不开放任何客户端 |
+| scheme | string | 生成接入地址使用的协议，`http` / `https`，默认 `https` |
 
 ---
 
@@ -1059,6 +1085,6 @@ GET /api/overview/call-trend
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| key | string (PK) | 设置项分组（log / smtp / auth / user_ops / platform / api_gateway / network_security） |
+| key | string (PK) | 设置项分组（log / smtp / auth / user_ops / platform / api_gateway / network_security / quick_access） |
 | value | text | 该分组的 JSON 内容 |
 | updated_at | datetime | 更新时间 |

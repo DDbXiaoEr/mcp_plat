@@ -23,6 +23,7 @@ const MENUS = {
   user: [
     { key: 'profile', label: '个人信息' },
     { key: 'accesskey', label: 'AccessKey 管理' },
+    { key: 'quickaccess', label: '快速接入' },
     { key: 'history', label: '使用历史' }
   ],
   admin: [
