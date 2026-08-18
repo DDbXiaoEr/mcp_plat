@@ -110,6 +110,54 @@ func kongReplaceTargets(client *http.Client, gw ApiGatewaySetting, upstreamID st
 	return nil
 }
 
+func kongSetMaintenance(client *http.Client, gw ApiGatewaySetting, srv model.MCPServer) error {
+	var payload struct {
+		Data []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"data"`
+	}
+	if err := kongGet(client, gw, "/routes/"+srv.ID+"/plugins", &payload); err != nil {
+		return err
+	}
+	var pluginID string
+	for _, p := range payload.Data {
+		if p.Name == "request-termination" {
+			pluginID = p.ID
+			break
+		}
+	}
+	body := map[string]interface{}{
+		"name": "request-termination",
+		"config": map[string]interface{}{
+			"status_code": 503,
+			"message":     "服务维护中，请稍后再试",
+		},
+	}
+	if pluginID != "" {
+		return kongRequest(client, gw, http.MethodPut, "/plugins/"+pluginID, body)
+	}
+	return kongRequest(client, gw, http.MethodPost, "/routes/"+srv.ID+"/plugins", body)
+}
+
+func kongRestoreMaintenance(client *http.Client, gw ApiGatewaySetting, srv model.MCPServer) error {
+	var payload struct {
+		Data []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"data"`
+	}
+	if err := kongGet(client, gw, "/routes/"+srv.ID+"/plugins", &payload); err != nil {
+		return err
+	}
+	for _, p := range payload.Data {
+		if p.Name == "request-termination" {
+			return kongRequest(client, gw, http.MethodDelete, "/plugins/"+p.ID, nil)
+		}
+	}
+	return nil
+}
+
 func kongGet(client *http.Client, gw ApiGatewaySetting, apiPath string, out interface{}) error {
 	urlStr := strings.TrimRight(gw.AdminURL, "/") + apiPath
 	req, err := http.NewRequest(http.MethodGet, urlStr, nil)

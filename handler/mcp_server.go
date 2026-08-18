@@ -115,3 +115,18 @@ func (h *MCPServerHandler) Publish(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "发布成功"})
 }
+
+func (h *MCPServerHandler) Maintenance(c *gin.Context) {
+	var input service.MaintenanceInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
+		return
+	}
+
+	if err := service.SetMaintenance(input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "维护设置成功"})
+}

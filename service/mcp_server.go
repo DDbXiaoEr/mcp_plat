@@ -698,6 +698,13 @@ func PublishServers(input PublishInput) error {
 			errs = append(errs, fmt.Sprintf("%s: 创建路由失败: %v", srv.Name, err))
 			continue
 		}
+
+		if routeJSON, err := json.Marshal(routeBody); err == nil {
+			if err := database.DB.Model(&model.MCPServer{}).Where("id = ?", srv.ID).
+				Update("gateway_route", string(routeJSON)).Error; err != nil {
+				errs = append(errs, fmt.Sprintf("%s: 保存路由配置失败: %v", srv.Name, err))
+			}
+		}
 	}
 
 	if len(errs) > 0 {
@@ -714,6 +721,137 @@ func PublishServers(input PublishInput) error {
 		return fmt.Errorf("更新发布状态失败: %w", err)
 	}
 
+	return nil
+}
+
+func buildAPISIXMaintenanceRoute(gw ApiGatewaySetting, srv model.MCPServer, pluginName, statusKey string) map[string]interface{} {
+	plugin := map[string]interface{}{
+		"response_example": "{\"code\":503,\"message\":\"服务维护中，请稍后再试\"}",
+	}
+	plugin[statusKey] = 503
+	route := map[string]interface{}{
+		"name":        srv.Name,
+		"uris":        []string{"/" + srv.ID, "/" + srv.ID + "/*"},
+		"upstream_id": srv.ID,
+		"plugins": map[string]interface{}{
+			pluginName: plugin,
+		},
+	}
+	if gw.DefaultPublishDomain != "" {
+		route["host"] = gw.DefaultPublishDomain
+	}
+	return route
+}
+
+func setAPISIXMaintenance(client *http.Client, gw ApiGatewaySetting, srv model.MCPServer) error {
+	err := putAPISIXAdmin(client, gw.AdminURL, gw.AdminKey, "/apisix/admin/routes/"+srv.ID,
+		buildAPISIXMaintenanceRoute(gw, srv, "mocking", "response_status"))
+	if err == nil {
+		return nil
+	}
+	return putAPISIXAdmin(client, gw.AdminURL, gw.AdminKey, "/apisix/admin/routes/"+srv.ID,
+		buildAPISIXMaintenanceRoute(gw, srv, "mock", "response_code"))
+}
+
+func buildAPISIXRestoreRoute(gw ApiGatewaySetting, srv model.MCPServer) map[string]interface{} {
+	if srv.GatewayRoute != "" {
+		var route map[string]interface{}
+		if err := json.Unmarshal([]byte(srv.GatewayRoute), &route); err == nil {
+			return route
+		}
+	}
+	route := map[string]interface{}{
+		"name":        srv.Name,
+		"uris":        []string{"/" + srv.ID, "/" + srv.ID + "/*"},
+		"upstream_id": srv.ID,
+	}
+	if gw.DefaultPublishDomain != "" {
+		route["host"] = gw.DefaultPublishDomain
+	}
+	if srv.Address != "" && srv.Address != "/" {
+		route["plugins"] = map[string]interface{}{
+			"proxy-rewrite": map[string]interface{}{
+				"regex_uri": []string{
+					"^/" + srv.ID + "(.*)",
+					srv.Address + "$1",
+				},
+			},
+		}
+	}
+	return route
+}
+
+type MaintenanceInput struct {
+	ServerIDs  []string `json:"server_ids"`
+	RestoreIDs []string `json:"restore_ids"`
+}
+
+func SetMaintenance(input MaintenanceInput) error {
+	var gw ApiGatewaySetting
+	if err := GetSetting("api_gateway", &gw); err != nil {
+		return errors.New("请先在系统设置中配置 API 网关参数")
+	}
+	if gw.AdminURL == "" {
+		return errors.New("API 网关 Admin API 地址未配置")
+	}
+	if gw.Provider != "kong" && gw.AdminKey == "" {
+		return errors.New("API 网关 Admin API Key 未配置")
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	var errs []string
+
+	if len(input.ServerIDs) > 0 {
+		var servers []model.MCPServer
+		if err := database.DB.Where("id IN ?", input.ServerIDs).Find(&servers).Error; err != nil {
+			return fmt.Errorf("查询服务器失败: %w", err)
+		}
+		for _, srv := range servers {
+			if gw.Provider == "kong" {
+				if err := kongSetMaintenance(client, gw, srv); err != nil {
+					errs = append(errs, fmt.Sprintf("%s: 设置维护失败: %v", srv.Name, err))
+					continue
+				}
+			} else {
+				if err := setAPISIXMaintenance(client, gw, srv); err != nil {
+					errs = append(errs, fmt.Sprintf("%s: 设置维护失败: %v", srv.Name, err))
+					continue
+				}
+			}
+			if err := database.DB.Model(&model.MCPServer{}).Where("id = ?", srv.ID).
+				Update("status", "maintenance").Error; err != nil {
+				errs = append(errs, fmt.Sprintf("%s: 更新维护状态失败: %v", srv.Name, err))
+			}
+		}
+	}
+
+	if len(input.RestoreIDs) > 0 {
+		var servers []model.MCPServer
+		if err := database.DB.Where("id IN ?", input.RestoreIDs).Find(&servers).Error; err != nil {
+			return fmt.Errorf("查询服务器失败: %w", err)
+		}
+		for _, srv := range servers {
+			if gw.Provider == "kong" {
+				if err := kongRestoreMaintenance(client, gw, srv); err != nil {
+					errs = append(errs, fmt.Sprintf("%s: 取消维护失败: %v", srv.Name, err))
+					continue
+				}
+			} else {
+				if err := putAPISIXAdmin(client, gw.AdminURL, gw.AdminKey, "/apisix/admin/routes/"+srv.ID, buildAPISIXRestoreRoute(gw, srv)); err != nil {
+					errs = append(errs, fmt.Sprintf("%s: 取消维护失败: %v", srv.Name, err))
+					continue
+				}
+			}
+			if err := database.DB.Model(&model.MCPServer{}).Where("id = ?", srv.ID).
+				Update("status", "published").Error; err != nil {
+				errs = append(errs, fmt.Sprintf("%s: 更新状态失败: %v", srv.Name, err))
+			}
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("操作部分失败: %s", strings.Join(errs, "; "))
+	}
 	return nil
 }
 
@@ -738,8 +876,8 @@ func putAPISIXAdmin(client *http.Client, adminURL, adminKey, apiPath string, bod
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		io.Copy(io.Discard, resp.Body)
-		return fmt.Errorf("APISIX 返回错误 (status=%d)", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("APISIX 返回错误 (status=%d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	return nil

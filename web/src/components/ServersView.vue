@@ -19,7 +19,7 @@
 
 // Author: deepseek-v4-pro / opencode
 import { ref, computed, onMounted, watch } from 'vue'
-import { fetchServers, createServer, fetchServerTools, publishServers, deleteServer, updateServer, fetchGatewayStatus } from '../api.js'
+import { fetchServers, createServer, fetchServerTools, publishServers, setServersMaintenance, deleteServer, updateServer, fetchGatewayStatus } from '../api.js'
 
 const servers = ref([])
 const loading = ref(true)
@@ -359,6 +359,126 @@ async function executePublish() {
   }
   publishing.value = false
 }
+
+const showingMaintenance = ref(false)
+const showingMaintenanceConfirm = ref(false)
+const maintaining = ref(false)
+const initialMaintenanceIds = ref([])
+const maintenanceSelected = ref([])
+const maintenanceSelectedIds = ref([])
+const maintenanceSearchLeft = ref('')
+const maintenanceSearchRight = ref('')
+
+const leftMaintenanceServers = computed(() => {
+  const list = servers.value.filter((s) =>
+    (s.status === 'published' || s.status === 'maintenance') && !maintenanceSelected.value.includes(s.id)
+  )
+  const kw = maintenanceSearchLeft.value.trim().toLowerCase()
+  if (!kw) return list
+  return list.filter((s) =>
+    (s.name || '').toLowerCase().includes(kw) || (s.id || '').toLowerCase().includes(kw)
+  )
+})
+
+const rightMaintenanceServers = computed(() => {
+  const list = servers.value.filter((s) => maintenanceSelected.value.includes(s.id))
+  const kw = maintenanceSearchRight.value.trim().toLowerCase()
+  if (!kw) return list
+  return list.filter((s) =>
+    (s.name || '').toLowerCase().includes(kw) || (s.id || '').toLowerCase().includes(kw)
+  )
+})
+
+const isAllLeftMaintenanceChecked = computed(() => {
+  if (leftMaintenanceServers.value.length === 0) return false
+  return leftMaintenanceServers.value.every((s) => maintenanceSelectedIds.value.includes(s.id))
+})
+
+const isAllRightMaintenanceChecked = computed(() => {
+  if (rightMaintenanceServers.value.length === 0) return false
+  return rightMaintenanceServers.value.every((s) => maintenanceSelectedIds.value.includes(s.id))
+})
+
+const maintenanceTargets = computed(() => {
+  const current = maintenanceSelected.value
+  const initial = initialMaintenanceIds.value
+  const enter = current.filter((id) => !initial.includes(id))
+  const restore = initial.filter((id) => !current.includes(id))
+  return {
+    enter: servers.value.filter((s) => enter.includes(s.id)),
+    restore: servers.value.filter((s) => restore.includes(s.id))
+  }
+})
+
+function openMaintenance() {
+  initialMaintenanceIds.value = servers.value.filter((s) => s.status === 'maintenance').map((s) => s.id)
+  maintenanceSelected.value = [...initialMaintenanceIds.value]
+  maintenanceSelectedIds.value = []
+  maintenanceSearchLeft.value = ''
+  maintenanceSearchRight.value = ''
+  showingMaintenance.value = true
+}
+
+function toggleMaintenanceSelect(id) {
+  const idx = maintenanceSelectedIds.value.indexOf(id)
+  if (idx >= 0) maintenanceSelectedIds.value.splice(idx, 1)
+  else maintenanceSelectedIds.value.push(id)
+}
+
+function toggleMaintenanceSelectAll(list) {
+  const ids = list.map((s) => s.id)
+  if (ids.every((id) => maintenanceSelectedIds.value.includes(id))) {
+    maintenanceSelectedIds.value = maintenanceSelectedIds.value.filter((id) => !ids.includes(id))
+  } else {
+    ids.forEach((id) => {
+      if (!maintenanceSelectedIds.value.includes(id)) maintenanceSelectedIds.value.push(id)
+    })
+  }
+}
+
+function moveMaintenanceRight() {
+  const selected = maintenanceSelectedIds.value.filter((id) =>
+    leftMaintenanceServers.value.some((s) => s.id === id)
+  )
+  selected.forEach((id) => {
+    if (!maintenanceSelected.value.includes(id)) maintenanceSelected.value.push(id)
+  })
+  maintenanceSelectedIds.value = maintenanceSelectedIds.value.filter((id) => !selected.includes(id))
+}
+
+function moveMaintenanceLeft() {
+  const selected = maintenanceSelectedIds.value.filter((id) =>
+    rightMaintenanceServers.value.some((s) => s.id === id)
+  )
+  maintenanceSelected.value = maintenanceSelected.value.filter((id) => !selected.includes(id))
+  maintenanceSelectedIds.value = maintenanceSelectedIds.value.filter((id) => !selected.includes(id))
+}
+
+function confirmMaintenance() {
+  showingMaintenance.value = false
+  showingMaintenanceConfirm.value = true
+}
+
+function backToMaintenance() {
+  showingMaintenanceConfirm.value = false
+  showingMaintenance.value = true
+}
+
+async function executeMaintenance() {
+  const { enter, restore } = maintenanceTargets.value
+  if (enter.length === 0 && restore.length === 0) return
+  maintaining.value = true
+  try {
+    await setServersMaintenance(enter.map((s) => s.id), restore.map((s) => s.id))
+    alert('维护设置成功')
+    showingMaintenanceConfirm.value = false
+    showingMaintenance.value = false
+    await loadServers()
+  } catch (e) {
+    alert(e.message || '操作失败')
+  }
+  maintaining.value = false
+}
 </script>
 
 <template>
@@ -371,6 +491,9 @@ async function executePublish() {
         </button>
         <button class="btn btn--secondary" type="button" @click="openPublish">
           发布
+        </button>
+        <button class="btn btn--secondary" type="button" @click="openMaintenance">
+          维护
         </button>
       </div>
     </div>
@@ -397,8 +520,8 @@ async function executePublish() {
         <span class="server-list__uuid server-list__uuid-col">{{ server.id }}</span>
         <span class="server-list__dept server-list__dept-col">{{ server.department }}</span>
         <span class="server-list__status-col">
-          <span class="server-list__status" :class="server.status === 'published' ? 'server-list__status--on' : 'server-list__status--off'">
-            {{ server.status === 'published' ? '已发布' : '未发布' }}
+          <span class="server-list__status" :class="server.status === 'published' ? 'server-list__status--on' : server.status === 'maintenance' ? 'server-list__status--maint' : 'server-list__status--off'">
+            {{ server.status === 'published' ? '已发布' : server.status === 'maintenance' ? '维护中' : '未发布' }}
           </span>
         </span>
         <span class="server-list__action-col">
@@ -473,8 +596,8 @@ async function executePublish() {
             <div class="server-detail__row">
               <dt>发布状态</dt>
               <dd>
-                <span class="server-detail__status" :class="selected.status === 'published' ? 'server-detail__status--on' : 'server-detail__status--off'">
-                  {{ selected.status === 'published' ? '已发布' : '未发布' }}
+                <span class="server-detail__status" :class="selected.status === 'published' ? 'server-detail__status--on' : selected.status === 'maintenance' ? 'server-detail__status--maint' : 'server-detail__status--off'">
+                  {{ selected.status === 'published' ? '已发布' : selected.status === 'maintenance' ? '维护中' : '未发布' }}
                 </span>
               </dd>
             </div>
@@ -873,6 +996,184 @@ async function executePublish() {
           </div>
         </div>
       </div>
+      <div v-if="showingMaintenance" class="dialog-overlay" @click.self="showingMaintenance = false">
+        <div class="dialog dialog--wide dialog--publish">
+          <h2 class="dialog__title">设置服务器维护</h2>
+          <p class="dialog__desc">选择要进入维护的服务器（移入右侧），或将维护中的服务器移回左侧取消维护：</p>
+          <div class="shuttle">
+            <div class="shuttle__panel">
+              <div class="shuttle__head">
+                <span class="shuttle__label">可选服务器</span>
+                <span class="shuttle__count">{{ leftMaintenanceServers.length }}</span>
+              </div>
+              <div class="shuttle__search">
+                <input
+                  v-model="maintenanceSearchLeft"
+                  type="text"
+                  class="shuttle__search-input"
+                  placeholder="过滤名称/UUID"
+                />
+              </div>
+              <div class="shuttle__list">
+                <label class="shuttle__item shuttle__item--all">
+                  <input
+                    type="checkbox"
+                    :checked="isAllLeftMaintenanceChecked"
+                    @change="toggleMaintenanceSelectAll(leftMaintenanceServers)"
+                  />
+                  <span>全选</span>
+                </label>
+                <label
+                  v-for="server in leftMaintenanceServers"
+                  :key="server.id"
+                  class="shuttle__item"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="maintenanceSelectedIds.includes(server.id)"
+                    @change="toggleMaintenanceSelect(server.id)"
+                  />
+                  <span class="shuttle__name">{{ server.name }}</span>
+                  <span class="shuttle__meta">{{ server.address }}</span>
+                </label>
+                <span v-if="leftMaintenanceServers.length === 0" class="table__muted shuttle__empty">
+                  暂无可选服务器
+                </span>
+              </div>
+            </div>
+            <div class="shuttle__actions">
+              <button
+                class="shuttle__btn"
+                type="button"
+                :disabled="!maintenanceSelectedIds.some((id) => leftMaintenanceServers.some((s) => s.id === id))"
+                @click="moveMaintenanceRight"
+              >
+                &gt;
+              </button>
+              <button
+                class="shuttle__btn"
+                type="button"
+                :disabled="!maintenanceSelectedIds.some((id) => rightMaintenanceServers.some((s) => s.id === id))"
+                @click="moveMaintenanceLeft"
+              >
+                &lt;
+              </button>
+            </div>
+            <div class="shuttle__panel">
+              <div class="shuttle__head">
+                <span class="shuttle__label">维护中</span>
+                <span class="shuttle__count">{{ rightMaintenanceServers.length }}</span>
+              </div>
+              <div class="shuttle__search">
+                <input
+                  v-model="maintenanceSearchRight"
+                  type="text"
+                  class="shuttle__search-input"
+                  placeholder="过滤名称/UUID"
+                />
+              </div>
+              <div class="shuttle__list">
+                <label class="shuttle__item shuttle__item--all">
+                  <input
+                    type="checkbox"
+                    :checked="isAllRightMaintenanceChecked"
+                    @change="toggleMaintenanceSelectAll(rightMaintenanceServers)"
+                  />
+                  <span>全选</span>
+                </label>
+                <label
+                  v-for="server in rightMaintenanceServers"
+                  :key="server.id"
+                  class="shuttle__item"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="maintenanceSelectedIds.includes(server.id)"
+                    @change="toggleMaintenanceSelect(server.id)"
+                  />
+                  <span class="shuttle__name">{{ server.name }}</span>
+                  <span class="shuttle__meta">{{ server.address }}</span>
+                </label>
+                <span v-if="rightMaintenanceServers.length === 0" class="table__muted shuttle__empty">
+                  暂无维护中的服务器
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="dialog__actions">
+            <button class="btn btn--ghost" type="button" @click="showingMaintenance = false">
+              取消
+            </button>
+            <button
+              class="btn btn--primary"
+              type="button"
+              :disabled="maintenanceTargets.enter.length === 0 && maintenanceTargets.restore.length === 0"
+              @click="confirmMaintenance"
+            >
+              确认维护
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="showingMaintenanceConfirm" class="dialog-overlay" @click.self="showingMaintenanceConfirm = false">
+        <div class="dialog">
+          <h2 class="dialog__title">确认维护配置</h2>
+          <p class="dialog__desc">
+            即将向 API 网关推送以下维护配置，维护中的路由将直接返回 503：
+          </p>
+          <div class="publish-preview">
+            <template v-if="maintenanceTargets.enter.length > 0">
+              <p class="maintenance-preview__section">进入维护</p>
+              <div
+                v-for="server in maintenanceTargets.enter"
+                :key="server.id"
+                class="publish-preview__card"
+              >
+                <div class="publish-preview__row">
+                  <span class="publish-preview__label">服务名称</span>
+                  <span class="publish-preview__value">{{ server.name }}</span>
+                </div>
+                <div class="publish-preview__row">
+                  <span class="publish-preview__label">网关路径</span>
+                  <span class="publish-preview__value">{{ server.address }}</span>
+                </div>
+              </div>
+            </template>
+            <template v-if="maintenanceTargets.restore.length > 0">
+              <p class="maintenance-preview__section">取消维护</p>
+              <div
+                v-for="server in maintenanceTargets.restore"
+                :key="server.id"
+                class="publish-preview__card"
+              >
+                <div class="publish-preview__row">
+                  <span class="publish-preview__label">服务名称</span>
+                  <span class="publish-preview__value">{{ server.name }}</span>
+                </div>
+                <div class="publish-preview__row">
+                  <span class="publish-preview__label">网关路径</span>
+                  <span class="publish-preview__value">{{ server.address }}</span>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div class="dialog__actions">
+            <button class="btn btn--ghost" type="button" @click="backToMaintenance">
+              返回修改
+            </button>
+            <button
+              class="btn btn--primary"
+              type="button"
+              :disabled="maintaining"
+              @click="executeMaintenance"
+            >
+              {{ maintaining ? '提交中...' : '确认推送' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div v-if="showingDeleteConfirm" class="dialog-overlay" @click.self="showingDeleteConfirm = false">
         <div class="dialog">
           <h2 class="dialog__title">确认删除</h2>
@@ -1039,6 +1340,11 @@ async function executePublish() {
 .server-list__status--off {
   color: #6c757d;
   background: #e9ecef;
+}
+
+.server-list__status--maint {
+  color: #92400e;
+  background: #fef3c7;
 }
 
 .server-list__action-col {
@@ -1266,6 +1572,18 @@ async function executePublish() {
 .server-detail__status--off {
   color: #6c757d;
   background: #e9ecef;
+}
+
+.server-detail__status--maint {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.maintenance-preview__section {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--xauat-blue);
+  margin: 4px 0;
 }
 
 .server-detail__edit {

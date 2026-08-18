@@ -317,7 +317,7 @@ GET /api/servers
 | protocol_version | string | MCP 协议版本（2025-03-26 / 2025-06-18 / 2026-07-28），默认 2026-07-28 |
 | tools | string | 工具列表，JSON 字符串数组格式，每个元素为 `{"name":"...","description":"..."}` |
 | description | string | 服务器描述信息 |
-| status | string | 发布状态，`published`（已发布）或 `unpublished`（未发布） |
+| status | string | 发布状态，`published`（已发布）、`maintenance`（维护中）或 `unpublished`（未发布） |
 | auth_enabled | bool | 是否启用了 Access Key 认证（发布时根据 `enable_auth` 记录；Kong 网关发布时不生效，恒为 `false`；未发布服务器为默认值 `true`） |
 
 ### 4.2 新增 MCP 服务器
@@ -428,6 +428,42 @@ POST /api/servers/fetch-tools
 ```
 
 **说明：** 后端根据地址和协议连接目标 MCP 服务器，调用 `tools/list` 协议方法，返回可用工具名称及描述列表。连接失败或地址无效时返回 4xx/5xx。
+
+### 4.7 设置服务器维护状态
+
+```
+POST /api/servers/maintenance
+```
+
+> 需管理员权限。
+
+**请求参数（JSON Body）：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| server_ids | []string | 否 | 要进入维护的 MCP 服务器 ID 列表，对应网关路由将直接返回 503 |
+| restore_ids | []string | 否 | 要取消维护的 MCP 服务器 ID 列表，对应网关路由恢复原配置 |
+
+**请求示例：**
+```json
+{
+  "server_ids": ["uuid-1"],
+  "restore_ids": ["uuid-2"]
+}
+```
+
+**成功响应：**
+```json
+{
+  "code": 200,
+  "message": "维护设置成功"
+}
+```
+
+**说明：** 后端根据已配置的 API 网关设置（`api_gateway` 分组，`provider` 字段），将选中的 MCP 服务器路由改为直接返回 503：
+- `provider=apisix`（默认）：路由 `plugins` 整体替换为 `mocking` 插件（`response_status=503`，旧版 APISIX 回退为 `mock` 插件 `response_code=503`），取消维护时恢复发布时保存的原始路由配置（含认证/审计等插件）。
+- `provider=kong`：为路由下发 `request-termination` 插件（`status_code=503`），取消维护时删除该插件。
+- 进入维护后服务器 `status` 置为 `maintenance`，取消维护后恢复为 `published`。
 
 ### 4.3 更新 MCP 服务器
 

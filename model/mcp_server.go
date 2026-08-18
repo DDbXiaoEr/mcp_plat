@@ -31,6 +31,7 @@ type MCPServer struct {
 	Description     string    `gorm:"type:text" json:"description"`
 	Status          string    `gorm:"size:32;default:unpublished" json:"status"`
 	AuthEnabled     bool      `gorm:"default:true" json:"auth_enabled"`
+	GatewayRoute    string    `gorm:"type:text" json:"-"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }

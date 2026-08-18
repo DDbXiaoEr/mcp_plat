@@ -17,6 +17,7 @@
 | 使用历史 | GET /api/history | ✅ 已完成 | 审计日志存储可配置（关系库 / ClickHouse），AccessKey 以 ID 存储减少数据量 |
 | 使用历史 | GET /api/audit-logs | ✅ 已完成 | 审计日志列表查询 |
 | MCP 服务器 | POST /api/servers/publish | ✅ 已完成 | 新增 accesskey_header 参数；发布成功后自动标记 status=published 并记录 auth_enabled（Kong 恒 false）；支持 provider=kong 时仅发布上游/Service/路由（不下发插件） |
+| MCP 服务器 | POST /api/servers/maintenance | ✅ 已完成 | 设置/取消维护状态；APISIX 用 mocking 插件（response_status=503，旧版回退 mock/response_code）返回 503，Kong 用 request-termination 插件；取消维护恢复发布时保存的原始路由（GatewayRoute）；进入维护置 status=maintenance，取消恢复 published |
 | MCP 服务器 | GET /api/servers | ✅ 已完成 | 新增 description、status、auth_enabled 字段 |
 | MCP 服务器 | POST /api/servers | ✅ 已完成 | 新增 description 字段 |
 | MCP 服务器 | PUT /api/servers/:id | ✅ 已完成 | 新增 description 字段 |

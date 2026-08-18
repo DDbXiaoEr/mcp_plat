@@ -68,6 +68,7 @@ func Setup() *gin.Engine {
 		admin.PUT("/servers/:id", serverHandler.Update)
 		admin.DELETE("/servers/:id", serverHandler.Delete)
 		admin.POST("/servers/publish", serverHandler.Publish)
+		admin.POST("/servers/maintenance", serverHandler.Maintenance)
 
 		admin.GET("/roles", roleHandler.List)
 		admin.POST("/roles", roleHandler.Create)

@@ -18,7 +18,7 @@
 <script setup>
 
 // Author: deepseek-v4-pro / opencode
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, onBeforeUnmount } from 'vue'
 import { setActive } from '../stores/nav.js'
 import { fetchAccessKeys, createAccessKey, updateAccessKey, deleteAccessKey, fetchServers, fetchSetting } from '../api.js'
 import AccessKeyDrawer from './AccessKeyDrawer.vue'
@@ -114,6 +114,22 @@ function closeDialog() {
   createdKey.value = null
   dialogCopyId.value = null
 }
+
+function onDialogKeydown(e) {
+  if (e.key === 'Enter') closeDialog()
+}
+
+watch(createdKey, (val) => {
+  if (val) {
+    window.addEventListener('keydown', onDialogKeydown)
+  } else {
+    window.removeEventListener('keydown', onDialogKeydown)
+  }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onDialogKeydown)
+})
 
 async function copyDialogKey() {
   if (!createdKey.value) return

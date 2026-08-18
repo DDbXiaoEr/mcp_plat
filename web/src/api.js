@@ -29,7 +29,13 @@ async function request(path, options = {}) {
     headers.Authorization = `Bearer ${getToken()}`
   }
   const res = await fetch(`${BASE}${path}`, { ...options, headers })
-  const json = await res.json()
+  let json
+  try {
+    json = await res.json()
+  } catch {
+    const text = await res.text()
+    throw new Error(`请求失败 (${res.status}): ${text || res.statusText}`)
+  }
   if (json.code !== 200) {
     throw new Error(json.message || '请求失败')
   }
@@ -167,6 +173,13 @@ export function publishServers(serverIds, enableAuth, accesskeyHeader, enableAud
   return request('/servers/publish', {
     method: 'POST',
     body: JSON.stringify({ server_ids: serverIds, enable_auth: enableAuth, accesskey_header: accesskeyHeader, enable_audit_log: enableAuditLog })
+  })
+}
+
+export function setServersMaintenance(serverIds, restoreIds) {
+  return request('/servers/maintenance', {
+    method: 'POST',
+    body: JSON.stringify({ server_ids: serverIds, restore_ids: restoreIds })
   })
 }
 
