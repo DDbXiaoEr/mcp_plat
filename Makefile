@@ -19,8 +19,8 @@ RELEASE_LDFLAGS := -s -w $(XFLAGS) -X 'github.com/gin-gonic/gin.mode=release'
 
 BUILD_DIR := build
 BIN_DIR := $(BUILD_DIR)/bin
-SERVER_OUT := $(BIN_DIR)/mcp_plat-console
-EMBED_OUT := $(BIN_DIR)/mcp_plat
+SERVER_OUT := $(BIN_DIR)/mcp_plat-server
+EMBED_OUT := $(BIN_DIR)/mcp_plat_embed
 ACCESSKEY_SERVER_OUT := $(BIN_DIR)/accesskey-auth-server
 AUDIT_LOG_SERVER_OUT := $(BIN_DIR)/audit-log-server
 APISIX_RUNNER_OUT := $(BIN_DIR)/apisix-go-runner
@@ -168,7 +168,7 @@ datagen:
 auditgen:
 	@go run ./cmd/auditgen -days $(or $(DAYS),30) -per-day $(or $(PER_DAY),200)
 
-build-auditgen:
+build-auditdatagenerate:
 	@echo "==> building auditgen"
 	@mkdir -p $(TOOLS_DIR)
 	go build -o $(TOOLS_DIR)/auditgen cmd/auditgen/main.go
