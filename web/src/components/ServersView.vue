@@ -410,6 +410,13 @@ const maintenanceTargets = computed(() => {
   }
 })
 
+const maintenanceConfirmLabel = computed(() => {
+  const { enter, restore } = maintenanceTargets.value
+  if (enter.length > 0 && restore.length > 0) return '确认维护配置'
+  if (restore.length > 0) return '确认取消维护'
+  return '确认维护'
+})
+
 function openMaintenance() {
   initialMaintenanceIds.value = servers.value.filter((s) => s.status === 'maintenance').map((s) => s.id)
   maintenanceSelected.value = [...initialMaintenanceIds.value]
@@ -1110,7 +1117,7 @@ async function executeMaintenance() {
               :disabled="maintenanceTargets.enter.length === 0 && maintenanceTargets.restore.length === 0"
               @click="confirmMaintenance"
             >
-              确认维护
+              {{ maintenanceConfirmLabel }}
             </button>
           </div>
         </div>
