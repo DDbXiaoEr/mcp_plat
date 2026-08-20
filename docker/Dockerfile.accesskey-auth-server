@@ -1,6 +1,6 @@
 FROM debian:bullseye-v1.4.1
 WORKDIR /opt/mcp_plat
 COPY build/bin/accesskey-auth-server-linux-amd64 /usr/local/bin/accesskey-auth-server
-COPY build/config/accesskey_auth_server.yml /opt/mcp_plat/accesskey_auth_server.yml
+COPY accesskey_auth_server.yml /opt/mcp_plat/accesskey_auth_server.yml
 ENTRYPOINT ["/usr/local/bin/accesskey-auth-server"]
 EXPOSE 9090

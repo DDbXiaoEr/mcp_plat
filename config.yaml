@@ -1,55 +1,29 @@
 # ============================================================
 # 主程序数据库（用户、角色、AccessKey、服务器、系统设置等）
-# type 可选：postgres / mysql
 # ============================================================
 database:
   type: postgres
   postgres:
-    host: localhost
+    host: 127.0.0.1
     port: 5432
     user: root
     password: 123456
-    dbname: mcp_platform
-  # 切换为 MySQL 时，请启用下方配置并删除上方 postgres 配置，将 type 改为 mysql：
-  # mysql:
-  #   host: localhost
-  #   port: 3306
-  #   user: root
-  #   password: 123456
-  #   dbname: mcp_platform
+    dbname: mcp_plat_db
 
 # ============================================================
-# 审计日志数据库（与 audit-log-server 共用）
-# type 可选：
-#   - postgres / mysql : 关系库存储（低/中量级）
-#   - clickhouse       : ClickHouse 时序存储（高量级），读取端也必须保持一致
+# 审计日志存储（与 audit-log-server 共用，写入/查询目标一致）
 # ============================================================
 audit_log_db:
-  type: postgres
-  postgres:
-    host: localhost
-    port: 5432
-    user: root
-    password: 123456
-    dbname: mcp_history_db
-  # 切换为 MySQL 时，请启用下方配置并删除上方 postgres 配置，将 type 改为 mysql：
-  # mysql:
-  #   host: localhost
-  #   port: 3306
-  #   user: root
-  #   password: 123456
-  #   dbname: mcp_history_db
-  # 切换为 ClickHouse 时，请启用下方配置并删除上方 postgres 配置：
-  # type: clickhouse
-  # clickhouse:
-  #   addr: 127.0.0.1:9000
-  #   user: default
-  #   password: ""
-  #   db: mcp_platform
-  #   table: audit_logs
-  #   engine: merge_tree            # 单机：merge_tree；集群：replicated_merge_tree
-  #   cluster: ""                   # replicated_merge_tree 时必填，如 mcp_platform_cluster
-  #   ttl_days: 90                  # 数据保留天数
+  type: clickhouse
+  clickhouse:
+    addr: 127.0.0.1:9000
+    user: default
+    password: ""
+    db: default
+    table: audit_logs
+    engine: merge_tree               # 单机部署
+    cluster: ""
+    ttl_days: 90
 
 # 密钥需至少 32 字符随机值，生产环境建议通过环境变量注入
 jwt_secret: changeme-please-generate-a-random-32-char-string
