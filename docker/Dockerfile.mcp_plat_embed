@@ -1,0 +1,6 @@
+FROM debian:bullseye-v1.4.1
+WORKDIR /opt/mcp_plat
+COPY build/bin/mcp_plat_embed-linux-amd64 /usr/local/bin/mcp_plat_embed
+COPY build/config/config.yaml /opt/mcp_plat/config.yaml
+ENTRYPOINT ["/usr/local/bin/mcp_plat_embed"]
+EXPOSE 8080

@@ -7,6 +7,8 @@
         build-embed-linux-arm64 \
         build-accesskey-auth-server-linux-arm64 build-audit-log-server-linux-arm64 \
         build-tools build-auditgen build-apisix-plugin build-web \
+        docker-build docker-build-accesskey-auth-server docker-build-audit-log-server docker-build-mcp-plat-embed \
+        docker-build-arm64 docker-build-arm64-accesskey-auth-server docker-build-arm64-audit-log-server docker-build-arm64-mcp-plat-embed \
         proto run dev datagen auditgen clean
 
 VERSION := $(shell git describe --tags --always 2>/dev/null || echo "dev")
@@ -148,6 +150,40 @@ proto:
 	@echo "==> generating protobuf code"
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative plugin/accesskey.proto
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative plugin/auditlog.proto
+
+# ------------------------------------------------------------------
+# docker
+# ------------------------------------------------------------------
+
+DOCKER_TAG ?= $(GIT_COMMIT)
+
+docker-build: build-linux-amd64-release docker-build-accesskey-auth-server docker-build-audit-log-server docker-build-mcp-plat-embed
+
+docker-build-accesskey-auth-server:
+	@echo "==> building docker image accesskey-auth-server:$(DOCKER_TAG)"
+	DOCKER_BUILDKIT=0 docker build -f docker/Dockerfile.accesskey-auth-server -t accesskey-auth-server:$(DOCKER_TAG) .
+
+docker-build-audit-log-server:
+	@echo "==> building docker image audit-log-server:$(DOCKER_TAG)"
+	DOCKER_BUILDKIT=0 docker build -f docker/Dockerfile.audit-log-server -t audit-log-server:$(DOCKER_TAG) .
+
+docker-build-mcp-plat-embed:
+	@echo "==> building docker image mcp_plat_embed:$(DOCKER_TAG)"
+	DOCKER_BUILDKIT=0 docker build -f docker/Dockerfile.mcp_plat_embed -t mcp_plat_embed:$(DOCKER_TAG) .
+
+docker-build-arm64: build-linux-arm64-release docker-build-arm64-accesskey-auth-server docker-build-arm64-audit-log-server docker-build-arm64-mcp-plat-embed
+
+docker-build-arm64-accesskey-auth-server:
+	@echo "==> building docker image accesskey-auth-server:$(DOCKER_TAG) (arm64)"
+	DOCKER_BUILDKIT=0 docker build -f docker/Dockerfile.accesskey-auth-server-arm64 -t accesskey-auth-server:$(DOCKER_TAG) .
+
+docker-build-arm64-audit-log-server:
+	@echo "==> building docker image audit-log-server:$(DOCKER_TAG) (arm64)"
+	DOCKER_BUILDKIT=0 docker build -f docker/Dockerfile.audit-log-server-arm64 -t audit-log-server:$(DOCKER_TAG) .
+
+docker-build-arm64-mcp-plat-embed:
+	@echo "==> building docker image mcp_plat_embed:$(DOCKER_TAG) (arm64)"
+	DOCKER_BUILDKIT=0 docker build -f docker/Dockerfile.mcp_plat_embed-arm64 -t mcp_plat_embed:$(DOCKER_TAG) .
 
 # ------------------------------------------------------------------
 # utils

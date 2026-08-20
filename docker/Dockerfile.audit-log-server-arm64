@@ -1,0 +1,6 @@
+FROM debian:bullseye-slim-linuxarm64
+WORKDIR /opt/mcp_plat
+COPY build/bin/audit-log-server-linux-arm64 /usr/local/bin/audit-log-server
+COPY build/config/audit_log_server.yml /opt/mcp_plat/audit_log_server.yml
+ENTRYPOINT ["/usr/local/bin/audit-log-server"]
+EXPOSE 9090

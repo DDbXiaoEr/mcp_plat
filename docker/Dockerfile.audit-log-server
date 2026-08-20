@@ -1,0 +1,6 @@
+FROM debian:bullseye-v1.4.1
+WORKDIR /opt/mcp_plat
+COPY build/bin/audit-log-server-linux-amd64 /usr/local/bin/audit-log-server
+COPY build/config/audit_log_server.yml /opt/mcp_plat/audit_log_server.yml
+ENTRYPOINT ["/usr/local/bin/audit-log-server"]
+EXPOSE 9090
