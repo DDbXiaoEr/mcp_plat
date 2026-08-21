@@ -10,6 +10,9 @@ config.yaml
 !.vscode/extensions.json
 *.log
 
+# 运行日志目录
+logs/
+
 # Go
 *.exe
 *.test

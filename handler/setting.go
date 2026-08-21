@@ -22,6 +22,7 @@ import (
 	"io"
 	"net/http"
 
+	"mcp_plat-console/logging"
 	"mcp_plat-console/service"
 
 	"github.com/gin-gonic/gin"
@@ -75,6 +76,10 @@ func (h *SettingHandler) Save(c *gin.Context) {
 
 	if key == "user_ops" {
 		service.ReloadAccessKeyCron()
+	}
+
+	if key == "log" {
+		logging.Reconfigure()
 	}
 
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "保存成功"})

@@ -35,9 +35,13 @@ const platformOpen = ref(true)
 
 const logForm = ref({
   syslogEnabled: false,
-  logPath: '/var/log/mcp-plat',
+  logPath: './logs',
   logLevel: 'info',
-  logPrefix: 'mcp-plat',
+  logPrefix: 'mcp_plat',
+  maxSize: 100,
+  maxBackups: 10,
+  maxAge: 30,
+  compress: false,
   syslogHost: '',
   syslogPort: 514,
   syslogProtocol: 'tcp'
@@ -404,13 +408,16 @@ onMounted(async () => {
           </div>
 
           <template v-if="!logForm.syslogEnabled">
+            <div class="ldap-notice">
+              未启用 Syslog 时，日志同时输出到标准输出与本地文件（支持轮转）。
+            </div>
             <label class="field">
-              <span class="field__label">日志路径</span>
+              <span class="field__label">日志目录</span>
               <input
                 v-model="logForm.logPath"
                 class="field__input"
                 type="text"
-                placeholder="请输入日志路径"
+                placeholder="./logs"
               />
             </label>
             <label class="field">
@@ -420,17 +427,64 @@ onMounted(async () => {
               </select>
             </label>
             <label class="field">
-              <span class="field__label">日志文件前缀</span>
+              <span class="field__label">日志文件名</span>
               <input
                 v-model="logForm.logPrefix"
                 class="field__input"
                 type="text"
-                placeholder="请输入日志文件前缀"
+                placeholder="mcp_plat"
               />
+              <span class="field__help-text">日志文件为 {前缀}.log，默认 mcp_plat.log</span>
             </label>
+
+            <p class="field__section-title">日志轮转</p>
+            <div class="field-row">
+              <label class="field">
+                <span class="field__label">单文件大小上限（MB）</span>
+                <input
+                  v-model.number="logForm.maxSize"
+                  class="field__input"
+                  type="number"
+                  min="1"
+                  placeholder="100"
+                />
+              </label>
+              <label class="field">
+                <span class="field__label">保留历史文件数</span>
+                <input
+                  v-model.number="logForm.maxBackups"
+                  class="field__input"
+                  type="number"
+                  min="1"
+                  placeholder="10"
+                />
+              </label>
+            </div>
+            <div class="field-row">
+              <label class="field">
+                <span class="field__label">保留天数</span>
+                <input
+                  v-model.number="logForm.maxAge"
+                  class="field__input"
+                  type="number"
+                  min="1"
+                  placeholder="30"
+                />
+              </label>
+              <label class="field">
+                <span class="field__label">压缩历史日志</span>
+                <select v-model="logForm.compress" class="field__input">
+                  <option :value="false">不压缩</option>
+                  <option :value="true">gzip 压缩</option>
+                </select>
+              </label>
+            </div>
           </template>
 
           <template v-else>
+            <div class="ldap-notice">
+              启用 Syslog 后，标准输出与本地文件日志均失效，仅输出到 Syslog 服务器。
+            </div>
             <label class="field">
               <span class="field__label">Syslog 服务器地址</span>
               <input

@@ -41,7 +41,7 @@ mcp_plat-console/
 │   └── clickhouse_store.go   # ClickHouse 实现（MergeTree / ReplicatedMergeTree + TTL）
 │
 ├── logging/
-│   └── logging.go            # 日志初始化（启动时读 log 设置，启用则重定向到 Syslog，否则标准输出）
+│   └── logging.go            # 日志初始化（默认标准输出 + 本地文件 ./logs/mcp_plat.log 并轮转；启用 Syslog 后二者失效）
 │
 ├── model/
 │   ├── user.go               # User 模型

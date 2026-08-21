@@ -834,9 +834,13 @@ GET /api/settings
   "data": {
     "log": {
       "syslogEnabled": false,
-      "logPath": "/var/log/mcp-plat",
+      "logPath": "./logs",
       "logLevel": "info",
-      "logPrefix": "mcp-plat",
+      "logPrefix": "mcp_plat",
+      "maxSize": 100,
+      "maxBackups": 10,
+      "maxAge": 30,
+      "compress": false,
       "syslogHost": "",
       "syslogPort": 514,
       "syslogProtocol": "tcp"
@@ -897,7 +901,7 @@ PUT /api/settings/:key
 
 任意合法 JSON 对象，整组覆盖保存（后端原样存储，不校验字段）。
 
-> `log` 分组在服务启动时加载：`syslogEnabled` 为 true 且 `syslogHost` 非空时，日志输出重定向到 Syslog 服务器（`syslogProtocol` 支持 tcp/udp，默认端口 514，`logPrefix` 作为 tag）；未启用或连接失败时输出到标准输出。修改后需重启服务生效。
+> `log` 分组保存后即时生效（无需重启）。未启用 Syslog（`syslogEnabled=false` 或 `syslogHost` 为空）时，日志同时输出到标准输出与本地文件 `{logPath}/{logPrefix}.log`（默认 `./logs/mcp_plat.log`），并按 `maxSize`（单文件大小上限 MB，默认 100）、`maxBackups`（保留历史文件数，默认 10）、`maxAge`（保留天数，默认 30）、`compress`（是否 gzip 压缩）轮转；启用 Syslog 后标准输出与本地文件日志均失效，仅输出到 Syslog 服务器（`syslogProtocol` 支持 tcp/udp，默认端口 514，`logPrefix` 作为 tag），连接失败时回退为标准输出 + 文件。
 
 **成功响应：**
 ```json
