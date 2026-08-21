@@ -6,6 +6,8 @@
 
 | 模块 | 接口 | 状态 | 备注 |
 |------|------|------|------|
+| 健康检查 | GET /healthz | ✅ 已完成 | 存活探针，无鉴权，供 Docker / K8s 使用 |
+| 健康检查 | GET /readyz | ✅ 已完成 | 就绪探针，校验数据库连通性，无鉴权 |
 | 认证 | POST /api/auth/login | ✅ 已完成 | |
 | 认证 | GET /api/auth/method | ✅ 已完成 | 前端登录页按返回方式渲染 |
 | 认证 | POST /api/auth/cas/validate | ✅ 已完成 | CAS ticket 验证 |

@@ -37,6 +37,9 @@ func Setup() *gin.Engine {
 	userHandler := handler.NewRBACUserHandler()
 	settingHandler := handler.NewSettingHandler()
 
+	r.GET("/healthz", handler.Healthz)
+	r.GET("/readyz", handler.Readyz)
+
 	r.POST("/api/auth/login", authHandler.Login)
 	r.GET("/api/auth/method", authHandler.GetAuthMethod)
 	r.POST("/api/auth/cas/validate", authHandler.CASValidate)

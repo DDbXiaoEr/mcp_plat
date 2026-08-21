@@ -56,6 +56,7 @@ mcp_plat-console/
 ├── handler/
 │   ├── auth.go               # POST /api/auth/login, GET /api/auth/profile
 │   ├── access_key.go         # CRUD /api/access-keys
+│   ├── health.go             # GET /healthz（存活探针）, GET /readyz（就绪探针，校验 DB）
 │   ├── history.go            # GET /api/history
 │   ├── mcp_server.go         # CRUD /api/servers
 │   ├── overview.go           # GET /api/overview/stats（平台概况统计，仅管理员）, GET /api/overview/call-trend（AI 调用历史趋势，仅管理员）
@@ -147,6 +148,8 @@ mcp_plat-console/
 
 | Method | Path | 鉴权 | 管理员 | Handler |
 |--------|------|:---:|:---:|---------|
+| GET | `/healthz` | 否 | - | handler/health.go → Healthz |
+| GET | `/readyz` | 否 | - | handler/health.go → Readyz |
 | POST | `/api/auth/login` | 否 | - | handler/auth.go → Login |
 | GET | `/api/auth/method` | 否 | - | handler/auth.go → GetAuthMethod |
 | POST | `/api/auth/cas/validate` | 否 | - | handler/auth.go → CASValidate |
