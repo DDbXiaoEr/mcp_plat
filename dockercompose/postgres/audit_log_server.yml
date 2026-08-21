@@ -1,0 +1,27 @@
+# ============================================================
+# audit-log-server 配置文件（审计日志存储：Postgres）
+# ============================================================
+
+# 密钥需至少 32 字符随机值，需与主程序 config.yaml 中 access_key_secret 保持一致
+access_key_secret: changeme
+
+# gRPC 监听地址
+grpc_addr: "0.0.0.0:9091"
+
+# 审计日志存储（与主程序 config.yaml 中 audit_log_db 保持一致）
+database:
+  type: postgres
+  postgres:
+    host: auditpostgres
+    port: 5432
+    user: root
+    password: changeme
+    dbname: mcp_history_db
+
+# 写入缓冲（gRPC 收到单条日志后，缓冲满或到间隔再批量落库）
+writer:
+  batch_size: 200          # 单批最大条数
+  flush_interval_ms: 1000  # 批量刷新间隔（毫秒）
+
+# 关系库旧数据保留天数；超过则自动清理。设为 0 表示不清理。
+retention_days: 90

@@ -1,0 +1,134 @@
+services:
+  etcd:
+    image: etcd:3.5.10-debian-11-r2
+    container_name: etcd
+    restart: unless-stopped
+    environment:
+      ALLOW_NONE_AUTHENTICATION: "yes"
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd:2380
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_INITIAL_CLUSTER: etcd=http://etcd:2380
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - mcp_plat
+
+  apisix:
+    image: mcp_plat_apisix:${TAG:-latest}
+    container_name: apisix
+    restart: unless-stopped
+    depends_on:
+      etcd:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "9180:9180"
+    networks:
+      - mcp_plat
+
+  mainpostgres:
+    image: postgres:16
+    container_name: mainpostgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: "changeme"
+      POSTGRES_DB: mcp_plat_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - mainpostgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d mcp_plat_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - mcp_plat
+
+  auditpostgres:
+    image: postgres:16
+    container_name: auditpostgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: "changeme"
+      POSTGRES_DB: mcp_history_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - auditpostgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d mcp_history_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - mcp_plat
+
+  accesskey-auth-server:
+    image: accesskey-auth-server:${TAG:-latest}
+    container_name: accesskey_auth_server
+    restart: unless-stopped
+    depends_on:
+      mainpostgres:
+        condition: service_healthy
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./accesskey_auth_server.yml:/opt/accesskey_auth_server.yml:ro
+    networks:
+      - mcp_plat
+
+  audit-log-server:
+    image: audit-log-server:${TAG:-latest}
+    container_name: audit_log_server
+    restart: unless-stopped
+    depends_on:
+      auditpostgres:
+        condition: service_healthy
+    ports:
+      - "9091:9091"
+    volumes:
+      - ./audit_log_server.yml:/opt/audit_log_server.yml:ro
+    networks:
+      - mcp_plat
+
+  mcp_plat_embed:
+    image: mcp_plat_embed:${TAG:-latest}
+    container_name: mcp_plat_embed
+    restart: unless-stopped
+    depends_on:
+      apisix:
+        condition: service_started
+      mainpostgres:
+        condition: service_healthy
+      auditpostgres:
+        condition: service_healthy
+      accesskey-auth-server:
+        condition: service_started
+      audit-log-server:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config.yaml:/opt/config.yaml:ro
+    networks:
+      - mcp_plat
+
+volumes:
+  mainpostgres_data:
+  auditpostgres_data:
+
+networks:
+  mcp_plat:
+    name: mcp_plat

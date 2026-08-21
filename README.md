@@ -31,11 +31,12 @@ MCP 服务平台 · 管理控制台
 ### 1. 配置
 
 ```bash
-# 编辑 config.yaml 填写数据库、JWT 等配置
+# 从示例复制配置文件，然后编辑 config.yaml 填写数据库、JWT 等配置
 # 主库支持 PostgreSQL 和 MySQL 两种数据库
+cp config.yaml.example config.yaml
 ```
 
-`config.yaml` 关键配置：
+`config.yaml` 关键配置（完整示例见 `config.yaml.example`）：
 
 ```yaml
 # 主库（用户、角色、AccessKey、服务器、系统设置等）

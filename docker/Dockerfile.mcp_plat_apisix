@@ -1,0 +1,4 @@
+FROM apache/apisix:latest
+COPY build/bin/apisix-go-runner-linux-amd64 /opt/mcp_plat/bin/apisix-go-runner
+COPY apisix_config.yaml /usr/local/apisix/conf/config.yaml
+EXPOSE 9080 9180

@@ -1,0 +1,142 @@
+services:
+  etcd:
+    image: etcd:3.5.10-debian-11-r2
+    container_name: etcd
+    restart: unless-stopped
+    environment:
+      ALLOW_NONE_AUTHENTICATION: "yes"
+      ETCD_NAME: "etcd"
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd:2380
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_INITIAL_CLUSTER: etcd=http://etcd:2380
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - mcp_plat
+
+  apisix:
+    image: mcp_plat_apisix:${TAG:-64c736b}
+    container_name: apisix
+    restart: unless-stopped
+    depends_on:
+      etcd:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "9180:9180"
+    volumes:
+      - ./apisix_config.yaml:/usr/local/apisix/conf/config.yaml:ro
+    networks:
+      - mcp_plat
+
+  mainpostgres:
+    image: postgres:11
+    container_name: mainpostgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: "changeme"
+      POSTGRES_DB: mcp_plat_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - mainpostgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d mcp_plat_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - mcp_plat
+
+  clickhouse:
+    image: clickhouse-server:21.6.9.7
+    container_name: clickhouse
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: audit_logs
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ""
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+      - "9009:9009"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1'"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - mcp_plat
+
+  accesskey-auth-server:
+    image: accesskey-auth-server:${TAG:-64c736b}
+    container_name: accesskey_auth_server
+    restart: unless-stopped
+    depends_on:
+      mainpostgres:
+        condition: service_healthy
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./clickhouse/accesskey_auth_server.yml:/opt/mcp_plat/accesskey_auth_server.yml:ro
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
+    networks:
+      - mcp_plat
+
+  audit-log-server:
+    image: audit-log-server:${TAG:-64c736b}
+    container_name: audit_log_server
+    restart: unless-stopped
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    ports:
+      - "9091:9091"
+    volumes:
+      - ./clickhouse/audit_log_server.yml:/opt/mcp_plat/audit_log_server.yml:ro
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
+    networks:
+      - mcp_plat
+
+  mcp_plat_embed:
+    image: mcp_plat_embed:${TAG:-64c736b}
+    container_name: mcp_plat_embed
+    restart: unless-stopped
+    depends_on:
+      apisix:
+        condition: service_started
+      mainpostgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      accesskey-auth-server:
+        condition: service_started
+      audit-log-server:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./clickhouse/config.yaml:/opt/mcp_plat/config.yaml:ro
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
+    networks:
+      - mcp_plat
+
+volumes:
+  mainpostgres_data:
+  clickhouse_data:
+
+networks:
+  mcp_plat:
+    name: mcp_plat

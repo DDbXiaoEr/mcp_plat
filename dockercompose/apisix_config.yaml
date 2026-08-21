@@ -1,0 +1,31 @@
+#
+# ============================================================
+# APISIX 示例配置（部署 apisix-go-runner 插件）
+# admin key 使用 changeme 占位，生产环境必须更换！
+# ============================================================
+#
+deployment:
+  role: traditional
+  role_traditional:
+    config_provider: etcd
+  admin:
+    enable_admin_ui: true
+    allow_admin:
+      - 0.0.0.0/0  # TODO: 生产环境请限制为可信 IP 段，如 192.168.0.0/16
+    admin_key:
+      - name: admin
+        key: changeme
+        role: admin
+  etcd:
+    host:
+      - http://${{ETCD_HOST:=etcd}}:2379
+
+apisix:
+  node_listen:
+    - 80
+    - 443:ssl
+
+# APISIX 以子进程方式启动 go plugin runner，并自动管理其生命周期
+# 注意：该路径必须与 apisix 镜像（mcp_plat_apisix）内部 go-runner 的实际安装路径一致，否则容器内会启动失败
+ext-plugin:
+  cmd: ["/opt/mcp_plat/bin/apisix-go-runner"]

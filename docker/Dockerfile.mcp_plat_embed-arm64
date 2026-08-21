@@ -1,6 +1,5 @@
 FROM debian:bullseye-slim-linuxarm64
 WORKDIR /opt/mcp_plat
-COPY build/bin/mcp_plat_embed-linux-arm64 /usr/local/bin/mcp_plat_embed
-COPY config.yaml /opt/mcp_plat/config.yaml
-ENTRYPOINT ["/usr/local/bin/mcp_plat_embed"]
+COPY build/bin/mcp_plat_embed-linux-arm64 /opt/mcp_plat/bin/mcp_plat_embed
+ENTRYPOINT ["/opt/mcp_plat/bin/mcp_plat_embed"]
 EXPOSE 8080

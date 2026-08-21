@@ -3,6 +3,9 @@ dist
 dist-ssr
 *.local
 .DS_Store
+
+# 本地配置文件（由 config.yaml.example 复制）
+config.yaml
 .vscode/*
 !.vscode/extensions.json
 *.log

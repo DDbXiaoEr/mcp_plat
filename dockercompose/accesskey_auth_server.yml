@@ -1,0 +1,14 @@
+# accesskey auth server 配置文件
+# 密钥需至少 32 字符随机值，需与主程序保持一致
+access_key_secret: changeme
+grpc_addr: :9090
+
+# 数据库配置独立指定，需连到与主程序相同的数据库
+database:
+  type: postgres
+  postgres:
+    host: 192.168.31.233
+    port: 5432
+    user: root
+    password: changeme
+    dbname: mcp_plat_db
