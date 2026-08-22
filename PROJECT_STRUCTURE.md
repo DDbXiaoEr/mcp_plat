@@ -100,6 +100,15 @@ mcp_plat-console/
 │   ├── api_doc.md            # API 接口文档（强制维护）
 │   └── api-devstatus.md      # API 开发进度状态（强制维护）
 │
+├── kubernetes/               # Kubernetes 部署清单（namespace / configmap / etcd / apisix / 各服务）
+│   ├── 00-namespace.yaml
+│   ├── 01-external-services.yaml
+│   ├── 10-configmaps.yaml
+│   ├── 20-etcd.yaml
+│   ├── 30-apisix.yaml
+│   ├── 40-accesskey-auth-server.yaml
+│   └── 50-audit-log-server.yaml
+│
 └── web/                      # Vue 3 前端（SPA）
     ├── AGENTS.md             # 前端规范
     ├── PROJECT_STRUCTURE.md  # 前端项目结构

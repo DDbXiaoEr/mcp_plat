@@ -1,0 +1,59 @@
+# ============================================================
+# audit-log-server
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: audit-log-server
+  namespace: mcp-plat
+  labels:
+    app: audit-log-server
+spec:
+  type: NodePort
+  selector:
+    app: audit-log-server
+  ports:
+    - name: grpc
+      port: 9091
+      targetPort: 9091
+      nodePort: 30091
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit-log-server
+  namespace: mcp-plat
+  labels:
+    app: audit-log-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: audit-log-server
+  template:
+    metadata:
+      labels:
+        app: audit-log-server
+    spec:
+      containers:
+        - name: audit-log-server
+          image: audit-log-server:64c736b
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grpc
+              containerPort: 9091
+          volumeMounts:
+            - name: config
+              mountPath: /opt/mcp_plat/audit_log_server.yml
+              subPath: audit_log_server.yml
+              readOnly: true
+            - name: tzdata
+              mountPath: /usr/share/zoneinfo
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: audit-log-server-config
+        - name: tzdata
+          hostPath:
+            path: /usr/share/zoneinfo

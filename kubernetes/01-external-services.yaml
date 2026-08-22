@@ -1,0 +1,81 @@
+# ============================================================
+# 外部服务（PostgreSQL / ClickHouse / etcd）
+#
+# 以下服务不在此集群内运行，通过 ClusterIP Service + 手动 Endpoints
+# 将内部 DNS 名称映射到外部固定 IP。
+# ============================================================
+
+# --- PostgreSQL (192.168.31.233:5432) ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mainpostgres
+  namespace: mcp-plat
+spec:
+  type: ClusterIP
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: mainpostgres
+  namespace: mcp-plat
+subsets:
+  - addresses:
+      - ip: 192.168.31.233
+    ports:
+      - name: postgres
+        port: 5432
+---
+# --- ClickHouse (192.168.31.233:9000) ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse
+  namespace: mcp-plat
+spec:
+  type: ClusterIP
+  ports:
+    - name: clickhouse
+      port: 9000
+      targetPort: 9000
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: clickhouse
+  namespace: mcp-plat
+subsets:
+  - addresses:
+      - ip: 192.168.31.233
+    ports:
+      - name: clickhouse
+        port: 9000
+---
+# --- etcd (172.16.74.1:2379) ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd-external
+  namespace: mcp-plat
+spec:
+  type: ClusterIP
+  ports:
+    - name: client
+      port: 2379
+      targetPort: 2379
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: etcd-external
+  namespace: mcp-plat
+subsets:
+  - addresses:
+      - ip: 172.16.74.1
+    ports:
+      - name: client
+        port: 2379

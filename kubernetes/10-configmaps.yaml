@@ -1,0 +1,160 @@
+# ============================================================
+# ConfigMap 集合
+#
+# 对应 docker-compose 中的 bind mount 配置文件。
+# 注意：以下配置中的口令与密钥均为占位符，生产环境必须更换（建议改为 Secret 注入）。
+# ============================================================
+
+# --- APISIX 配置 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apisix-config
+  namespace: mcp-plat
+data:
+  config.yaml: |
+    #
+    # ============================================================
+    # APISIX 示例配置（部署 apisix-go-runner 插件）
+    # admin key 使用 changeme 占位，生产环境必须更换！
+    # ============================================================
+    #
+    deployment:
+      role: traditional
+      role_traditional:
+        config_provider: etcd
+      admin:
+        enable_admin_ui: false
+        allow_admin:
+          - 0.0.0.0/0  # TODO: 生产环境请限制为可信 IP 段，如 192.168.0.0/16
+        admin_key:
+          - name: admin
+            key: changeme-apisix-admin-key
+            role: admin
+      etcd:
+        host:
+          - http://etcd-external:2379
+
+    apisix:
+      enable_admin: false
+      node_listen:
+        - 80
+        - 443:ssl
+
+    # APISIX 以子进程方式启动 go plugin runner，并自动管理其生命周期
+    # 注意：该路径必须与 apisix 镜像（mcp_plat_apisix）内部 go-runner 的实际安装路径一致，否则容器内会启动失败
+    ext-plugin:
+      cmd: ["/opt/mcp_plat/bin/apisix-go-runner"]
+
+---
+# --- accesskey-auth-server 配置 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: accesskey-auth-server-config
+  namespace: mcp-plat
+data:
+  accesskey_auth_server.yml: |
+    # accesskey auth server 配置文件
+    # 密钥需至少 32 字符随机值，需与主程序保持一致
+    access_key_secret: changeme-access-key-secret
+    grpc_addr: :9090
+
+    # 数据库配置独立指定，需连到与主程序相同的数据库
+    database:
+      type: postgres
+      postgres:
+        host: mainpostgres
+        port: 5432
+        user: root
+        password: changeme-db-password
+        dbname: mcp_plat_db
+
+---
+# --- audit-log-server 配置 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audit-log-server-config
+  namespace: mcp-plat
+data:
+  audit_log_server.yml: |
+    # ============================================================
+    # audit-log-server 配置文件（审计日志存储：ClickHouse）
+    # ============================================================
+
+    # 密钥需至少 32 字符随机值，需与主程序 config.yaml 中 access_key_secret 保持一致
+    access_key_secret: changeme-access-key-secret
+
+    # gRPC 监听地址
+    grpc_addr: "0.0.0.0:9091"
+
+    # 审计日志存储（与主程序 config.yaml 中 audit_log_db 保持一致）
+    database:
+      type: clickhouse
+      clickhouse:
+        addr: clickhouse:9000
+        user: default
+        password: ""
+        db: audit_logs
+        table: audit_logs
+        engine: merge_tree               # 单机：merge_tree；集群：replicated_merge_tree
+        cluster: ""                      # replicated_merge_tree 时必填
+        ttl_days: 90                     # 数据保留天数（ClickHouse 原生 TTL，自动清理）
+
+    # 写入缓冲（gRPC 收到单条日志后，缓冲满或到间隔再批量落库）
+    writer:
+      batch_size: 200          # 单批最大条数
+      flush_interval_ms: 1000  # 批量刷新间隔（毫秒）
+
+    # 关系库旧数据保留天数。ClickHouse 无需配置（由表 TTL 负责）。
+    retention_days: 0
+
+---
+# --- mcp_plat_embed 主程序配置 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mcp-plat-embed-config
+  namespace: mcp-plat
+data:
+  config.yaml: |
+    # ============================================================
+    # mcp_plat-console 主程序配置文件（审计日志存储：ClickHouse）
+    # ============================================================
+
+    # 主程序数据库（用户、角色、AccessKey、服务器、系统设置等）
+    database:
+      type: postgres
+      postgres:
+        host: mainpostgres
+        port: 5432
+        user: root
+        password: changeme-db-password
+        dbname: mcp_plat_db
+
+    # ============================================================
+    # 审计日志存储（与 audit_log_server.yml 保持一致）
+    # ============================================================
+    audit_log_db:
+      type: clickhouse
+      clickhouse:
+        addr: clickhouse:9000
+        user: default
+        password: ""
+        db: audit_logs
+        table: audit_logs
+        engine: merge_tree               # 单机：merge_tree；集群：replicated_merge_tree
+        cluster: ""                      # replicated_merge_tree 时必填
+        ttl_days: 90                     # 数据保留天数（ClickHouse 原生 TTL，自动清理）
+
+    # 密钥需至少 32 字符随机值，生产环境建议通过环境变量注入
+    jwt_secret: changeme-jwt-secret
+    access_key_secret: changeme-access-key-secret
+
+    # HTTP 监听端口
+    server_port: 8080
+
+    admin:
+      username: admin
+      password: changeme-admin-password

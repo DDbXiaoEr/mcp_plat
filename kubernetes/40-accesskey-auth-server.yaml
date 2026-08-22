@@ -1,0 +1,59 @@
+# ============================================================
+# accesskey-auth-server
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: accesskey-auth-server
+  namespace: mcp-plat
+  labels:
+    app: accesskey-auth-server
+spec:
+  type: NodePort
+  selector:
+    app: accesskey-auth-server
+  ports:
+    - name: grpc
+      port: 9090
+      targetPort: 9090
+      nodePort: 30090
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: accesskey-auth-server
+  namespace: mcp-plat
+  labels:
+    app: accesskey-auth-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: accesskey-auth-server
+  template:
+    metadata:
+      labels:
+        app: accesskey-auth-server
+    spec:
+      containers:
+        - name: accesskey-auth-server
+          image: accesskey-auth-server:64c736b
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grpc
+              containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /opt/mcp_plat/accesskey_auth_server.yml
+              subPath: accesskey_auth_server.yml
+              readOnly: true
+            - name: tzdata
+              mountPath: /usr/share/zoneinfo
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: accesskey-auth-server-config
+        - name: tzdata
+          hostPath:
+            path: /usr/share/zoneinfo
