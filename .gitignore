@@ -6,6 +6,9 @@ dist-ssr
 
 # 本地配置文件（由 config.yaml.example 复制）
 config.yaml
+# dockercompose 部署模板例外（密钥占位，可提交）
+!dockercompose/clickhouse/config.yaml
+!dockercompose/postgres/config.yaml
 .vscode/*
 !.vscode/extensions.json
 *.log

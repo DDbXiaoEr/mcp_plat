@@ -1,0 +1,37 @@
+# ============================================================
+# mcp_plat-console 主程序配置文件（审计日志存储：Postgres）
+# ============================================================
+
+# 主程序数据库（用户、角色、AccessKey、服务器、系统设置等）
+database:
+  type: postgres
+  postgres:
+    host: mainpostgres
+    port: 5432
+    user: root
+    password: changeme
+    dbname: mcp_plat_db
+
+# ============================================================
+# 审计日志存储（与 audit_log_server.yml 保持一致）
+# ============================================================
+audit_log_db:
+  type: postgres
+  postgres:
+    host: auditpostgres
+    port: 
+    user: root
+    password: changeme
+    dbname: mcp_history_db
+
+# 密钥需至少 32 字符随机值，生产环境建议通过环境变量注入
+
+jwt_secret: changeme
+access_key_secret: changeme
+
+# HTTP 监听端口
+server_port: 8080
+
+admin:
+  username: admin
+  password: changeme

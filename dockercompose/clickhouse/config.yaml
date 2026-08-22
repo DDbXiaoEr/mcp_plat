@@ -1,0 +1,39 @@
+# ============================================================
+# mcp_plat-console 主程序配置文件（审计日志存储：ClickHouse）
+# ============================================================
+
+# 主程序数据库（用户、角色、AccessKey、服务器、系统设置等）
+database:
+  type: postgres
+  postgres:
+    host: mainpostgres
+    port: 5432
+    user: root
+    password: changeme
+    dbname: mcp_plat_db
+
+# ============================================================
+# 审计日志存储（与 audit_log_server.yml 保持一致）
+# ============================================================
+audit_log_db:
+  type: clickhouse
+  clickhouse:
+    addr: clickhouse:9000
+    user: default
+    password: ""
+    db: audit_logs
+    table: audit_logs
+    engine: merge_tree               # 单机：merge_tree；集群：replicated_merge_tree
+    cluster: ""                      # replicated_merge_tree 时必填
+    ttl_days: 90                     # 数据保留天数（ClickHouse 原生 TTL，自动清理）
+
+# 密钥需至少 32 字符随机值，生产环境建议通过环境变量注入
+jwt_secret: changeme
+access_key_secret: changeme
+
+# HTTP 监听端口
+server_port: 8080
+
+admin:
+  username: admin
+  password: changeme
