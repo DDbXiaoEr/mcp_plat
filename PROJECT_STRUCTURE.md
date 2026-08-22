@@ -90,7 +90,8 @@ mcp_plat-console/
 │   ├── auditlog_client.go    # AuditLog gRPC 客户端
 │   ├── auditlog_grpc.pb.go   # gRPC 生成代码
 │   ├── auditlog.pb.go        # protobuf 生成代码
-│   └── auditlog.proto        # AuditLog proto 定义
+│   ├── auditlog.proto        # AuditLog proto 定义
+│   └── grpc_lb.go            # gRPC 多后端负载均衡（最少连接）
 │
 ├── router/
 │   └── router.go             # Gin 路由注册（仅 main.go 使用，main_embed.go 自行注册）

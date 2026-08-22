@@ -31,9 +31,11 @@ import (
 )
 
 type AccessKeyVerifyConf struct {
-	HeaderName string `json:"header_name"`
-	GrpcAddr   string `json:"grpc_addr"`
-	ServerID   string `json:"server_id"`
+	HeaderName string         `json:"header_name"`
+	GrpcAddr   string         `json:"grpc_addr"`
+	GrpcAddrs  []string       `json:"grpc_addrs"`
+	ServerID   string         `json:"server_id"`
+	lb         *plugin.GrpcLB
 }
 
 type AccessKeyVerify struct{}
@@ -59,11 +61,23 @@ func (p *AccessKeyVerify) ParseConf(in []byte) (interface{}, error) {
 	if conf.HeaderName == "" {
 		conf.HeaderName = "X-Access-Key"
 	}
+	addrs := conf.GrpcAddrs
+	if len(addrs) == 0 && conf.GrpcAddr != "" {
+		addrs = []string{conf.GrpcAddr}
+	}
+	conf.lb = plugin.GetGrpcLB(addrs)
 	return conf, nil
 }
 
 func (p *AccessKeyVerify) RequestFilter(conf interface{}, w http.ResponseWriter, r runnerHttp.Request) {
 	cfg := conf.(AccessKeyVerifyConf)
+
+	if cfg.lb == nil || cfg.lb.Len() == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write([]byte(`{"code":503,"message":"access key 校验服务未配置"}`))
+		return
+	}
 
 	accessKey := extractAccessKey(r, cfg.HeaderName)
 	if accessKey == "" {
@@ -74,15 +88,13 @@ func (p *AccessKeyVerify) RequestFilter(conf interface{}, w http.ResponseWriter,
 		return
 	}
 
-	grpcAddr := cfg.GrpcAddr
-
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	requestPath := string(r.Path())
 	toolName := extractToolName(r)
 
-	resp, err := plugin.ValidateAccessKey(ctx, grpcAddr, accessKey, requestPath, cfg.ServerID, toolName)
+	resp, err := plugin.ValidateAccessKey(ctx, cfg.lb, accessKey, requestPath, cfg.ServerID, toolName)
 	if err != nil || !resp.Valid {
 		msg := "access key 校验失败"
 		if resp != nil && resp.Message != "" {

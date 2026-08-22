@@ -17,17 +17,14 @@ package plugin
 
 import (
 	"context"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
-func LogAccess(ctx context.Context, grpcAddr string, req *LogAccessRequest) (*LogAccessResponse, error) {
-	conn, err := grpc.NewClient(grpcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, err
+func LogAccess(ctx context.Context, lb *GrpcLB, req *LogAccessRequest) (*LogAccessResponse, error) {
+	conn, release := lb.Pick()
+	if conn == nil {
+		return nil, ctx.Err()
 	}
-	defer conn.Close()
+	defer release()
 
 	client := NewAuditLogServiceClient(conn)
 	return client.LogAccess(ctx, req)

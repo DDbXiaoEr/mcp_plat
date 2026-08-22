@@ -29,9 +29,11 @@ import (
 )
 
 type AuditLogConf struct {
-	GrpcAddr   string `json:"grpc_addr"`
-	HeaderName string `json:"header_name"`
-	ServerID   string `json:"server_id"`
+	GrpcAddr   string         `json:"grpc_addr"`
+	GrpcAddrs  []string       `json:"grpc_addrs"`
+	HeaderName string         `json:"header_name"`
+	ServerID   string         `json:"server_id"`
+	lb         *plugin.GrpcLB
 }
 
 type AuditLog struct{}
@@ -57,12 +59,17 @@ func (p *AuditLog) ParseConf(in []byte) (interface{}, error) {
 	if conf.HeaderName == "" {
 		conf.HeaderName = "X-Access-Key"
 	}
+	addrs := conf.GrpcAddrs
+	if len(addrs) == 0 && conf.GrpcAddr != "" {
+		addrs = []string{conf.GrpcAddr}
+	}
+	conf.lb = plugin.GetGrpcLB(addrs)
 	return conf, nil
 }
 
 func (p *AuditLog) RequestFilter(conf interface{}, w http.ResponseWriter, r runnerHttp.Request) {
 	cfg := conf.(AuditLogConf)
-	if cfg.GrpcAddr == "" || cfg.ServerID == "" {
+	if cfg.lb == nil || cfg.lb.Len() == 0 || cfg.ServerID == "" {
 		return
 	}
 
@@ -73,7 +80,7 @@ func (p *AuditLog) RequestFilter(conf interface{}, w http.ResponseWriter, r runn
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
-		_, err := plugin.LogAccess(ctx, cfg.GrpcAddr, &plugin.LogAccessRequest{
+		_, err := plugin.LogAccess(ctx, cfg.lb, &plugin.LogAccessRequest{
 			AccessKey: accessKey,
 			ServerId:  cfg.ServerID,
 			ToolName:  toolName,

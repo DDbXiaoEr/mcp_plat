@@ -10,7 +10,7 @@ curl http://127.0.0.1:9180/apisix/admin/routes/1 \
       "conf": [
         {
           "name": "accesskey_verify",
-          "value": "{\"header_name\":\"X-Access-Key\",\"grpc_addr\":\":9090\"}"
+          "value": "{\"header_name\":\"X-Access-Key\",\"grpc_addrs\":[\"127.0.0.1:9090\",\"127.0.0.1:9091\"]}"
         }
       ]
     }
@@ -26,7 +26,8 @@ curl http://127.0.0.1:9180/apisix/admin/routes/1 \
 ## 2. 插件配置字段说明
 
 # header_name: 从哪个 HTTP Header 提取 access key（默认 "X-Access-Key"）
-# grpc_addr:   gRPC 校验服务地址（必填，对应 accesskey_auth_server.yml 中 grpc_addr）
+# grpc_addrs:  gRPC 校验服务地址列表（必填，支持多个后端，插件按连接数做最少连接负载均衡）
+# grpc_addr:   兼容旧配置，单个 gRPC 校验服务地址；配置了 grpc_addrs 时优先使用 grpc_addrs
 
 ## 3. 测试请求
 

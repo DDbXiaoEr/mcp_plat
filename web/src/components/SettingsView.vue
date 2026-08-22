@@ -65,7 +65,8 @@ const apiGwForm = ref({
   adminUrl: '',
   defaultPublishDomain: '',
   adminKey: '',
-  accesskeyHeader: ''
+  accesskeyHeader: '',
+  authGrpcAddrs: []
 })
 
 const API_GW_PROVIDERS = [
@@ -91,7 +92,7 @@ const networkSecurityForm = ref({
 
 const auditLogForm = ref({
   enabled: false,
-  grpcAddr: '127.0.0.1:9091'
+  grpcAddrs: ['127.0.0.1:9091']
 })
 
 const authMethod = ref('cas')
@@ -293,6 +294,25 @@ function saveQuickAccessSettings() {
   saveSection('quick_access', quickAccessForm.value)
 }
 
+function toAddrList(value) {
+  if (Array.isArray(value)) return value.slice()
+  if (typeof value === 'string' && value.trim()) {
+    return value
+      .split(/[,\n]/)
+      .map(s => s.trim())
+      .filter(Boolean)
+  }
+  return []
+}
+
+function addAddr(list) {
+  list.push('')
+}
+
+function removeAddr(list, index) {
+  list.splice(index, 1)
+}
+
 function toggleQuickAccessClient(key) {
   const list = quickAccessForm.value.enabledClients
   const idx = list.indexOf(key)
@@ -306,11 +326,19 @@ function applySettings(data) {
   if (data.api_gateway) {
     apiGwConfigured.value = data.api_gateway.configured || false
     if (data.api_gateway.provider) apiGwForm.value.provider = data.api_gateway.provider
+    if (data.api_gateway.adminUrl != null) apiGwForm.value.adminUrl = data.api_gateway.adminUrl
+    if (data.api_gateway.defaultPublishDomain != null) apiGwForm.value.defaultPublishDomain = data.api_gateway.defaultPublishDomain
+    if (data.api_gateway.accesskeyHeader != null) apiGwForm.value.accesskeyHeader = data.api_gateway.accesskeyHeader
   }
   if (data.network_security && data.network_security.allowlist) {
     networkSecurityForm.value.allowlist = data.network_security.allowlist.join('\n')
   }
-  if (data.audit_log) Object.assign(auditLogForm.value, data.audit_log)
+  if (data.audit_log) {
+    if (data.audit_log.enabled != null) auditLogForm.value.enabled = data.audit_log.enabled
+    if (data.audit_log.grpcAddrs != null || data.audit_log.grpcAddr != null) {
+      auditLogForm.value.grpcAddrs = toAddrList(data.audit_log.grpcAddrs ?? data.audit_log.grpcAddr)
+    }
+  }
   if (data.auth) {
     if (data.auth.method) authMethod.value = data.auth.method
     if (data.auth.cas) Object.assign(casForm.value, data.auth.cas)
@@ -691,7 +719,7 @@ onMounted(async () => {
             </span>
           </label>
 
-          <label class="field">
+          <div class="field">
             <span class="field__label">
               Access Key 认证 gRPC 地址
               <span class="field__help">
@@ -699,17 +727,39 @@ onMounted(async () => {
                 <span class="field__tooltip">
                   对应 accesskey-auth-server 的 gRPC 监听地址，例如
                   <code>:9090</code> 或 <code>127.0.0.1:9090</code>。
-                  发布时若启用认证，将下发 accesskey_verify 插件并指向该地址。
+                  支持配置多个地址，发布时会下发到 accesskey_verify 插件，
+                  并按连接数（最少连接）负载均衡。每行一个地址。
                 </span>
               </span>
             </span>
-            <input
-              v-model="apiGwForm.authGrpcAddr"
-              class="field__input"
-              type="text"
-              placeholder=":9090"
-            />
-          </label>
+            <div
+              v-for="(addr, i) in apiGwForm.authGrpcAddrs"
+              :key="i"
+              class="addr-row"
+            >
+              <input
+                v-model="apiGwForm.authGrpcAddrs[i]"
+                class="field__input addr-row__input"
+                type="text"
+                placeholder="127.0.0.1:9090"
+              />
+              <button
+                class="addr-row__remove"
+                type="button"
+                title="移除"
+                @click="removeAddr(apiGwForm.authGrpcAddrs, i)"
+              >
+                ×
+              </button>
+            </div>
+            <button
+              class="addr-row__add"
+              type="button"
+              @click="addAddr(apiGwForm.authGrpcAddrs)"
+            >
+              + 添加地址
+            </button>
+          </div>
 
           <label class="field">
             <span class="field__label">
@@ -812,7 +862,7 @@ onMounted(async () => {
             </label>
           </div>
 
-          <label class="field">
+          <div class="field">
             <span class="field__label">
               审计日志 gRPC 地址
               <span class="field__help">
@@ -820,17 +870,39 @@ onMounted(async () => {
                 <span class="field__tooltip">
                   对应 audit-log-server 的 gRPC 监听地址，例如
                   <code>:9091</code> 或 <code>127.0.0.1:9091</code>。
-                  发布 MCP 服务时，将下发此地址到 accesskey_verify 插件。
+                  支持配置多个地址，发布时会下发到 audit_log 插件，
+                  并按连接数（最少连接）负载均衡。每行一个地址。
                 </span>
               </span>
             </span>
-            <input
-              v-model="auditLogForm.grpcAddr"
-              class="field__input"
-              type="text"
-              placeholder="127.0.0.1:9091"
-            />
-          </label>
+            <div
+              v-for="(addr, i) in auditLogForm.grpcAddrs"
+              :key="i"
+              class="addr-row"
+            >
+              <input
+                v-model="auditLogForm.grpcAddrs[i]"
+                class="field__input addr-row__input"
+                type="text"
+                placeholder="127.0.0.1:9091"
+              />
+              <button
+                class="addr-row__remove"
+                type="button"
+                title="移除"
+                @click="removeAddr(auditLogForm.grpcAddrs, i)"
+              >
+                ×
+              </button>
+            </div>
+            <button
+              class="addr-row__add"
+              type="button"
+              @click="addAddr(auditLogForm.grpcAddrs)"
+            >
+              + 添加地址
+            </button>
+          </div>
 
           <div class="collapse__actions">
             <span v-if="tips.audit_log" class="save-tip">{{ tips.audit_log }}</span>
@@ -1597,6 +1669,60 @@ onMounted(async () => {
 }
 
 .mapping-row__add:hover {
+  border-color: var(--xauat-blue);
+  background: rgba(10, 61, 122, 0.04);
+}
+
+.addr-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.addr-row__input {
+  flex: 1;
+}
+
+.addr-row__remove {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.addr-row__remove:hover {
+  color: #d93025;
+  border-color: #d93025;
+}
+
+.addr-row__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  width: fit-content;
+  font-size: 13px;
+  color: var(--xauat-blue);
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.addr-row__add:hover {
   border-color: var(--xauat-blue);
   background: rgba(10, 61, 122, 0.04);
 }

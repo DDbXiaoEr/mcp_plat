@@ -568,12 +568,13 @@ type PublishInput struct {
 }
 
 type ApiGatewaySetting struct {
-	Provider             string `json:"provider"`
-	AdminURL             string `json:"adminUrl"`
-	AdminKey             string `json:"adminKey"`
-	DefaultPublishDomain string `json:"defaultPublishDomain"`
-	AuthGrpcAddr         string `json:"authGrpcAddr"`
-	AccesskeyHeader      string `json:"accesskeyHeader"`
+	Provider             string   `json:"provider"`
+	AdminURL             string   `json:"adminUrl"`
+	AdminKey             string   `json:"adminKey"`
+	DefaultPublishDomain string   `json:"defaultPublishDomain"`
+	AuthGrpcAddr         string   `json:"authGrpcAddr"`
+	AuthGrpcAddrs        []string `json:"authGrpcAddrs"`
+	AccesskeyHeader      string   `json:"accesskeyHeader"`
 }
 
 func PublishServers(input PublishInput) error {
@@ -657,12 +658,17 @@ func PublishServers(input PublishInput) error {
 		var extPlugins []map[string]interface{}
 
 		if input.EnableAuth {
-			if gw.AuthGrpcAddr == "" {
+			authAddrs := gw.AuthGrpcAddrs
+			if len(authAddrs) == 0 && gw.AuthGrpcAddr != "" {
+				authAddrs = []string{gw.AuthGrpcAddr}
+			}
+			if len(authAddrs) == 0 {
 				errs = append(errs, fmt.Sprintf("%s: 启用认证但未配置 gRPC 校验地址", srv.Name))
 				continue
 			}
-			authValue := fmt.Sprintf(`{"header_name":"%s","grpc_addr":"%s","server_id":"%s"}`,
-				headerName, gw.AuthGrpcAddr, srv.ID)
+			addrsJSON, _ := json.Marshal(authAddrs)
+			authValue := fmt.Sprintf(`{"header_name":"%s","grpc_addrs":%s,"server_id":"%s"}`,
+				headerName, string(addrsJSON), srv.ID)
 			extPlugins = append(extPlugins, map[string]interface{}{
 				"name":  "accesskey_verify",
 				"value": authValue,
@@ -671,17 +677,27 @@ func PublishServers(input PublishInput) error {
 
 		if input.EnableAuditLog {
 			var auditLogSetting struct {
-				GrpcAddr string `json:"grpcAddr"`
+				GrpcAddr  string   `json:"grpcAddr"`
+				GrpcAddrs []string `json:"grpcAddrs"`
 			}
-			if err := GetSetting("audit_log", &auditLogSetting); err != nil || auditLogSetting.GrpcAddr == "" {
+			if err := GetSetting("audit_log", &auditLogSetting); err != nil {
 				errs = append(errs, fmt.Sprintf("%s: 启用审计日志但未配置 gRPC 地址，跳过审计日志插件", srv.Name))
 			} else {
-				auditValue := fmt.Sprintf(`{"header_name":"%s","grpc_addr":"%s","server_id":"%s","access_key_secret":"%s"}`,
-					headerName, auditLogSetting.GrpcAddr, srv.ID, config.AppConfig.AccessKeySecret)
-				extPlugins = append(extPlugins, map[string]interface{}{
-					"name":  "audit_log",
-					"value": auditValue,
-				})
+				auditAddrs := auditLogSetting.GrpcAddrs
+				if len(auditAddrs) == 0 && auditLogSetting.GrpcAddr != "" {
+					auditAddrs = []string{auditLogSetting.GrpcAddr}
+				}
+				if len(auditAddrs) == 0 {
+					errs = append(errs, fmt.Sprintf("%s: 启用审计日志但未配置 gRPC 地址，跳过审计日志插件", srv.Name))
+				} else {
+					addrsJSON, _ := json.Marshal(auditAddrs)
+					auditValue := fmt.Sprintf(`{"header_name":"%s","grpc_addrs":%s,"server_id":"%s","access_key_secret":"%s"}`,
+						headerName, string(addrsJSON), srv.ID, config.AppConfig.AccessKeySecret)
+					extPlugins = append(extPlugins, map[string]interface{}{
+						"name":  "audit_log",
+						"value": auditValue,
+					})
+				}
 			}
 		}
 

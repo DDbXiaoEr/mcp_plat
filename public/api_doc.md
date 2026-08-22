@@ -393,7 +393,7 @@ POST /api/servers/publish
 ```
 
 **说明：** 后端根据已配置的 API 网关设置（`api_gateway` 分组，`provider` 字段），将选中的 MCP 服务器路由注册到对应网关中。需先配置网关的 Admin API 地址（APISIX 还需 Key）。发布成功后会将服务器标记为 `published`，并根据 `enable_auth` 记录 `auth_enabled`（Kong 网关恒为 `false`）。
-- `provider=apisix`（默认）：创建 上游 + 路由，可按需下发 `accesskey_verify` / `audit_log` / `proxy-rewrite` 等插件。若启用认证，还需配置 `authGrpcAddr` 指向 accesskey-auth-server 的 gRPC 地址。
+- `provider=apisix`（默认）：创建 上游 + 路由，可按需下发 `accesskey_verify` / `audit_log` / `proxy-rewrite` 等插件。若启用认证，还需配置 `authGrpcAddrs`（数组，支持多个地址，插件按连接数负载均衡）指向 accesskey-auth-server 的 gRPC 地址。
 - `provider=kong`：仅创建 上游（Upstream）+ Service + 路由（Route），**不下发任何插件**，因此认证、审计、路径重写等能力在 Kong 下不生效；网关路径使用服务器配置的 URI 路径（address）。Admin API Key 仅在 Kong 启用 RBAC 时需要。
 
 ### 4.6 获取 MCP 服务器工具列表
@@ -875,8 +875,12 @@ GET /api/settings
       "adminUrl": "http://127.0.0.1:9180",
       "adminKey": "edd1c9f034335f136f87ad84b625c8f1",
       "defaultPublishDomain": "mcp.xauat.edu.cn",
-      "authGrpcAddr": ":9090",
+      "authGrpcAddrs": [":9090", "127.0.0.1:9091"],
       "accesskeyHeader": "X-Access-Key"
+    },
+    "audit_log": {
+      "enabled": true,
+      "grpcAddrs": [":9091", "127.0.0.1:9191"]
     },
     "network_security": {
       "allowlist": ["10.0.0.0/8", "172.16.0.0/12", "192.168.1.0/24"]
@@ -895,7 +899,7 @@ PUT /api/settings/:key
 
 | 参数 | 说明 |
 |------|------|
-| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `api_gateway` / `network_security` / `quick_access` |
+| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `api_gateway` / `network_security` / `audit_log` / `quick_access` |
 
 **请求参数（JSON Body）：**
 
@@ -933,7 +937,7 @@ GET /api/settings/:key
 
 | 参数 | 说明 |
 |------|------|
-| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `api_gateway` / `network_security` / `quick_access` |
+| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `api_gateway` / `network_security` / `audit_log` / `quick_access` |
 
 **响应示例（`GET /api/settings/platform`）：**
 ```json
