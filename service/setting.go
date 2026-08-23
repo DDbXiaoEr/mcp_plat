@@ -82,21 +82,29 @@ func GetSettingByKey(key string) (json.RawMessage, error) {
 }
 
 type GatewayStatus struct {
-	Configured           bool   `json:"configured"`
-	Provider             string `json:"provider"`
-	AdminURL             string `json:"adminUrl"`
-	DefaultPublishDomain string `json:"defaultPublishDomain"`
-	AccesskeyHeader      string `json:"accesskeyHeader"`
+	Configured           bool     `json:"configured"`
+	Provider             string   `json:"provider"`
+	AdminURL             string   `json:"adminUrl"`
+	DefaultPublishDomain string   `json:"defaultPublishDomain"`
+	AccesskeyHeader      string   `json:"accesskeyHeader"`
+	AuthGrpcAddrs        []string `json:"authGrpcAddrs"`
 }
 
 func CheckGatewayStatus() GatewayStatus {
 	var gw ApiGatewaySetting
 	if err := GetSetting("api_gateway", &gw); err != nil {
-		return GatewayStatus{Configured: false}
+		return GatewayStatus{Configured: false, AuthGrpcAddrs: []string{}}
 	}
 	configured := gw.AdminURL != ""
 	if gw.Provider != "kong" {
 		configured = configured && gw.AdminKey != ""
+	}
+	addrs := gw.AuthGrpcAddrs
+	if len(addrs) == 0 && gw.AuthGrpcAddr != "" {
+		addrs = []string{gw.AuthGrpcAddr}
+	}
+	if addrs == nil {
+		addrs = []string{}
 	}
 	return GatewayStatus{
 		Configured:           configured,
@@ -104,6 +112,7 @@ func CheckGatewayStatus() GatewayStatus {
 		AdminURL:             gw.AdminURL,
 		DefaultPublishDomain: gw.DefaultPublishDomain,
 		AccesskeyHeader:      gw.AccesskeyHeader,
+		AuthGrpcAddrs:        addrs,
 	}
 }
 

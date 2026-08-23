@@ -35,9 +35,11 @@ type grpcBackend struct {
 }
 
 // GrpcLB 基于「最少连接数」在多个后端 gRPC 地址间做负载均衡。
-// 优先选择已就绪（READY）的连接，再按在途请求数最少进行分配。
+// 优先选择已就绪（READY）的连接，再按在途请求数最少进行分配；
+// 在途数相同时按轮询（round-robin）打破平局，避免请求始终落在首个后端。
 type GrpcLB struct {
 	backends []*grpcBackend
+	next     atomic.Uint64
 }
 
 var (
@@ -101,20 +103,25 @@ func (lb *GrpcLB) Pick() (*grpc.ClientConn, func()) {
 	var picked *grpcBackend
 	best := int64(math.MaxInt64)
 
-	for _, b := range lb.backends {
+	n := len(lb.backends)
+	start := int(lb.next.Add(1)-1) % n
+
+	for i := 0; i < n; i++ {
+		b := lb.backends[(start+i)%n]
 		if !usableState(b.conn.GetState()) {
 			continue
 		}
-		if n := b.inflight.Load(); n < best {
-			best = n
+		if cnt := b.inflight.Load(); cnt < best {
+			best = cnt
 			picked = b
 		}
 	}
 	if picked == nil {
 		best = int64(math.MaxInt64)
-		for _, b := range lb.backends {
-			if n := b.inflight.Load(); n < best {
-				best = n
+		for i := 0; i < n; i++ {
+			b := lb.backends[(start+i)%n]
+			if cnt := b.inflight.Load(); cnt < best {
+				best = cnt
 				picked = b
 			}
 		}

@@ -329,6 +329,9 @@ function applySettings(data) {
     if (data.api_gateway.adminUrl != null) apiGwForm.value.adminUrl = data.api_gateway.adminUrl
     if (data.api_gateway.defaultPublishDomain != null) apiGwForm.value.defaultPublishDomain = data.api_gateway.defaultPublishDomain
     if (data.api_gateway.accesskeyHeader != null) apiGwForm.value.accesskeyHeader = data.api_gateway.accesskeyHeader
+    if (data.api_gateway.authGrpcAddrs != null || data.api_gateway.authGrpcAddr != null) {
+      apiGwForm.value.authGrpcAddrs = toAddrList(data.api_gateway.authGrpcAddrs ?? data.api_gateway.authGrpcAddr)
+    }
   }
   if (data.network_security && data.network_security.allowlist) {
     networkSecurityForm.value.allowlist = data.network_security.allowlist.join('\n')
