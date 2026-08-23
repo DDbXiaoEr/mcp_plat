@@ -59,10 +59,14 @@ func GetGrpcLB(addrs []string) *GrpcLB {
 
 	lb := &GrpcLB{}
 	for _, addr := range normalized {
-		conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		conn, err := grpc.NewClient(addr,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithIdleTimeout(0),
+		)
 		if err != nil {
 			continue
 		}
+		conn.Connect()
 		lb.backends = append(lb.backends, &grpcBackend{
 			addr: addr,
 			conn: conn,
@@ -98,7 +102,7 @@ func (lb *GrpcLB) Pick() (*grpc.ClientConn, func()) {
 	best := int64(math.MaxInt64)
 
 	for _, b := range lb.backends {
-		if b.conn.GetState() != connectivity.Ready {
+		if !usableState(b.conn.GetState()) {
 			continue
 		}
 		if n := b.inflight.Load(); n < best {
@@ -118,6 +122,13 @@ func (lb *GrpcLB) Pick() (*grpc.ClientConn, func()) {
 
 	picked.inflight.Add(1)
 	return picked.conn, func() { picked.inflight.Add(-1) }
+}
+
+// usableState 判断连接状态是否可用于负载均衡。
+// Idle/Connecting 会由 gRPC 在发起 RPC 时自动建连，故视为可用；
+// TransientFailure/Shutdown 表示后端不可用或已关闭，需排除。
+func usableState(s connectivity.State) bool {
+	return s != connectivity.TransientFailure && s != connectivity.Shutdown
 }
 
 // Len 返回后端地址数量。
