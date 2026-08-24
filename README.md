@@ -26,6 +26,10 @@ MCP 服务平台 · 管理控制台
 - **审计日志存储**: 关系库（PostgreSQL/MySQL）或 ClickHouse（可选，两库分离）
 - **前端**: Vue 3 + Vite（`web/` 目录）
 
+## 文档
+
+- [部署架构](deployment-architecture.md)（个人初步设计，仅供参考，欢迎提出改进建议）
+
 ## 快速开始
 
 ### 1. 配置
