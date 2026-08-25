@@ -213,9 +213,19 @@ const quickAccessForm = ref({
 })
 
 const roles = ref([])
-const defaultRoleId = ref('')
+const filterAttribute = ref('username')
+const roleRules = ref([])
 const maxAccessKeys = ref(5)
 const accessKeyCron = ref('')
+
+const ROLE_ATTRS = [
+  { key: 'username', label: '用户名' },
+  { key: 'uid', label: 'UID' },
+  { key: 'name', label: '姓名' },
+  { key: 'email', label: '邮箱' },
+  { key: 'phone', label: '电话' },
+  { key: 'organization', label: '组织' }
+]
 
 const apiGwConfigured = ref(false)
 
@@ -278,11 +288,26 @@ function saveAuthSettings() {
 }
 
 function saveUserOpsSettings() {
+  const rules = roleRules.value
+    .filter(item => item.pattern.trim() !== '' && item.roleId !== '')
+    .map(item => ({
+      roleId: item.roleId,
+      pattern: item.pattern.trim()
+    }))
   saveSection('user_ops', {
-    defaultRoleId: defaultRoleId.value === '' ? null : defaultRoleId.value,
+    filterAttribute: filterAttribute.value,
+    roleRules: rules,
     maxAccessKeys: maxAccessKeys.value,
     accessKeyCron: accessKeyCron.value
   })
+}
+
+function addRoleRule() {
+  roleRules.value.push({ pattern: '', roleId: '' })
+}
+
+function removeRoleRule(index) {
+  roleRules.value.splice(index, 1)
 }
 
 function savePlatformSettings() {
@@ -367,9 +392,15 @@ function applySettings(data) {
     if (data.auth.oauth) Object.assign(oauthForm.value, data.auth.oauth)
   }
   if (data.user_ops) {
-    if (data.user_ops.defaultRoleId != null) defaultRoleId.value = data.user_ops.defaultRoleId
+    if (data.user_ops.filterAttribute) filterAttribute.value = data.user_ops.filterAttribute
     if (data.user_ops.maxAccessKeys != null) maxAccessKeys.value = data.user_ops.maxAccessKeys
     accessKeyCron.value = data.user_ops.accessKeyCron || ''
+    roleRules.value = Array.isArray(data.user_ops.roleRules)
+      ? data.user_ops.roleRules.map(item => ({
+          pattern: item.pattern || '',
+          roleId: item.roleId != null ? item.roleId : ''
+        }))
+      : []
   }
   if (data.platform) {
     Object.assign(platformForm.value, data.platform)
@@ -1273,38 +1304,78 @@ onMounted(async () => {
           <span class="collapse__arrow" :class="{ 'collapse__arrow--open': userOpsOpen }">▾</span>
         </button>
         <div v-show="userOpsOpen" class="collapse__body">
-          <label class="field">
-            <span class="field__label">默认新用户角色</span>
-            <select v-model="defaultRoleId" class="field__input">
-              <option value="" disabled>请选择角色</option>
-              <option v-for="r in roles" :key="r.id" :value="r.id">
-                {{ r.name }}
-              </option>
-            </select>
-            <span v-if="roles.length === 0" class="field__muted">暂无可选角色</span>
-          </label>
+          <div class="user-ops-grid">
+            <div class="user-ops-col">
+              <label class="field">
+                <span class="field__label">每用户最大 AccessKey 数量</span>
+                <input
+                  v-model.number="maxAccessKeys"
+                  class="field__input"
+                  type="number"
+                  min="1"
+                  placeholder="5"
+                />
+              </label>
 
-          <label class="field">
-            <span class="field__label">每用户最大 AccessKey 数量</span>
-            <input
-              v-model.number="maxAccessKeys"
-              class="field__input"
-              type="number"
-              min="1"
-              placeholder="5"
-            />
-          </label>
+              <label class="field">
+                <span class="field__label">过期扫描 cron 表达式</span>
+                <input
+                  v-model="accessKeyCron"
+                  class="field__input"
+                  type="text"
+                  placeholder="0 */6 * * *"
+                />
+                <span class="field__help-text">每隔一段时间自动扫描过期 AccessKey 并禁用，支持标准 crontab 格式</span>
+              </label>
+            </div>
 
-          <label class="field">
-            <span class="field__label">过期扫描 cron 表达式</span>
-            <input
-              v-model="accessKeyCron"
-              class="field__input"
-              type="text"
-              placeholder="0 */6 * * *"
-            />
-            <span class="field__help-text">每隔一段时间自动扫描过期 AccessKey 并禁用，支持标准 crontab 格式</span>
-          </label>
+            <div class="user-ops-col">
+              <p class="field__section-title">新用户角色自动分配规则</p>
+              <label class="field">
+                <span class="field__label">过滤属性</span>
+                <select v-model="filterAttribute" class="field__input">
+                  <option v-for="a in ROLE_ATTRS" :key="a.key" :value="a.key">
+                    {{ a.label }}
+                  </option>
+                </select>
+                <span class="field__help-text">所有角色条件共用同一个过滤属性，用户该属性匹配到哪条规则就分配对应角色</span>
+              </label>
+
+              <div
+                v-for="(rule, i) in roleRules"
+                :key="i"
+                class="role-rule-row"
+              >
+                <span class="role-rule-row__index">条件 {{ i + 1 }}</span>
+                <span class="role-rule-row__label">满足</span>
+                <input
+                  v-model="rule.pattern"
+                  class="field__input role-rule-row__input"
+                  type="text"
+                  placeholder="正则表达式，如 ^\d{7}$"
+                />
+                <span class="role-rule-row__label">自动分配角色</span>
+                <select v-model="rule.roleId" class="field__input role-rule-row__select">
+                  <option value="" disabled>选择角色</option>
+                  <option v-for="r in roles" :key="r.id" :value="r.id">
+                    {{ r.name }}
+                  </option>
+                </select>
+                <button
+                  class="role-rule-row__remove"
+                  type="button"
+                  title="移除条件"
+                  @click="removeRoleRule(i)"
+                >
+                  ×
+                </button>
+              </div>
+
+              <button class="role-rule-row__add" type="button" @click="addRoleRule">
+                + 添加条件
+              </button>
+            </div>
+          </div>
 
           <div class="collapse__actions">
             <span v-if="tips.user_ops" class="save-tip">{{ tips.user_ops }}</span>
@@ -2107,5 +2178,109 @@ onMounted(async () => {
 .ldap-result__em {
   font-weight: 700;
   color: #b45309;
+}
+
+.user-ops-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.user-ops-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.role-rule-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.role-rule-row__index {
+  flex-shrink: 0;
+  min-width: 52px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--xauat-blue);
+  background: rgba(30, 95, 176, 0.08);
+  border-radius: 999px;
+  text-align: center;
+}
+
+.role-rule-row__label {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.role-rule-row__select {
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.role-rule-row__input {
+  flex: 1;
+  min-width: 140px;
+  font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
+}
+
+.role-rule-row__remove {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.role-rule-row__remove:hover {
+  color: #d93025;
+  border-color: #d93025;
+}
+
+.role-rule-row__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  width: fit-content;
+  font-size: 13px;
+  color: var(--xauat-blue);
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.role-rule-row__add:hover {
+  border-color: var(--xauat-blue);
+  background: rgba(10, 61, 122, 0.04);
+}
+
+@media (max-width: 900px) {
+  .user-ops-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

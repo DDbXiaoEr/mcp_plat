@@ -862,8 +862,13 @@ GET /api/settings
       "oauth": { "authorizeUrl": "", "tokenUrl": "", "userinfoUrl": "", "clientId": "", "clientSecret": "", "redirectUrl": "", "scope": "" }
     },
     "user_ops": {
-      "defaultRoleId": 1,
-      "maxAccessKeys": 5
+      "filterAttribute": "organization",
+      "roleRules": [
+        { "roleId": 2, "pattern": "^计算机学院" },
+        { "roleId": 3, "pattern": "^理学院" }
+      ],
+      "maxAccessKeys": 5,
+      "accessKeyCron": "0 */6 * * *"
     },
     "platform": {
       "name": "某某大学",
@@ -1005,6 +1010,36 @@ GET /api/settings/gateway-status
 |------|------|------|
 | enabledClients | []string | 用户「快速接入」页开放的客户端列表，当前支持 `cherrystudio`；为空表示不开放任何客户端 |
 | scheme | string | 生成接入地址使用的协议，`http` / `https`，默认 `https` |
+
+---
+
+### 6.6 用户运营设置（user_ops）
+
+> 需管理员权限保存（`PUT /api/settings/user_ops`）。
+
+**保存示例（JSON Body）：**
+```json
+{
+  "filterAttribute": "organization",
+  "roleRules": [
+    { "roleId": 2, "pattern": "^计算机学院" },
+    { "roleId": 3, "pattern": "^理学院" }
+  ],
+  "maxAccessKeys": 5,
+  "accessKeyCron": "0 */6 * * *"
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| filterAttribute | string | 全局唯一的过滤属性，所有角色条件共用；可选 `username` / `uid` / `name` / `email` / `phone` / `organization` |
+| roleRules | []object | 新用户角色自动分配规则列表，按顺序匹配，命中第一个即分配对应角色 |
+| roleRules[].roleId | uint | 目标角色 ID |
+| roleRules[].pattern | string | 正则表达式，对 `filterAttribute` 指定的属性做匹配（Go `regexp` 语义） |
+| maxAccessKeys | int | 每用户最大 AccessKey 数量 |
+| accessKeyCron | string | 过期 AccessKey 扫描 cron 表达式 |
+
+> 说明：新用户（LDAP/CAS 首次登录创建）取 `filterAttribute` 对应属性的值，依次按 `roleRules` 匹配；命中即自动分配角色，若所有规则均不匹配，则用户 `role_id` 为空（未分配角色），等待管理员在用户管理中手动分配。
 
 ---
 

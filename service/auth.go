@@ -20,6 +20,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"mcp_plat-console/config"
@@ -55,16 +56,33 @@ type authSettings struct {
 	Ldap   LdapConfig `json:"ldap"`
 }
 
-type userOpsSettings struct {
-	DefaultRoleID *uint  `json:"defaultRoleId"`
-	MaxAccessKeys int    `json:"maxAccessKeys"`
-	AccessKeyCron string `json:"accessKeyCron"`
+type RoleAssignRule struct {
+	RoleID  uint   `json:"roleId"`
+	Pattern string `json:"pattern"`
 }
 
-func getDefaultRoleID() *uint {
+type userOpsSettings struct {
+	FilterAttribute string           `json:"filterAttribute"`
+	RoleRules       []RoleAssignRule `json:"roleRules"`
+	MaxAccessKeys   int              `json:"maxAccessKeys"`
+	AccessKeyCron   string           `json:"accessKeyCron"`
+}
+
+func getAutoAssignRoleID(attrs map[string]string) *uint {
 	var ops userOpsSettings
-	if err := GetSetting("user_ops", &ops); err == nil {
-		return ops.DefaultRoleID
+	if err := GetSetting("user_ops", &ops); err != nil {
+		return nil
+	}
+	value := attrs[ops.FilterAttribute]
+	for _, rule := range ops.RoleRules {
+		if rule.Pattern == "" {
+			continue
+		}
+		matched, err := regexp.MatchString(rule.Pattern, value)
+		if err == nil && matched {
+			roleID := rule.RoleID
+			return &roleID
+		}
 	}
 	return nil
 }
@@ -143,11 +161,22 @@ func Login(input LoginInput) (*LoginOutput, error) {
 		}
 
 		if userNotFound {
+			uid := ldapAttrs["uid"]
+			if uid == "" {
+				uid = input.Username
+			}
 			user = model.User{
 				UID:          input.Username,
 				Username:     input.Username,
 				Password:     string(hashedPassword),
-				RoleID:       getDefaultRoleID(),
+				RoleID: getAutoAssignRoleID(map[string]string{
+					"username":     input.Username,
+					"uid":          uid,
+					"name":         ldapAttrs["name"],
+					"email":        ldapAttrs["email"],
+					"phone":        ldapAttrs["phone"],
+					"organization": ldapAttrs["organization"],
+				}),
 				Name:         ldapAttrs["name"],
 				Email:        ldapAttrs["email"],
 				Phone:        ldapAttrs["phone"],
@@ -220,11 +249,15 @@ func CASLogin(input CASValidateInput) (*LoginOutput, error) {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("用户名或密码错误")
 		}
+		uid := generateUID()
 		user = model.User{
-			UID:      generateUID(),
+			UID:      uid,
 			Username: username,
 			Password: "",
-			RoleID:   getDefaultRoleID(),
+			RoleID: getAutoAssignRoleID(map[string]string{
+				"username": username,
+				"uid":      uid,
+			}),
 		}
 		if err := database.DB.Create(&user).Error; err != nil {
 			return nil, fmt.Errorf("创建用户失败: %v", err)

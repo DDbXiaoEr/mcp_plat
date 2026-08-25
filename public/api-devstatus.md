@@ -39,6 +39,7 @@
 | 平台概况 | GET /api/overview/call-trend | ✅ 已完成 | AI 调用历史趋势已接入（近 7/30 天，audit_logs 按天分组统计）；含服务器调用量占比、用户组用户数占比饼图数据，及按天×服务器堆叠柱状图数据（Top 8 + 其他） |
 | 系统设置 | GET /api/settings | ✅ 已完成 | 前端已接入 |
 | 系统设置 | PUT /api/settings/:key | ✅ 已完成 | key: log / smtp / auth / user_ops / platform / api_gateway / network_security / audit_log |
+| 系统设置 | PUT /api/settings/user_ops | ✅ 已完成 | 新用户角色自动分配改为全局单一过滤属性 filterAttribute + 按角色配置正则规则（roleRules：roleId + pattern），登录时按属性依次匹配，命中即分配，均不匹配则暂不分配等待管理员手动处理；移除原 defaultRoleId |
 | 系统设置 | PUT /api/settings/log | ✅ 已完成 | 保存后热生效；未启用 Syslog 时日志输出到标准输出 + 本地文件（默认 ./logs/mcp_plat.log），支持大小/数量/天数轮转与 gzip 压缩；启用 Syslog 后二者失效 |
 | 系统设置 | GET /api/settings/:key | ✅ 已完成 | 仅需登录 |
 | 系统设置 | GET /api/settings/gateway-status | ✅ 已完成 | 网关配置状态检测，不泄露管理配置；返回 provider / adminUrl / defaultPublishDomain / accesskeyHeader |
