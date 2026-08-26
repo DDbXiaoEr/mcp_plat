@@ -120,6 +120,87 @@ make dev
 mcp_plat-console version v1.0.0 (commit abc1234), built at 2026-07-11_06:42:21
 ```
 
+## Docker Compose 快速部署
+
+项目提供开箱即用的 Docker Compose 配置，一键启动完整环境（含数据库、APISIX 网关、gRPC 鉴权/审计服务、OpenLDAP 等）。
+
+### 前提条件
+
+- Docker Engine 20.10+
+- Docker Compose v2（`docker compose` 命令）
+
+### 1. 构建镜像
+
+```bash
+# amd64 架构
+make docker-build
+
+# arm64 架构（Apple Silicon / 鲲鹏等）
+make docker-build-arm64
+
+# APISIX 网关镜像（独立构建，需先安装 Go 插件依赖）
+make docker-build-mcp_plat_apisix
+```
+
+构建完成后会生成以下镜像：
+
+| 镜像 | 说明 |
+|------|------|
+| `mcp_plat_embed:latest` | 主应用（内嵌前端） |
+| `accesskey-auth-server:latest` | AccessKey gRPC 鉴权服务 |
+| `audit-log-server:latest` | 审计日志 gRPC 服务 |
+
+### 2. 启动服务
+
+进入 `dockercompose/` 目录，根据审计存储需求选择一种模式：
+
+**PostgreSQL 模式**（适合中小规模）：
+
+```bash
+cd dockercompose
+TAG=latest docker compose -f docker-compose-postgres.yml up -d
+```
+
+**ClickHouse 模式**（适合大数据量、高吞吐）：
+
+```bash
+cd dockercompose
+TAG=latest docker compose -f docker-compose-clickhouse.yml up -d
+```
+
+> `TAG` 值对应 `make docker-build` 时的 Git commit hash，可通过 `docker images` 查看实际标签。
+
+### 3. 访问
+
+| 服务 | 地址 | 说明 |
+|------|------|------|
+| 管理控制台 | http://localhost:8080 | Web 管理界面 |
+| APISIX 网关 | http://localhost:80 | API 网关入口 |
+| 默认账号 | admin / admin123 | 超级管理员 |
+
+### 4. 停止服务
+
+```bash
+cd dockercompose
+docker compose -f docker-compose-postgres.yml down    # PostgreSQL 模式
+# 或
+docker compose -f docker-compose-clickhouse.yml down  # ClickHouse 模式
+```
+
+### 服务端口一览
+
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| mcp_plat_embed | 8080 | 管理控制台 |
+| APISIX | 80, 443, 9180 | API 网关 |
+| mainpostgres | 5432 | 主数据库 |
+| auditpostgres | 5433 | 审计数据库（仅 PG 模式） |
+| ClickHouse | 8123, 9000 | 审计数据库（仅 CH 模式） |
+| accesskey-auth-server | 9090 | AccessKey 鉴权服务 |
+| audit-log-server | 9091 | 审计日志服务 |
+| OpenLDAP | 389 | LDAP 目录服务 |
+| Etcd | 2379 | APISIX 配置中心 |
+
 ### 4. 默认管理员账号
 
 | 用户名 | 密码 |
