@@ -35,6 +35,11 @@ services:
       - "9180:9180"
     volumes:
       - ./apisix_config.yaml:/usr/local/apisix/conf/config.yaml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9180'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     networks:
       - mcp_plat
 
@@ -44,7 +49,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: root
-      POSTGRES_PASSWORD: "changeme"
+      POSTGRES_PASSWORD: "123456"
       POSTGRES_DB: mcp_plat_db
     ports:
       - "5432:5432"
@@ -64,7 +69,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: root
-      POSTGRES_PASSWORD: "changeme"
+      POSTGRES_PASSWORD: "123456"
       POSTGRES_DB: mcp_history_db
     ports:
       - "5433:5432"
@@ -106,13 +111,30 @@ services:
     networks:
       - mcp_plat
 
+  openldap:
+    image: openldap:stable
+    container_name: openldap
+    restart: unless-stopped
+    environment:
+      LDAP_ORGANISATION: "XXX University"
+      LDAP_DOMAIN: "xxx.edu.cn"
+      LDAP_ADMIN_PASSWORD: "admin@123456"
+      LDAP_CONFIG_PASSWORD: "admin@123456"
+      LDAP_BASE_DN: "dc=xxx,dc=edu,dc=cn"
+    volumes:
+      - openldap_data:/var/lib/ldap
+      - openldap_config:/etc/ldap/slapd.d
+      - ./ldap/init-data.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/50-bootstrap.ldif:ro
+    networks:
+      - mcp_plat
+
   mcp_plat_embed:
     image: mcp_plat_embed:${TAG:-latest}
     container_name: mcp_plat_embed
     restart: unless-stopped
     depends_on:
       apisix:
-        condition: service_started
+        condition: service_healthy
       mainpostgres:
         condition: service_healthy
       auditpostgres:
@@ -121,16 +143,25 @@ services:
         condition: service_started
       audit-log-server:
         condition: service_started
+      openldap:
+        condition: service_started
     ports:
       - "8080:8080"
     volumes:
       - ./postgres/config.yaml:/opt/mcp_plat/config.yaml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     networks:
       - mcp_plat
 
 volumes:
   mainpostgres_data:
   auditpostgres_data:
+  openldap_data:
+  openldap_config:
 
 networks:
   mcp_plat:

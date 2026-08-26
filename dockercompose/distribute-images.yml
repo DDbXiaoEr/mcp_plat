@@ -1,0 +1,33 @@
+---
+- name: 分发容器镜像到node节点并导入到containerd
+  hosts: nodes
+  gather_facts: no
+  vars:
+    image_files:
+      - mcp_plat_apisix_64c736b.tar
+      - accesskey-auth-server_64c736b.tar
+      - audit-log-server_64c736b.tar
+      - mcp_plat_embed_64c736b.tar
+      - etcd_3.5.10-debian-11-r2.tar
+    remote_path: /tmp/docker-images
+    local_key: "{{ lookup('env', 'HOME') }}/.ssh/local_keys/vmwarevmuse"
+
+  tasks:
+    - name: 创建远程目录
+      raw: mkdir -p {{ remote_path }}
+
+    - name: 复制镜像文件到远程节点
+      command: >
+        scp -o StrictHostKeyChecking=no
+        -i {{ local_key }}
+        {{ item }}
+        {{ ansible_user }}@{{ ansible_host }}:{{ remote_path }}/{{ item }}
+      delegate_to: localhost
+      loop: "{{ image_files }}"
+
+    - name: 导入容器镜像到containerd
+      raw: ctr -n k8s.io images import {{ remote_path }}/{{ item }}
+      loop: "{{ image_files }}"
+
+    - name: 验证镜像导入
+      raw: ctr -n k8s.io images ls | grep -E "apisix|accesskey-auth|audit-log|embed|etcd"

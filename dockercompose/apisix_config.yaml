@@ -14,7 +14,7 @@ deployment:
       - 0.0.0.0/0  # TODO: 生产环境请限制为可信 IP 段，如 192.168.0.0/16
     admin_key:
       - name: admin
-        key: changeme
+        key: b6899497f05e634029031f18ce1765ad17c604141ae053ec
         role: admin
   etcd:
     host:
