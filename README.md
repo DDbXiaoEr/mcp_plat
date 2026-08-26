@@ -178,6 +178,17 @@ TAG=latest docker compose -f docker-compose-clickhouse.yml up -d
 | APISIX 网关 | http://localhost:80 | API 网关入口 |
 | 默认账号 | admin / admin123 | 超级管理员 |
 
+### LDAP 测试账号
+
+Docker Compose 启动时会自动初始化 OpenLDAP 并预置以下测试账号：
+
+| 类型 | 账号范围 | 邮箱格式 | 密码 |
+|------|----------|----------|------|
+| 学生 | student01 ~ student20 | student01@xxx.edu.cn | student@123 |
+| 教职工 | teacher01 ~ teacher20 | teacher01@xxx.edu.cn | teacher@123 |
+
+> 测试账号数据见 `dockercompose/ldap/init-data.ldif`，登录时使用邮箱或 uid 作为用户名。
+
 ### 4. 停止服务
 
 ```bash
