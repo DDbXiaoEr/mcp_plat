@@ -9,6 +9,8 @@ config.yaml
 # dockercompose 部署模板例外（密钥占位，可提交）
 !dockercompose/clickhouse/config.yaml
 !dockercompose/postgres/config.yaml
+# dockercompose 二进制/归档文件
+dockercompose/ldap.tar
 .vscode/*
 !.vscode/extensions.json
 *.log
