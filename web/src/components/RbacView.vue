@@ -18,7 +18,7 @@
 <script setup>
 
 // Author: deepseek-v4-pro / opencode
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import {
   fetchRoles, createRole, updateRole, deleteRole,
   fetchUsers, createUser, updateUser, deleteUser,
@@ -40,12 +40,23 @@ const loadingRoles = ref(true)
 const users = ref([])
 const loadingUsers = ref(true)
 const userFilter = ref('all')
+const userKeyword = ref('')
 
 const filteredUsers = computed(() => {
-  if (userFilter.value === 'assigned') return users.value.filter((u) => u.role_name)
-  if (userFilter.value === 'unassigned') return users.value.filter((u) => !u.role_name)
-  return users.value
+  let list = users.value
+  if (userFilter.value === 'assigned') list = list.filter((u) => u.role_name)
+  if (userFilter.value === 'unassigned') list = list.filter((u) => !u.role_name)
+  return list
 })
+
+async function loadUsers() {
+  try {
+    users.value = await fetchUsers(undefined, userKeyword.value.trim())
+  } catch {
+    // ignore
+  }
+  loadingUsers.value = false
+}
 
 async function loadRoles() {
   try {
@@ -56,14 +67,11 @@ async function loadRoles() {
   loadingRoles.value = false
 }
 
-async function loadUsers() {
-  try {
-    users.value = await fetchUsers()
-  } catch {
-    // ignore
-  }
-  loadingUsers.value = false
-}
+let searchTimer = null
+watch(userKeyword, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(loadUsers, 300)
+})
 
 onMounted(async () => {
   await Promise.all([
@@ -390,6 +398,15 @@ async function removeUser(user) {
         </tr>
       </tbody>
     </table>
+
+    <div v-if="tab === 'users'" class="rbac__search">
+      <input
+        v-model="userKeyword"
+        class="rbac__search-input"
+        type="text"
+        placeholder="搜索学号/工号"
+      />
+    </div>
 
     <table v-if="tab === 'users' && !loadingUsers" class="table">
       <thead>
@@ -788,6 +805,32 @@ async function removeUser(user) {
   border-radius: 8px;
   outline: none;
   cursor: pointer;
+}
+
+.rbac__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rbac__search-input {
+  max-width: 280px;
+  padding: 8px 14px;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.rbac__search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.rbac__search-input:focus {
+  border-color: var(--xauat-blue);
 }
 
 .table__name {

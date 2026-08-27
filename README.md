@@ -183,7 +183,7 @@ make docker-build
 # arm64 架构（Apple Silicon / 鲲鹏等）
 make docker-build-arm64
 
-# APISIX 网关镜像（独立构建，需先安装 Go 插件依赖）
+# APISIX 网关镜像（独立构建，安装 自定义插件）
 make docker-build-mcp_plat_apisix
 ```
 

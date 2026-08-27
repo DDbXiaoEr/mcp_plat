@@ -126,9 +126,12 @@ export function assignRoleUsers(id, userIds) {
   })
 }
 
-export function fetchUsers(roleId) {
-  const params = roleId ? `?role_id=${roleId}` : ''
-  return request(`/users${params}`)
+export function fetchUsers(roleId, q) {
+  const params = new URLSearchParams()
+  if (roleId) params.set('role_id', roleId)
+  if (q) params.set('q', q)
+  const qs = params.toString()
+  return request(`/users${qs ? `?${qs}` : ''}`)
 }
 
 export function createUser(body) {

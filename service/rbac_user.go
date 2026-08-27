@@ -51,11 +51,15 @@ type UserOutput struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func ListUsers(roleID *uint) ([]UserOutput, error) {
+func ListUsers(roleID *uint, keyword string) ([]UserOutput, error) {
 	query := database.DB.Model(&model.User{})
 
 	if roleID != nil {
 		query = query.Where("role_id = ?", *roleID)
+	}
+
+	if keyword != "" {
+		query = query.Where("uid LIKE ?", "%"+keyword+"%")
 	}
 
 	var users []model.User

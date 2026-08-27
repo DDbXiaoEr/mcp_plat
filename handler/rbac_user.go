@@ -42,7 +42,7 @@ func (h *RBACUserHandler) List(c *gin.Context) {
 		}
 	}
 
-	users, err := service.ListUsers(roleID)
+	users, err := service.ListUsers(roleID, c.Query("q"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "查询失败"})
 		return

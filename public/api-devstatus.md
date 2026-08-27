@@ -31,7 +31,7 @@
 | RBAC | DELETE /api/roles/:id | ✅ 已完成 | |
 | RBAC | GET /api/roles/:id/users | ✅ 已完成 | |
 | RBAC | PUT /api/roles/:id/users | ✅ 已完成 | |
-| RBAC | GET /api/users | ✅ 已完成 | |
+| RBAC | GET /api/users | ✅ 已完成 | 用户管理页新增搜索框，支持按学号/工号（uid）模糊搜索（?q=），可与角色筛选（?role_id=）叠加 |
 | RBAC | POST /api/users | ✅ 已完成 | |
 | RBAC | PUT /api/users/:id | ✅ 已完成 | |
 | RBAC | DELETE /api/users/:id | ✅ 已完成 | |
