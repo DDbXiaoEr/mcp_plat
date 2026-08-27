@@ -182,13 +182,14 @@ TAG=latest docker compose -f docker-compose-clickhouse.yml up -d
 
 Docker Compose 启动时会自动初始化 OpenLDAP 并预置测试账号：
 
-| 类型 | 账号范围 | 邮箱 | 密码 |
-|------|----------|------|------|
-| 学生 | student01 ~ student20 | student01@xxx.edu.cn | student@123 |
-| 教职工 | teacher01 ~ teacher20 | teacher01@xxx.edu.cn | teacher@123 |
+| 类型 | 账号范围 | uid 格式 | 邮箱 | 密码 |
+|------|----------|----------|------|------|
+| 学生 | student01 ~ student20 | `^student\d{2}$` | student01@xxx.edu.cn | student@123 |
+| 教师 | teacher01 ~ teacher20 | `^teacher\d{2}$` | teacher01@xxx.edu.cn | teacher@123 |
+| 职工 | staff01 ~ staff10 | `^staff\d{2}$` | staff01@xxx.edu.cn | staff@123 |
 
 > 登录时的用户名取决于系统设置中 LDAP 的 `userFilter` 配置。默认过滤器为 `(uid=%s)`，即使用 uid 登录（如 `student01`）。管理员可在 **系统设置 → 认证 → LDAP 用户过滤器** 中自定义匹配规则。
-> 
+>
 > 测试账号数据见 `dockercompose/ldap/init-data.ldif`。
 
 ### 4. 停止服务
