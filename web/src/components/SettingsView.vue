@@ -171,11 +171,16 @@ async function runLdapTest() {
   ldapTesting.value = true
   ldapTestResult.value = null
   try {
+    const saved = savedLdap.value || {}
+    const ldap = {}
+    for (const key of ['host', 'baseDn', 'bindDn', 'bindPassword', 'userFilter']) {
+      ldap[key] = ldapForm.value[key] !== '' ? ldapForm.value[key] : (saved[key] || '')
+    }
+    ldap.port = ldapForm.value.port !== '' && ldapForm.value.port != null ? ldapForm.value.port : (saved.port ?? 389)
+    ldap.attrMapping = mappingToObject()
+
     const data = await testLdap({
-      ldap: {
-        ...ldapForm.value,
-        attrMapping: mappingToObject()
-      },
+      ldap,
       username: ldapTestUser.value.trim()
     })
     ldapTestResult.value = data

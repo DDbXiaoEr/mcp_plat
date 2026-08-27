@@ -119,6 +119,7 @@ services:
     image: openldap:stable
     container_name: openldap
     restart: unless-stopped
+    entrypoint: ["/bin/bash", "/entrypoint.sh"]
     environment:
       LDAP_ORGANISATION: "XXX University"
       LDAP_DOMAIN: "xxx.edu.cn"
@@ -129,6 +130,8 @@ services:
     volumes:
       - openldap_data:/var/lib/ldap
       - openldap_config:/etc/ldap/slapd.d
+      - ./ldap/entrypoint.sh:/entrypoint.sh:ro
+      - ./ldap/init-data.ldif:/bootstrap/init-data.ldif:ro
     networks:
       - mcp_plat
 
