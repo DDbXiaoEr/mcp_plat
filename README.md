@@ -151,7 +151,7 @@ make dev
 | `make build-local` | 本地全量：server + accesskey-auth-server + audit-log-server |
 | `make build-local-release` | 本地发布版：embed + accesskey-auth-server + audit-log-server |
 | `make build-linux-amd64-release` | 交叉编译 linux amd64（server / embed / gRPC 服务） |
-| `make build-linux-arm64-release` | 交叉编译 linux arm64（embed / gRPC 服务） |
+| `make build-linux-arm64-release` | 交叉编译 linux arm64（server / embed / gRPC 服务） |
 | `make build-accesskey-auth-server` | 构建 AccessKey gRPC 鉴权服务 |
 | `make build-audit-log-server` | 构建审计日志 gRPC 服务 |
 | `make build-apisix-plugin` | 构建 APISIX Go 插件运行器（linux/$(ARCH)） |
@@ -185,6 +185,10 @@ make docker-build-arm64
 
 # APISIX 网关镜像（独立构建，安装 自定义插件）
 make docker-build-mcp_plat_apisix
+
+# 纯后端镜像（独立构建，不内嵌前端，前端需另行部署/反代）
+make docker-build-mcp-plat-server          # linux/amd64
+make docker-build-arm64-mcp-plat-server    # linux/arm64
 ```
 
 构建完成后会生成以下镜像：
@@ -192,6 +196,7 @@ make docker-build-mcp_plat_apisix
 | 镜像 | 说明 |
 |------|------|
 | `mcp_plat_embed:latest` | 主应用（内嵌前端） |
+| `mcp_plat_server:latest` | 主应用（纯后端，不内嵌前端） |
 | `accesskey-auth-server:latest` | AccessKey gRPC 鉴权服务 |
 | `audit-log-server:latest` | 审计日志 gRPC 服务 |
 

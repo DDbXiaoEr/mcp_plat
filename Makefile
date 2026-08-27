@@ -4,10 +4,11 @@
         build-audit-log-server build-audit-log-server-release \
         build-server-linux-amd64 build-embed-linux-amd64 \
         build-accesskey-auth-server-linux-amd64 build-audit-log-server-linux-amd64 \
-        build-embed-linux-arm64 \
+        build-embed-linux-arm64 build-server-linux-arm64 \
         build-accesskey-auth-server-linux-arm64 build-audit-log-server-linux-arm64 \
         build-tools build-auditgen build-apisix-plugin build-web \
         docker-build docker-build-accesskey-auth-server docker-build-audit-log-server docker-build-mcp-plat-embed \
+        docker-build-mcp-plat-server docker-build-arm64-mcp-plat-server \
         docker-build-mcp_plat_apisix \
         docker-build-arm64 docker-build-arm64-accesskey-auth-server docker-build-arm64-audit-log-server docker-build-arm64-mcp-plat-embed \
         makedockerbuild docker-build-env \
@@ -44,7 +45,7 @@ build-local-release: build-embed build-accesskey-auth-server-release build-audit
 build-linux-amd64-release: build-server-linux-amd64 build-embed-linux-amd64 \
 	build-accesskey-auth-server-linux-amd64 build-audit-log-server-linux-amd64
 
-build-linux-arm64-release: build-embed-linux-arm64 \
+build-linux-arm64-release: build-embed-linux-arm64 build-server-linux-arm64 \
 	build-accesskey-auth-server-linux-arm64 build-audit-log-server-linux-arm64
 
 # ------------------------------------------------------------------
@@ -93,6 +94,11 @@ build-server-linux-amd64:
 	@echo "==> building server (linux/amd64 release, gin=release) $(VERSION)"
 	@mkdir -p $(BIN_DIR)
 	GOOS=linux GOARCH=amd64 go build -ldflags "$(RELEASE_LDFLAGS)" -o $(SERVER_OUT)-linux-amd64 .
+
+build-server-linux-arm64:
+	@echo "==> building server (linux/arm64 release, gin=release) $(VERSION)"
+	@mkdir -p $(BIN_DIR)
+	GOOS=linux GOARCH=arm64 go build -ldflags "$(RELEASE_LDFLAGS)" -o $(SERVER_OUT)-linux-arm64 .
 
 build-embed-linux-amd64: build-web
 	@echo "==> building standalone embed web (linux/amd64 release) $(VERSION)"
@@ -174,6 +180,14 @@ docker-build-mcp-plat-embed:
 	@echo "==> building docker image mcp_plat_embed:$(DOCKER_TAG)"
 	DOCKER_BUILDKIT=0 docker build -f docker/Dockerfile.mcp_plat_embed -t mcp_plat_embed:$(DOCKER_TAG) .
 
+docker-build-mcp-plat-server: build-server-linux-amd64
+	@echo "==> building docker image mcp_plat_server:$(DOCKER_TAG) (纯后端，不内嵌前端)"
+	DOCKER_BUILDKIT=0 docker build -f docker/Dockerfile.mcp_plat_server -t mcp_plat_server:$(DOCKER_TAG) .
+
+docker-build-arm64-mcp-plat-server: build-server-linux-arm64
+	@echo "==> building docker image mcp_plat_server:$(DOCKER_TAG) (arm64, 纯后端，不内嵌前端)"
+	DOCKER_BUILDKIT=0 docker build -f docker/Dockerfile.mcp_plat_server-arm64 -t mcp_plat_server:$(DOCKER_TAG) .
+
 docker-build-mcp_plat_apisix: build-apisix-plugin
 	@echo "==> building docker image mcp_plat_apisix:$(DOCKER_TAG)"
 	DOCKER_BUILDKIT=0 docker build -f docker/Dockerfile.mcp_plat_apisix -t mcp_plat_apisix:$(DOCKER_TAG) .
@@ -216,6 +230,7 @@ docker-build-env:
 docker-clean:
 	@echo "==> removing docker images (tag: $(DOCKER_TAG))"
 	@docker rmi mcp_plat_embed:$(DOCKER_TAG) 2>/dev/null || true
+	@docker rmi mcp_plat_server:$(DOCKER_TAG) 2>/dev/null || true
 	@docker rmi accesskey-auth-server:$(DOCKER_TAG) 2>/dev/null || true
 	@docker rmi audit-log-server:$(DOCKER_TAG) 2>/dev/null || true
 	@docker rmi mcp_plat_apisix:$(DOCKER_TAG) 2>/dev/null || true

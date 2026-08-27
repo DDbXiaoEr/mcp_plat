@@ -1,0 +1,5 @@
+FROM debian:bullseye-v1.4.1
+WORKDIR /opt/mcp_plat
+COPY build/bin/mcp_plat-server-linux-amd64 /opt/mcp_plat/bin/mcp_plat_server
+ENTRYPOINT ["/opt/mcp_plat/bin/mcp_plat_server"]
+EXPOSE 8080
