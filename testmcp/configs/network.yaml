@@ -1,0 +1,5 @@
+server:
+  name: "network-service"
+  version: "1.0.0"
+  host: "0.0.0.0"
+  ports: [8083, 18083, 28083]

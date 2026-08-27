@@ -1,0 +1,32 @@
+[
+  {
+    "student_id": "2021010101",
+    "name": "张三",
+    "card": {"balance": 250.80, "status": "normal"},
+    "network": {"account": "2021010101@xxxx.edu.cn", "status": "active", "ip": "10.10.23.45", "used_gb": 65.3, "remaining_gb": 34.7}
+  },
+  {
+    "student_id": "2021010102",
+    "name": "李四",
+    "card": {"balance": 180.50, "status": "normal"},
+    "network": {"account": "2021010102@xxxx.edu.cn", "status": "active", "ip": "10.10.23.46", "used_gb": 88.1, "remaining_gb": 11.9}
+  },
+  {
+    "student_id": "2021010103",
+    "name": "王五",
+    "card": {"balance": 520.00, "status": "normal"},
+    "network": {"account": "2021010103@xxxx.edu.cn", "status": "active", "ip": "10.10.24.10", "used_gb": 45.2, "remaining_gb": 54.8}
+  },
+  {
+    "student_id": "2021010104",
+    "name": "赵六",
+    "card": {"balance": 85.30, "status": "lost"},
+    "network": {"account": "2021010104@xxxx.edu.cn", "status": "suspended", "ip": "10.10.23.47", "used_gb": 99.9, "remaining_gb": 0.1}
+  },
+  {
+    "student_id": "2021010105",
+    "name": "陈七",
+    "card": {"balance": 320.00, "status": "normal"},
+    "network": {"account": "2021010105@xxxx.edu.cn", "status": "active", "ip": "10.10.23.48", "used_gb": 32.7, "remaining_gb": 67.3}
+  }
+]

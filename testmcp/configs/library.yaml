@@ -1,0 +1,5 @@
+server:
+  name: "library-service"
+  version: "1.0.0"
+  host: "0.0.0.0"
+  ports: [8084, 18084, 28084]

@@ -107,6 +107,23 @@ mcp_plat-console/
 │   ├── 40-accesskey-auth-server.yaml
 │   └── 50-audit-log-server.yaml
 │
+├── testmcp/                  # 测试 MCP 服务合集（card / network / library / academic）
+│   ├── cmd/
+│   │   ├── card/main.go      # 卡片服务入口
+│   │   ├── network/main.go   # 网络服务入口
+│   │   ├── library/main.go   # 图书馆服务入口
+│   │   └── academic/main.go  # 学术服务入口
+│   ├── internal/
+│   │   ├── card/service.go   # 卡片服务逻辑
+│   │   ├── network/service.go # 网络服务逻辑
+│   │   ├── library/service.go # 图书馆服务逻辑
+│   │   └── academic/service.go # 学术服务逻辑
+│   ├── configs/              # 各服务配置文件
+│   ├── bin/                  # 编译产物
+│   ├── go.mod / go.sum
+│   ├── Makefile
+│   └── test_accounts.json    # 测试账号
+│
 └── web/                      # Vue 3 前端（SPA）
     ├── AGENTS.md             # 前端规范
     ├── PROJECT_STRUCTURE.md  # 前端项目结构
