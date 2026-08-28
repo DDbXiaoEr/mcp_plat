@@ -14,10 +14,11 @@ import (
 
 type Config struct {
 	Server struct {
-		Name    string `yaml:"name"`
-		Version string `yaml:"version"`
-		Host    string `yaml:"host"`
-		Ports   []int  `yaml:"ports"`
+		Name             string   `yaml:"name"`
+		Version          string   `yaml:"version"`
+		Host             string   `yaml:"host"`
+		Ports            []int    `yaml:"ports"`
+		ProtocolVersions []string `yaml:"protocol_versions"`
 	} `yaml:"server"`
 }
 
@@ -35,7 +36,7 @@ func main() {
 		log.Fatalf("failed to parse config: %v", err)
 	}
 
-	srv := mcp.NewServer(cfg.Server.Name, cfg.Server.Version)
+	srv := mcp.NewServer(cfg.Server.Name, cfg.Server.Version, mcp.WithProtocolVersions(cfg.Server.ProtocolVersions))
 	library.RegisterTools(srv)
 
 	addrs := make([]string, len(cfg.Server.Ports))

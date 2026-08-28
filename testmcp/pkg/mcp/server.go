@@ -12,6 +12,18 @@ import (
 
 const ProtocolVersion = "2026-07-28"
 
+var defaultProtocolVersions = []string{ProtocolVersion}
+
+type ServerOption func(*Server)
+
+func WithProtocolVersions(versions []string) ServerOption {
+	return func(s *Server) {
+		if len(versions) > 0 {
+			s.protocolVersions = append([]string(nil), versions...)
+		}
+	}
+}
+
 type JSONRPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      json.RawMessage `json:"id,omitempty"`
@@ -64,6 +76,12 @@ type Content struct {
 	Text string `json:"text"`
 }
 
+type InitializeParams struct {
+	ProtocolVersion string          `json:"protocolVersion"`
+	Capabilities    json.RawMessage `json:"capabilities,omitempty"`
+	ClientInfo      json.RawMessage `json:"clientInfo,omitempty"`
+}
+
 type InitializeResult struct {
 	ProtocolVersion string       `json:"protocolVersion"`
 	Capabilities    Capabilities `json:"capabilities"`
@@ -91,23 +109,63 @@ type ListToolsResult struct {
 type ToolHandler func(ctx context.Context, args map[string]interface{}) (*CallToolResult, error)
 
 type Server struct {
-	name     string
-	version  string
-	tools    []Tool
-	handlers map[string]ToolHandler
-	mu       sync.RWMutex
+	name             string
+	version          string
+	protocolVersions []string
+	tools            []Tool
+	handlers         map[string]ToolHandler
+	mu               sync.RWMutex
 }
 
-func NewServer(name, version string) *Server {
-	return &Server{
-		name:     name,
-		version:  version,
-		handlers: make(map[string]ToolHandler),
+func NewServer(name, version string, opts ...ServerOption) *Server {
+	s := &Server{
+		name:             name,
+		version:          version,
+		protocolVersions: append([]string(nil), defaultProtocolVersions...),
+		handlers:         make(map[string]ToolHandler),
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 func (s *Server) Name() string    { return s.name }
 func (s *Server) Version() string { return s.version }
+
+func (s *Server) SetProtocolVersions(versions ...string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(versions) > 0 {
+		s.protocolVersions = append([]string(nil), versions...)
+	}
+}
+
+func (s *Server) ProtocolVersions() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]string(nil), s.protocolVersions...)
+}
+
+func (s *Server) DefaultProtocolVersion() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if len(s.protocolVersions) == 0 {
+		return ProtocolVersion
+	}
+	return s.protocolVersions[len(s.protocolVersions)-1]
+}
+
+func (s *Server) supportsProtocolVersion(v string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, pv := range s.protocolVersions {
+		if pv == v {
+			return true
+		}
+	}
+	return false
+}
 
 func (s *Server) RegisterTool(tool Tool, handler ToolHandler) {
 	s.mu.Lock()
@@ -127,7 +185,7 @@ func (s *Server) Handler() http.Handler {
 }
 
 func (s *Server) ListenAndServe(addr string) error {
-	log.Printf("[%s] MCP Server (protocol %s) starting on %s", s.name, ProtocolVersion, addr)
+	log.Printf("[%s] MCP Server (protocol %s) starting on %s", s.name, s.DefaultProtocolVersion(), addr)
 	return http.ListenAndServe(addr, s.Handler())
 }
 
@@ -139,7 +197,7 @@ func (s *Server) ListenAndServeMulti(addrs []string) error {
 		wg.Add(1)
 		go func(addr string) {
 			defer wg.Done()
-			log.Printf("[%s] MCP Server (protocol %s) starting on %s", s.name, ProtocolVersion, addr)
+			log.Printf("[%s] MCP Server (protocol %s) starting on %s", s.name, s.DefaultProtocolVersion(), addr)
 			if err := http.ListenAndServe(addr, s.Handler()); err != nil {
 				errCh <- err
 			}
@@ -190,12 +248,12 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handlePost(w http.ResponseWriter, r *http.Request) {
 	protoVersion := r.Header.Get("MCP-Protocol-Version")
-	if protoVersion != "" && protoVersion != ProtocolVersion {
+	if protoVersion != "" && !s.supportsProtocolVersion(protoVersion) {
 		s.writeHTTPError(w, http.StatusBadRequest, &JSONRPCError{
 			Code:    -32602,
 			Message: "Unsupported protocol version",
 			Data: map[string]interface{}{
-				"supported": []string{ProtocolVersion},
+				"supported": s.ProtocolVersions(),
 				"requested": protoVersion,
 			},
 		})
@@ -280,8 +338,25 @@ func (s *Server) routeRequest(w http.ResponseWriter, req JSONRPCRequest, accept 
 }
 
 func (s *Server) handleInitialize(w http.ResponseWriter, req JSONRPCRequest, accept string) {
+	var params InitializeParams
+	if len(req.Params) > 0 {
+		_ = json.Unmarshal(req.Params, &params)
+	}
+
+	negotiated := s.DefaultProtocolVersion()
+	if params.ProtocolVersion != "" {
+		if !s.supportsProtocolVersion(params.ProtocolVersion) {
+			s.writeJSONRPCError(w, req.ID, -32602, "Unsupported protocol version", map[string]interface{}{
+				"supported": s.ProtocolVersions(),
+				"requested": params.ProtocolVersion,
+			})
+			return
+		}
+		negotiated = params.ProtocolVersion
+	}
+
 	result := InitializeResult{
-		ProtocolVersion: ProtocolVersion,
+		ProtocolVersion: negotiated,
 		Capabilities: Capabilities{
 			Tools: &ToolsCapability{ListChanged: false},
 		},
