@@ -2,6 +2,8 @@
 
 MCP 服务平台 · 管理控制台
 
+[English](README_EN.md)
+
 ## 项目功能特点
 
 `mcp_plat-console` 是 MCP（Model Context Protocol）服务平台的管理后台，面向**平台管理员**，提供 MCP 服务全生命周期管理、用户权限管控、API 网关集成等核心能力。
