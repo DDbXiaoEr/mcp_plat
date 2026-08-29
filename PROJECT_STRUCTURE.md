@@ -182,6 +182,7 @@ mcp_plat-console/
 | GET | `/api/auth/platform` | 否 | - | handler/auth.go → GetPlatform |
 | POST | `/api/auth/cas/validate` | 否 | - | handler/auth.go → CASValidate |
 | GET | `/api/auth/profile` | 是 | - | handler/auth.go → Profile |
+| PUT | `/api/auth/profile` | 是 | - | handler/auth.go → UpdateProfile |
 | GET | `/api/access-keys` | 是 | - | handler/access_key.go → List |
 | POST | `/api/access-keys` | 是 | - | handler/access_key.go → Create |
 | PUT | `/api/access-keys/:id` | 是 | - | handler/access_key.go → Update |

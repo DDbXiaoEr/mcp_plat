@@ -76,6 +76,11 @@ func (p *AuditLog) RequestFilter(conf interface{}, w http.ResponseWriter, r runn
 	accessKey := extractAccessKey(r, cfg.HeaderName)
 	toolName := extractToolName(r)
 
+	clientIP := ""
+	if ip := r.SrcIP(); ip != nil {
+		clientIP = ip.String()
+	}
+
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
@@ -86,6 +91,7 @@ func (p *AuditLog) RequestFilter(conf interface{}, w http.ResponseWriter, r runn
 			ToolName:  toolName,
 			Success:   true,
 			Message:   "ok",
+			ClientIp:  clientIP,
 		})
 		if err != nil {
 			log.Warnf("audit log 写入失败: %s", err)

@@ -15,6 +15,7 @@ message LogAccessRequest {
   string tool_name = 4;
   bool success = 5;
   string message = 6;
+  string client_ip = 7;
 }
 
 message LogAccessResponse {

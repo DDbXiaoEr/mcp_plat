@@ -205,6 +205,7 @@ func (s *auditLogServer) LogAccess(ctx context.Context, req *plugin.LogAccessReq
 		UserID:      userID,
 		ServerID:    req.ServerId,
 		ToolName:    req.ToolName,
+		ClientIP:    req.ClientIp,
 		Success:     req.Success,
 		Message:     req.Message,
 		CreatedAt:   time.Now(),

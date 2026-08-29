@@ -70,7 +70,52 @@ GET /api/auth/profile
 }
 ```
 
-### 1.3 获取认证方式
+### 1.3 更新个人信息（邮箱）
+
+```
+PUT /api/auth/profile
+```
+
+**请求头：**
+| 字段 | 说明 |
+|------|------|
+| Authorization | Bearer {token} |
+
+> 仅普通用户（非管理员）可调用，管理员账号返回 403。修改邮箱后 LDAP 用户下次登录仍可能被 LDAP 属性覆盖同步。
+
+**请求参数（JSON Body）：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| email | string | 是 | 新邮箱地址，需格式合法且未被其他账号使用 |
+
+**成功响应：**
+```json
+{
+  "code": 200,
+  "message": "保存成功",
+  "data": {
+    "id": 1,
+    "uid": "2021001",
+    "username": "user1",
+    "email": "new@example.com",
+    "phone": "13800000000",
+    "organization": "计算机学院",
+    "created_at": "2026-01-01T00:00:00Z",
+    "updated_at": "2026-01-01T00:00:00Z"
+  }
+}
+```
+
+**失败响应（邮箱格式错误/已被占用/为空）：**
+```json
+{
+  "code": 400,
+  "message": "邮箱格式不正确"
+}
+```
+
+### 1.4 获取认证方式
 
 ```
 GET /api/auth/method
@@ -90,7 +135,7 @@ GET /api/auth/method
 
 `method` 可能的值：`local`（本地数据库）、`ldap`、`cas`。
 
-### 1.4 获取平台信息（登录页）
+### 1.5 获取平台信息（登录页）
 
 ```
 GET /api/auth/platform
@@ -119,7 +164,7 @@ GET /api/auth/platform
 | siteUrl | string | 跳转链接 |
 | loginBackground | string | 登录页背景图地址（留空使用默认渐变背景） |
 
-### 1.5 CAS 登录验证
+### 1.6 CAS 登录验证
 
 ```
 POST /api/auth/cas/validate
@@ -283,6 +328,7 @@ GET /api/history
         "user_id": 1,
         "server_id": "b8a1...",
         "tool_name": "get_weather",
+        "client_ip": "10.0.0.8",
         "success": true,
         "message": "ok",
         "created_at": "2026-01-01T12:00:00Z"
@@ -295,7 +341,7 @@ GET /api/history
 }
 ```
 
-> 说明：`access_key_id` 为 AccessKey 在数据库中的 ID（不落明文 key，减少数据量）；`access_key_name` 为服务端根据当前用户持有的 Key 反查的名称，Key 已删除时可能为空。
+> 说明：`access_key_id` 为 AccessKey 在数据库中的 ID（不落明文 key，减少数据量）；`access_key_name` 为服务端根据当前用户持有的 Key 反查的名称，Key 已删除时可能为空。`client_ip` 为调用来源 IP（APISIX `audit_log` 插件采集的客户端地址，经网关后可能为网关/反向代理出口地址；旧数据或未启用审计插件的记录为空）。
 
 ---
 

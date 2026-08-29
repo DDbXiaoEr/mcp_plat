@@ -116,6 +116,7 @@ func (s *clickHouseStore) ensureTable(ctx context.Context, engine, cluster strin
   user_id UInt64,
   server_id String,
   tool_name String,
+  client_ip String,
   success UInt8,
   message String,
   created_at DateTime64(3)
@@ -124,7 +125,13 @@ PARTITION BY toYYYYMM(created_at)
 ORDER BY (created_at, id)
 TTL toDateTime(created_at) + INTERVAL %d DAY`, s.tableName(), onCluster, tableEngine, s.ttlDays)
 
-	return s.conn.Exec(ctx, ddl)
+	if err := s.conn.Exec(ctx, ddl); err != nil {
+		return err
+	}
+
+	// 兼容已存在的表：幂等地补充 client_ip 列（CREATE TABLE IF NOT EXISTS 不会改动旧表）
+	alterDDL := fmt.Sprintf("ALTER TABLE %s%s ADD COLUMN IF NOT EXISTS client_ip String AFTER tool_name", s.tableName(), onCluster)
+	return s.conn.Exec(ctx, alterDDL)
 }
 
 func (s *clickHouseStore) nextID(t time.Time) uint64 {
@@ -138,7 +145,7 @@ func (s *clickHouseStore) Append(ctx context.Context, logs []model.AuditLog) err
 	}
 
 	batch, err := s.conn.PrepareBatch(ctx, fmt.Sprintf(
-		"INSERT INTO %s (id, access_key_id, user_id, server_id, tool_name, success, message, created_at)",
+		"INSERT INTO %s (id, access_key_id, user_id, server_id, tool_name, client_ip, success, message, created_at)",
 		s.tableName()))
 	if err != nil {
 		return err
@@ -155,6 +162,7 @@ func (s *clickHouseStore) Append(ctx context.Context, logs []model.AuditLog) err
 			log.UserID,
 			log.ServerID,
 			log.ToolName,
+			log.ClientIP,
 			success,
 			log.Message,
 			log.CreatedAt,
@@ -177,7 +185,7 @@ func (s *clickHouseStore) List(ctx context.Context, q Query) ([]model.AuditLog, 
 	page, pageSize := normalizePage(q.Page, q.PageSize)
 	offset := (page - 1) * pageSize
 	query := fmt.Sprintf(
-		"SELECT id, access_key_id, user_id, server_id, tool_name, success, message, created_at FROM %s%s ORDER BY created_at DESC, id DESC LIMIT %d OFFSET %d",
+		"SELECT id, access_key_id, user_id, server_id, tool_name, client_ip, success, message, created_at FROM %s%s ORDER BY created_at DESC, id DESC LIMIT %d OFFSET %d",
 		s.tableName(), where, pageSize, offset)
 
 	rows, err := s.conn.Query(ctx, query, args...)
@@ -201,6 +209,7 @@ func (s *clickHouseStore) List(ctx context.Context, q Query) ([]model.AuditLog, 
 			&userID,
 			&log.ServerID,
 			&log.ToolName,
+			&log.ClientIP,
 			&successU8,
 			&log.Message,
 			&createdAt,

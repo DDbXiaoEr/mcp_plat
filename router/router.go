@@ -49,6 +49,7 @@ func Setup() *gin.Engine {
 	auth.Use(middleware.AuthRequired())
 	{
 		auth.GET("/auth/profile", authHandler.Profile)
+		auth.PUT("/auth/profile", authHandler.UpdateProfile)
 
 		auth.GET("/access-keys", accessKeyHandler.List)
 		auth.POST("/access-keys", accessKeyHandler.Create)

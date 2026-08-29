@@ -23,6 +23,7 @@ type AuditLog struct {
 	UserID        uint      `gorm:"index" json:"user_id"`
 	ServerID      string    `gorm:"size:36" json:"server_id"`
 	ToolName      string    `gorm:"size:255" json:"tool_name"`
+	ClientIP      string    `gorm:"size:64" json:"client_ip"`
 	Success       bool      `json:"success"`
 	Message       string    `gorm:"type:text" json:"message"`
 	CreatedAt     time.Time `json:"created_at"`

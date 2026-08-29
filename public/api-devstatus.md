@@ -13,12 +13,14 @@
 | 认证 | GET /api/auth/platform | ✅ 已完成 | 登录页获取平台公开信息（名称/Logo/跳转链接/登录背景图 loginBackground），无鉴权 |
 | 认证 | POST /api/auth/cas/validate | ✅ 已完成 | CAS ticket 验证 |
 | 认证 | GET /api/auth/profile | ✅ 已完成 | |
+| 认证 | PUT /api/auth/profile | ✅ 已完成 | 普通用户个人信息邮箱修改，仅限本人，格式校验 + 唯一性校验，管理员返回 403 |
 | AccessKey | GET /api/access-keys | ✅ 已完成 | |
 | AccessKey | POST /api/access-keys | ✅ 已完成 | |
 | AccessKey | PUT /api/access-keys/:id | ✅ 已完成 | |
 | AccessKey | DELETE /api/access-keys/:id | ✅ 已完成 | |
 | 使用历史 | GET /api/history | ✅ 已完成 | 审计日志存储可配置（关系库 / ClickHouse），AccessKey 以 ID 存储减少数据量 |
 | 使用历史 | GET /api/audit-logs | ✅ 已完成 | 审计日志列表查询 |
+| 使用历史 | client_ip 记录 | ✅ 已完成 | APISIX audit_log 插件采集请求来源 IP（r.SrcIP）并随 gRPC LogAccessRequest 落库（audit_logs.client_ip），历史/审计列表返回 client_ip 字段；ClickHouse 建表含该列并对旧表幂等补列，关系库由 AutoMigrate 自动加列 |
 | MCP 服务器 | POST /api/servers/publish | ✅ 已完成 | 新增 accesskey_header 参数；发布成功后自动标记 status=published 并记录 auth_enabled（Kong 恒 false）；支持 provider=kong 时仅发布上游/Service/路由（不下发插件）；accesskey_verify 与 audit_log 插件支持下发多个后端 gRPC 地址（grpc_addrs），按连接数负载均衡 |
 | MCP 服务器 | POST /api/servers/maintenance | ✅ 已完成 | 设置/取消维护状态；APISIX 用 mocking 插件（response_status=503，旧版回退 mock/response_code）返回 503，Kong 用 request-termination 插件；取消维护恢复发布时保存的原始路由（GatewayRoute）；进入维护置 status=maintenance，取消恢复 published |
 | MCP 服务器 | GET /api/servers | ✅ 已完成 | 新增 description、status、auth_enabled 字段 |

@@ -166,3 +166,25 @@ func (h *AuthHandler) Profile(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": user})
 }
+
+func (h *AuthHandler) UpdateProfile(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	if userID == 0 {
+		c.JSON(http.StatusForbidden, gin.H{"code": 403, "message": "管理员账号不支持修改邮箱"})
+		return
+	}
+
+	var input service.UpdateProfileInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
+		return
+	}
+
+	user, err := service.UpdateProfile(userID, input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "保存成功", "data": user})
+}

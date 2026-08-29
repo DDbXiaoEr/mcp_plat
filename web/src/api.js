@@ -156,6 +156,13 @@ export function fetchPublicPlatform() {
   return request('/auth/platform')
 }
 
+export function updateProfile(body) {
+  return request('/auth/profile', {
+    method: 'PUT',
+    body: JSON.stringify(body)
+  })
+}
+
 export function fetchSettings() {
   return request('/settings')
 }

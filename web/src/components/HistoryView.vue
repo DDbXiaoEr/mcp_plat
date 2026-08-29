@@ -162,6 +162,7 @@ onMounted(async () => {
             <th>AccessKey</th>
             <th>MCP 服务器</th>
             <th>工具</th>
+            <th>来源 IP</th>
             <th>状态</th>
           </tr>
         </thead>
@@ -171,10 +172,11 @@ onMounted(async () => {
             <td>{{ getKeyLabel(r) }}</td>
             <td>{{ getServerName(r.server_id) }}</td>
             <td>{{ r.tool_name }}</td>
+            <td>{{ r.client_ip || '—' }}</td>
             <td>{{ r.success ? '成功' : '失败' }}</td>
           </tr>
           <tr v-if="!history.list.length">
-            <td class="history__empty" colspan="5">暂无匹配的记录</td>
+            <td class="history__empty" colspan="6">暂无匹配的记录</td>
           </tr>
         </tbody>
       </table>
