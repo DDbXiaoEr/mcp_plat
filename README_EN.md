@@ -2,6 +2,8 @@
 
 MCP Service Platform · Admin Console
 
+> **Personal Note**: All current modifications to this project have been done by AI. The author suffered a cerebral hemorrhage last year resulting in hemiplegia, and currently only has the use of one hand, so many features have not yet been implemented. I go to the hospital for rehabilitation every day, with limited time and energy. Without a job or income, tokens rely entirely on free new-user quotas and invitation rewards from various platforms. Development efficiency has reached its limit. Those with abundant tokens are welcome to contribute. Thanks to GLM and Alibaba Cloud Bailian.
+
 ## Features
 
 `mcp_plat-console` is the admin backend of an MCP (Model Context Protocol) service platform, designed for **platform administrators**. It provides full-lifecycle management of MCP services, user permission control, and API gateway integration.
