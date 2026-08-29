@@ -1284,10 +1284,6 @@ onMounted(async () => {
                     </div>
                   </div>
                   </div>
-
-                  <div class="ldap-result__hint">
-                    <p>请确保已点击上方「保存」按钮保存认证设置，保存后用户需<span class="ldap-result__em">重新登录</span>才能同步 LDAP 属性到个人信息。</p>
-                  </div>
                 </template>
               </div>
             </div>
@@ -1366,6 +1362,12 @@ onMounted(async () => {
             <button class="btn btn--primary" type="button" :disabled="saving === 'auth'" @click="saveAuthSettings">
               {{ saving === 'auth' ? '保存中…' : '保存' }}
             </button>
+          </div>
+          <div
+            v-if="ldapTestResult && ldapTestResult.success"
+            class="ldap-result__hint ldap-result__hint--under"
+          >
+            <p>请确保已点击上方「保存」按钮保存认证设置，保存后用户需<span class="ldap-result__em">重新登录</span>才能同步 LDAP 属性到个人信息。</p>
           </div>
         </div>
       </div>
@@ -2281,6 +2283,10 @@ onMounted(async () => {
 
 .ldap-result__hint p {
   margin: 0;
+}
+
+.ldap-result__hint--under {
+  margin-top: 0;
 }
 
 .ldap-result__em {
