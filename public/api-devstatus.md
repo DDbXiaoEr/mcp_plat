@@ -10,6 +10,7 @@
 | 健康检查 | GET /readyz | ✅ 已完成 | 就绪探针，校验数据库连通性，无鉴权 |
 | 认证 | POST /api/auth/login | ✅ 已完成 | |
 | 认证 | GET /api/auth/method | ✅ 已完成 | 前端登录页按返回方式渲染 |
+| 认证 | GET /api/auth/platform | ✅ 已完成 | 登录页获取平台公开信息（名称/Logo/跳转链接/登录背景图 loginBackground），无鉴权 |
 | 认证 | POST /api/auth/cas/validate | ✅ 已完成 | CAS ticket 验证 |
 | 认证 | GET /api/auth/profile | ✅ 已完成 | |
 | AccessKey | GET /api/access-keys | ✅ 已完成 | |
@@ -44,7 +45,10 @@
 | 系统设置 | GET /api/settings/:key | ✅ 已完成 | 仅需登录 |
 | 系统设置 | GET /api/settings/gateway-status | ✅ 已完成 | 网关配置状态检测，不泄露管理配置；返回 provider / adminUrl / defaultPublishDomain / accesskeyHeader |
 | 系统设置 | PUT/GET /api/settings/quick_access | ✅ 已完成 | 快速接入设置（客户端启停 + http/https 接入协议），普通用户可读 |
+| 系统设置 | PUT/GET /api/settings/platform | ✅ 已完成 | 平台设置新增 loginBackground（登录页背景图），登录页毛玻璃卡片 + 背景图自适应填充 |
 | 系统设置 | POST /api/settings/test-ldap | ✅ 已完成 | LDAP 连接与属性映射测试 |
+| 系统设置 | POST /api/settings/test-smtp | ✅ 已完成 | 邮件通知 SMTP 配置测试（支持 none/ssl/starttls），前端「发送测试邮件」按钮已接入；具体通知场景待定 |
+| 邮件通知 | service/notify.go | ✅ 已完成 | 封装 SendNotificationMail / SendNotificationMailToMany / SendNotificationMailToUser，SMTP 配置读取系统设置并校验 enabled 开关；后续通知场景直接调用即可 |
 | 快速接入（前端） | — | ✅ 已完成 | 用户侧边栏新增「快速接入」页，支持 CherryStudio 客户端生成带 AccessKey 的 mcpServers 配置，并一键通过 `cherrystudio://mcp/install?servers=` 深链打开应用导入；未开启 Key 验证的服务器（auth_enabled=false）无需选择 AccessKey；客户端启停与接入协议由管理员运营设置控制；仅展示已发布服务器并按 Key 权限过滤 |
 
 - ✅ 已完成

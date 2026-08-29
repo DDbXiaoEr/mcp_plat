@@ -17,13 +17,14 @@
 
 // Author: deepseek-v4-pro / opencode
 import { reactive, readonly } from 'vue'
-import { fetchSetting } from '../api.js'
+import { fetchSetting, fetchPublicPlatform } from '../api.js'
 
 const state = reactive({
   platform: {
     name: '某某大学',
     logoUrl: '',
-    siteUrl: ''
+    siteUrl: '',
+    loginBackground: ''
   },
   loaded: false
 })
@@ -37,12 +38,20 @@ async function loadSettings() {
   state.loaded = true
 }
 
+async function loadPublicPlatform() {
+  try {
+    const data = await fetchPublicPlatform()
+    applyPlatform(data)
+  } catch (_) { /* ignore */ }
+}
+
 function applyPlatform(data) {
   if (!data) return
   state.platform.name = data.name || '某某大学'
   state.platform.logoUrl = data.logoUrl || ''
   state.platform.siteUrl = data.siteUrl || ''
+  state.platform.loginBackground = data.loginBackground || ''
 }
 
 export const platformSettings = readonly(state)
-export { loadSettings, applyPlatform }
+export { loadSettings, loadPublicPlatform, applyPlatform }

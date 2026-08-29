@@ -34,6 +34,8 @@
   --chart-line: #0a3d7a;
   --chart-text: #5b6b80;
   --placeholder-color: #8a97a6;
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.7);
   --radius: 16px;
   --header-height: 64px;
   --sidebar-width: 240px;
@@ -57,6 +59,8 @@ html[data-theme="dark"] {
   --chart-line: #7fb3e8;
   --chart-text: #b8c4d4;
   --placeholder-color: #b8c4d4;
+  --glass-bg: rgba(24, 33, 48, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.14);
 }
 
 * {

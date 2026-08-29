@@ -81,6 +81,24 @@ func GetSettingByKey(key string) (json.RawMessage, error) {
 	return json.RawMessage(setting.Value), nil
 }
 
+type PlatformSetting struct {
+	Name            string `json:"name"`
+	LogoURL         string `json:"logoUrl"`
+	SiteURL         string `json:"siteUrl"`
+	LoginBackground string `json:"loginBackground"`
+}
+
+func GetPlatform() PlatformSetting {
+	var p PlatformSetting
+	if err := GetSetting("platform", &p); err != nil {
+		return PlatformSetting{Name: "某某大学"}
+	}
+	if p.Name == "" {
+		p.Name = "某某大学"
+	}
+	return p
+}
+
 type GatewayStatus struct {
 	Configured           bool     `json:"configured"`
 	Provider             string   `json:"provider"`

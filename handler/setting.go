@@ -95,3 +95,21 @@ func (h *SettingHandler) TestLdapMapping(c *gin.Context) {
 	output := service.TestLdapMapping(input)
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": output})
 }
+
+func (h *SettingHandler) TestSmtp(c *gin.Context) {
+	var input struct {
+		Smtp service.SmtpSetting `json:"smtp"`
+		To   string              `json:"to" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "收件人邮箱不能为空"})
+		return
+	}
+
+	if err := service.TestSmtp(input.Smtp, input.To); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "测试邮件发送成功"})
+}

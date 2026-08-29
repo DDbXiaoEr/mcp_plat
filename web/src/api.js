@@ -152,6 +152,10 @@ export function deleteUser(id) {
   return request(`/users/${id}`, { method: 'DELETE' })
 }
 
+export function fetchPublicPlatform() {
+  return request('/auth/platform')
+}
+
 export function fetchSettings() {
   return request('/settings')
 }
@@ -203,6 +207,13 @@ export function fetchHistory(params = {}) {
 
 export function testLdap(body) {
   return request('/settings/test-ldap', {
+    method: 'POST',
+    body: JSON.stringify(body)
+  })
+}
+
+export function testSmtp(body) {
+  return request('/settings/test-smtp', {
     method: 'POST',
     body: JSON.stringify(body)
   })

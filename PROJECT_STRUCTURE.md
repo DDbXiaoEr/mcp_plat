@@ -71,8 +71,10 @@ mcp_plat-console/
 │   ├── ldap.go               # LDAP 认证业务逻辑
 │   ├── history.go            # 使用历史业务逻辑
 │   ├── kong.go               # Kong 网关发布（仅上游/Service/路由，不下发插件）
+│   ├── mail.go               # 邮件发送（SMTP，支持 none/ssl/starttls）
 │   ├── mcp_server.go         # MCPServer 业务逻辑
 │   ├── mcp_server_test.go    # FetchTools 单元测试（mock + 可选真实服务器）
+│   ├── notify.go             # 邮件通知统一封装（SendNotificationMail 等，SMTP 配置来自系统设置）
 │   ├── overview.go           # 平台概况统计业务逻辑（用户/服务器/工具/当天调用数）
 │   ├── role.go               # Role 业务逻辑
 │   ├── rbac_user.go          # RBACUser 业务逻辑
@@ -177,6 +179,7 @@ mcp_plat-console/
 | GET | `/readyz` | 否 | - | handler/health.go → Readyz |
 | POST | `/api/auth/login` | 否 | - | handler/auth.go → Login |
 | GET | `/api/auth/method` | 否 | - | handler/auth.go → GetAuthMethod |
+| GET | `/api/auth/platform` | 否 | - | handler/auth.go → GetPlatform |
 | POST | `/api/auth/cas/validate` | 否 | - | handler/auth.go → CASValidate |
 | GET | `/api/auth/profile` | 是 | - | handler/auth.go → Profile |
 | GET | `/api/access-keys` | 是 | - | handler/access_key.go → List |
@@ -207,6 +210,7 @@ mcp_plat-console/
 | PUT | `/api/settings/:key` | 是 | 是 | handler/setting.go → Save |
 | GET | `/api/settings/:key` | 是 | - | handler/setting.go → GetByKey |
 | GET | `/api/settings/gateway-status` | 是 | - | handler/setting.go → GatewayStatus |
+| POST | `/api/settings/test-smtp` | 是 | 是 | handler/setting.go → TestSmtp |
 
 ## 内嵌版本前端路由（重要）
 

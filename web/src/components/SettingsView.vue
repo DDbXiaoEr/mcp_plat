@@ -19,7 +19,7 @@
 
 // Author: deepseek-v4-pro / opencode
 import { ref, onMounted, watch } from 'vue'
-import { fetchRoles, fetchSettings, saveSetting, testLdap } from '../api.js'
+import { fetchRoles, fetchSettings, saveSetting, testLdap, testSmtp } from '../api.js'
 import { applyPlatform } from '../stores/settings.js'
 
 const tab = ref('ops')
@@ -59,6 +59,10 @@ const smtpForm = ref({
   fromAddress: '',
   fromName: ''
 })
+
+const smtpTestTo = ref('')
+const smtpTesting = ref(false)
+const smtpTestResult = ref(null)
 
 const apiGwForm = ref({
   provider: 'apisix',
@@ -203,7 +207,8 @@ const oauthForm = ref({
 const platformForm = ref({
   name: '某某大学',
   logoUrl: '',
-  siteUrl: ''
+  siteUrl: '',
+  loginBackground: ''
 })
 
 const quickAccessOpen = ref(true)
@@ -257,6 +262,30 @@ function saveLogSettings() {
 
 function saveSmtpSettings() {
   saveSection('smtp', smtpForm.value)
+}
+
+async function runSmtpTest() {
+  if (!smtpTestTo.value.trim()) return
+  smtpTesting.value = true
+  smtpTestResult.value = null
+  try {
+    await testSmtp({
+      smtp: {
+        host: smtpForm.value.host,
+        port: smtpForm.value.port,
+        encryption: smtpForm.value.encryption,
+        username: smtpForm.value.username,
+        password: smtpForm.value.password,
+        fromAddress: smtpForm.value.fromAddress,
+        fromName: smtpForm.value.fromName
+      },
+      to: smtpTestTo.value.trim()
+    })
+    smtpTestResult.value = { ok: true, message: '测试邮件发送成功，请检查收件箱' }
+  } catch (e) {
+    smtpTestResult.value = { ok: false, message: e.message || '发送失败' }
+  }
+  smtpTesting.value = false
 }
 
 function saveApiGwSettings() {
@@ -603,76 +632,103 @@ onMounted(async () => {
               <span class="switch__track"><span class="switch__thumb"></span></span>
               <span class="switch__label">{{ smtpForm.enabled ? '启用' : '禁用' }}</span>
             </label>
+            <span class="field__help-text">开关控制是否实际发送通知邮件；下方配置项始终可编辑，用于测试与预先配置</span>
           </div>
 
-          <template v-if="smtpForm.enabled">
-            <div class="field-row">
-              <label class="field">
-                <span class="field__label">SMTP 服务器地址</span>
-                <input
-                  v-model="smtpForm.host"
-                  class="field__input"
-                  type="text"
-                  placeholder="smtp.example.edu.cn"
-                />
-              </label>
-              <label class="field">
-                <span class="field__label">端口</span>
-                <input
-                  v-model.number="smtpForm.port"
-                  class="field__input"
-                  type="number"
-                  placeholder="465"
-                />
-              </label>
-            </div>
+          <div class="field-row">
             <label class="field">
-              <span class="field__label">加密方式</span>
-              <select v-model="smtpForm.encryption" class="field__input">
-                <option value="none">无</option>
-                <option value="ssl">SSL/TLS</option>
-                <option value="starttls">STARTTLS</option>
-              </select>
-            </label>
-            <label class="field">
-              <span class="field__label">用户名</span>
+              <span class="field__label">SMTP 服务器地址</span>
               <input
-                v-model="smtpForm.username"
+                v-model="smtpForm.host"
                 class="field__input"
                 type="text"
-                placeholder="请输入 SMTP 用户名"
+                placeholder="smtp.example.edu.cn"
               />
             </label>
             <label class="field">
-              <span class="field__label">密码</span>
+              <span class="field__label">端口</span>
               <input
-                v-model="smtpForm.password"
+                v-model.number="smtpForm.port"
                 class="field__input"
-                type="password"
-                placeholder="请输入 SMTP 密码"
+                type="number"
+                placeholder="465"
               />
             </label>
-            <div class="field-row">
-              <label class="field">
-                <span class="field__label">发件人地址</span>
-                <input
-                  v-model="smtpForm.fromAddress"
-                  class="field__input"
-                  type="text"
-                  placeholder="noreply@example.edu.cn"
-                />
-              </label>
-              <label class="field">
-                <span class="field__label">发件人名称</span>
-                <input
-                  v-model="smtpForm.fromName"
-                  class="field__input"
-                  type="text"
-                  placeholder="MCP 服务平台"
-                />
-              </label>
+          </div>
+          <label class="field">
+            <span class="field__label">加密方式</span>
+            <select v-model="smtpForm.encryption" class="field__input">
+              <option value="none">无</option>
+              <option value="ssl">SSL/TLS</option>
+              <option value="starttls">STARTTLS</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field__label">用户名</span>
+            <input
+              v-model="smtpForm.username"
+              class="field__input"
+              type="text"
+              placeholder="请输入 SMTP 用户名"
+            />
+          </label>
+          <label class="field">
+            <span class="field__label">密码</span>
+            <input
+              v-model="smtpForm.password"
+              class="field__input"
+              type="password"
+              placeholder="请输入 SMTP 密码"
+            />
+          </label>
+          <div class="field-row">
+            <label class="field">
+              <span class="field__label">发件人地址</span>
+              <input
+                v-model="smtpForm.fromAddress"
+                class="field__input"
+                type="text"
+                placeholder="noreply@example.edu.cn"
+              />
+            </label>
+            <label class="field">
+              <span class="field__label">发件人名称</span>
+              <input
+                v-model="smtpForm.fromName"
+                class="field__input"
+                type="text"
+                placeholder="MCP 服务平台"
+              />
+            </label>
+          </div>
+
+          <div class="smtp-test">
+            <p class="field__section-title">发送测试邮件</p>
+            <div class="smtp-test__row">
+              <input
+                v-model="smtpTestTo"
+                class="field__input smtp-test__input"
+                type="text"
+                placeholder="输入收件人邮箱，验证 SMTP 配置"
+                @keyup.enter="runSmtpTest"
+              />
+              <button
+                class="btn btn--primary smtp-test__btn"
+                type="button"
+                :disabled="!smtpTestTo.trim() || smtpTesting"
+                @click="runSmtpTest"
+              >
+                {{ smtpTesting ? '发送中…' : '发送测试邮件' }}
+              </button>
             </div>
-          </template>
+            <div
+              v-if="smtpTestResult"
+              class="smtp-test__result"
+              :class="smtpTestResult.ok ? 'smtp-test__result--ok' : 'smtp-test__result--err'"
+            >
+              {{ smtpTestResult.message }}
+            </div>
+          </div>
 
           <div class="collapse__actions">
             <span v-if="tips.smtp" class="save-tip">{{ tips.smtp }}</span>
@@ -978,6 +1034,17 @@ onMounted(async () => {
               type="text"
               placeholder="请输入 Logo 图片的 URL 地址"
             />
+          </label>
+
+          <label class="field">
+            <span class="field__label">登录页背景图</span>
+            <input
+              v-model="platformForm.loginBackground"
+              class="field__input"
+              type="text"
+              placeholder="请输入登录页背景图片的 URL 地址"
+            />
+            <span class="field__help-text">留空则使用默认渐变背景；填写后登录页自适应填充显示该图片</span>
           </label>
 
           <label class="field">
@@ -2044,6 +2111,42 @@ onMounted(async () => {
 
 .ldap-test {
   margin-top: 16px;
+}
+
+.smtp-test {
+  margin-top: 16px;
+}
+
+.smtp-test__row {
+  display: flex;
+  gap: 8px;
+}
+
+.smtp-test__input {
+  flex: 1;
+}
+
+.smtp-test__btn {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.smtp-test__result {
+  margin-top: 12px;
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+.smtp-test__result--ok {
+  color: #1a7d3a;
+  background: #e8f5e9;
+}
+
+.smtp-test__result--err {
+  color: #b71c1c;
+  background: #fbe9e7;
 }
 
 .ldap-test__row {

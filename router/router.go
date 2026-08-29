@@ -42,6 +42,7 @@ func Setup() *gin.Engine {
 
 	r.POST("/api/auth/login", authHandler.Login)
 	r.GET("/api/auth/method", authHandler.GetAuthMethod)
+	r.GET("/api/auth/platform", authHandler.GetPlatform)
 	r.POST("/api/auth/cas/validate", authHandler.CASValidate)
 
 	auth := r.Group("/api")
@@ -91,6 +92,7 @@ func Setup() *gin.Engine {
 		admin.GET("/settings", settingHandler.Get)
 		admin.PUT("/settings/:key", settingHandler.Save)
 		admin.POST("/settings/test-ldap", settingHandler.TestLdapMapping)
+		admin.POST("/settings/test-smtp", settingHandler.TestSmtp)
 	}
 
 	return r

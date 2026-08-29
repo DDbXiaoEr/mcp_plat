@@ -359,6 +359,7 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse 模式
 |--------|------|:---:|------|
 | POST | `/api/auth/login` | - | 登录 |
 | GET | `/api/auth/method` | - | 获取认证方式（local / ldap / cas） |
+| GET | `/api/auth/platform` | - | 获取平台公开信息（登录页名称/Logo/背景图） |
 | POST | `/api/auth/cas/validate` | - | CAS 登录验证 |
 | GET | `/api/auth/profile` | Bearer | 个人信息 |
 | GET | `/api/access-keys` | Bearer | AccessKey 列表 |
@@ -388,6 +389,7 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse 模式
 | GET | `/api/settings` | Admin | 获取全部系统设置 |
 | PUT | `/api/settings/:key` | Admin | 保存系统设置 |
 | POST | `/api/settings/test-ldap` | Admin | 测试 LDAP 连接与属性映射 |
+| POST | `/api/settings/test-smtp` | Admin | 测试 SMTP 邮件发送 |
 | GET | `/api/settings/:key` | Bearer | 获取单个设置项 |
 | GET | `/api/settings/gateway-status` | Bearer | 检查 API 网关配置状态 |
 

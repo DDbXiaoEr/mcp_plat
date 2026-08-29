@@ -18,15 +18,28 @@
 <script setup>
 
 // Author: deepseek-v4-pro / opencode
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { login, fetchAuthMethod } from '../stores/auth.js'
+import { platformSettings, loadPublicPlatform } from '../stores/settings.js'
 
 const username = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
 
+const bgStyle = computed(() => {
+  const url = platformSettings.platform.loginBackground
+  if (!url) return {}
+  return {
+    backgroundImage: `url(${url})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat'
+  }
+})
+
 onMounted(async () => {
+  loadPublicPlatform()
   const authMethod = await fetchAuthMethod()
   if (authMethod.method === 'cas' && authMethod.cas?.serverUrl) {
     const backUrl = window.location.origin + window.location.pathname
@@ -53,7 +66,7 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="login">
+  <div class="login" :style="bgStyle">
     <form class="login__card" @submit.prevent="onSubmit">
       <div class="login__brand">
         <span class="brand__mark" aria-hidden="true">MCP</span>
@@ -99,6 +112,9 @@ async function onSubmit() {
   place-items: center;
   padding: 24px;
   background: linear-gradient(135deg, #eef3fb, #f6f8fb);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .login__card {
@@ -108,10 +124,12 @@ async function onSubmit() {
   flex-direction: column;
   gap: 18px;
   padding: 36px 32px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: 0 8px 30px rgba(10, 61, 122, 0.15);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
 }
 
 .login__brand {

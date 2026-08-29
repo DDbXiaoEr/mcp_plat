@@ -132,6 +132,10 @@ func (h *AuthHandler) CASValidate(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "登录成功", "data": output})
 }
 
+func (h *AuthHandler) GetPlatform(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": service.GetPlatform()})
+}
+
 func (h *AuthHandler) GetAuthMethod(c *gin.Context) {
 	output, err := service.GetAuthMethod()
 	if err != nil {

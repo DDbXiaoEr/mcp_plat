@@ -90,7 +90,36 @@ GET /api/auth/method
 
 `method` 可能的值：`local`（本地数据库）、`ldap`、`cas`。
 
-### 1.4 CAS 登录验证
+### 1.4 获取平台信息（登录页）
+
+```
+GET /api/auth/platform
+```
+
+无需鉴权，供登录页获取平台名称、Logo 与登录背景图等公开信息。
+
+**成功响应：**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "name": "某某大学",
+    "logoUrl": "https://www.example.edu.cn/logo.png",
+    "siteUrl": "https://www.example.edu.cn",
+    "loginBackground": "https://www.example.edu.cn/bg.jpg"
+  }
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| name | string | 平台名称 |
+| logoUrl | string | Logo 图片地址 |
+| siteUrl | string | 跳转链接 |
+| loginBackground | string | 登录页背景图地址（留空使用默认渐变背景） |
+
+### 1.5 CAS 登录验证
 
 ```
 POST /api/auth/cas/validate
@@ -874,7 +903,8 @@ GET /api/settings
     "platform": {
       "name": "某某大学",
       "logoUrl": "https://www.example.edu.cn/logo.png",
-      "siteUrl": "https://www.example.edu.cn"
+      "siteUrl": "https://www.example.edu.cn",
+      "loginBackground": "https://www.example.edu.cn/bg.jpg"
     },
     "api_gateway": {
       "provider": "apisix",
@@ -953,7 +983,8 @@ GET /api/settings/:key
   "data": {
     "name": "某某大学",
     "logoUrl": "https://www.example.edu.cn/logo.png",
-    "siteUrl": "https://www.example.edu.cn"
+    "siteUrl": "https://www.example.edu.cn",
+    "loginBackground": "https://www.example.edu.cn/bg.jpg"
   }
 }
 ```
@@ -1041,6 +1072,84 @@ GET /api/settings/gateway-status
 | accessKeyCron | string | 过期 AccessKey 扫描 cron 表达式 |
 
 > 说明：新用户（LDAP/CAS 首次登录创建）取 `filterAttribute` 对应属性的值，依次按 `roleRules` 匹配；命中即自动分配角色，若所有规则均不匹配，则用户 `role_id` 为空（未分配角色），等待管理员在用户管理中手动分配。
+
+---
+
+### 6.7 邮件通知设置（smtp）
+
+> 需管理员权限保存（`PUT /api/settings/smtp`）。邮件通知功能的基础配置；后续具体通知场景（如登录异常、AccessKey 到期提醒等）基于该配置发信。
+
+**保存示例（JSON Body）：**
+```json
+{
+  "enabled": true,
+  "host": "smtp.example.edu.cn",
+  "port": 465,
+  "encryption": "ssl",
+  "username": "noreply@example.edu.cn",
+  "password": "********",
+  "fromAddress": "noreply@example.edu.cn",
+  "fromName": "MCP 服务平台"
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| enabled | bool | 是否启用邮件通知 |
+| host | string | SMTP 服务器地址 |
+| port | int | 端口，默认 465 |
+| encryption | string | 加密方式，`none` / `ssl` / `starttls` |
+| username | string | SMTP 登录用户名 |
+| password | string | SMTP 登录密码 |
+| fromAddress | string | 发件人地址（留空则用 username） |
+| fromName | string | 发件人名称 |
+
+---
+
+### 6.8 发送测试邮件
+
+```
+POST /api/settings/test-smtp
+```
+
+> 需管理员权限。验证 SMTP 配置能否成功发送邮件，请求中携带完整的 smtp 配置（与保存格式一致），无需先保存。
+
+**请求参数（JSON Body）：**
+```json
+{
+  "smtp": {
+    "host": "smtp.example.edu.cn",
+    "port": 465,
+    "encryption": "ssl",
+    "username": "noreply@example.edu.cn",
+    "password": "********",
+    "fromAddress": "noreply@example.edu.cn",
+    "fromName": "MCP 服务平台"
+  },
+  "to": "admin@example.edu.cn"
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| smtp | object | 与 `PUT /api/settings/smtp` 相同的 SMTP 配置 |
+| to | string | 测试邮件收件人邮箱 |
+
+**成功响应：**
+```json
+{
+  "code": 200,
+  "message": "测试邮件发送成功"
+}
+```
+
+**失败响应（如配置错误、无法连接）：**
+```json
+{
+  "code": 400,
+  "message": "邮件发送失败: ..."
+}
+```
 
 ---
 
