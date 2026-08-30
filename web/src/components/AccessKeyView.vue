@@ -162,8 +162,8 @@ async function toggle(key) {
   try {
     await updateAccessKey(key.id, { enabled: !key.enabled })
     key.enabled = !key.enabled
-  } catch {
-    // ignore
+  } catch (e) {
+    alert(e.message || '操作失败')
   }
 }
 
@@ -201,8 +201,9 @@ async function onSave(payload) {
       editingKey.value.updated_at = new Date().toISOString()
       keys.value[idx] = { ...editingKey.value }
     }
-  } catch {
-    // ignore
+  } catch (e) {
+    alert(e.message || '保存失败')
+    return
   }
   editingKey.value = null
 }

@@ -16,7 +16,7 @@
 | 认证 | PUT /api/auth/profile | ✅ 已完成 | 普通用户个人信息邮箱修改，仅限本人，格式校验 + 唯一性校验，管理员返回 403 |
 | AccessKey | GET /api/access-keys | ✅ 已完成 | |
 | AccessKey | POST /api/access-keys | ✅ 已完成 | |
-| AccessKey | PUT /api/access-keys/:id | ✅ 已完成 | |
+| AccessKey | PUT /api/access-keys/:id | ✅ 已完成 | 过期（系统禁用）Key 禁止启用，返回"该 AccessKey 已过期，无法启用，请删除后重新创建"；手动禁用（未过期）可恢复 |
 | AccessKey | DELETE /api/access-keys/:id | ✅ 已完成 | |
 | 使用历史 | GET /api/history | ✅ 已完成 | 审计日志存储可配置（关系库 / ClickHouse），AccessKey 以 ID 存储减少数据量 |
 | 使用历史 | GET /api/audit-logs | ✅ 已完成 | 审计日志列表查询 |
@@ -49,8 +49,9 @@
 | 系统设置 | PUT/GET /api/settings/quick_access | ✅ 已完成 | 快速接入设置（客户端启停 + http/https 接入协议），普通用户可读 |
 | 系统设置 | PUT/GET /api/settings/platform | ✅ 已完成 | 平台设置新增 loginBackground（登录页背景图），登录页毛玻璃卡片 + 背景图自适应填充 |
 | 系统设置 | POST /api/settings/test-ldap | ✅ 已完成 | LDAP 连接与属性映射测试 |
-| 系统设置 | POST /api/settings/test-smtp | ✅ 已完成 | 邮件通知 SMTP 配置测试（支持 none/ssl/starttls），前端「发送测试邮件」按钮已接入；具体通知场景待定 |
-| 邮件通知 | service/notify.go | ✅ 已完成 | 封装 SendNotificationMail / SendNotificationMailToMany / SendNotificationMailToUser，SMTP 配置读取系统设置并校验 enabled 开关；后续通知场景直接调用即可 |
+| 系统设置 | POST /api/settings/test-smtp | ✅ 已完成 | 邮件通知 SMTP 配置测试（支持 none/ssl/starttls），前端「发送测试邮件」按钮已接入 |
+| 邮件通知 | service/notify.go | ✅ 已完成 | 封装 SendNotificationMail / SendNotificationMailToMany / SendNotificationMailToUser，SMTP 配置读取系统设置并校验 enabled 开关 |
+| 邮件通知 | AccessKey 到期禁用通知 | ✅ 已完成 | 定时任务 DisableExpiredAccessKeys 禁用过期 Key 后，按用户聚合发邮件，正文仅列出 Key 名称 + 到期时间（HTML 转义），提示登录平台删除；复用 SMTP enabled 开关 |
 | 快速接入（前端） | — | ✅ 已完成 | 用户侧边栏新增「快速接入」页，支持 CherryStudio 客户端生成带 AccessKey 的 mcpServers 配置，并一键通过 `cherrystudio://mcp/install?servers=` 深链打开应用导入；未开启 Key 验证的服务器（auth_enabled=false）无需选择 AccessKey；客户端启停与接入协议由管理员运营设置控制；仅展示已发布服务器并按 Key 权限过滤 |
 
 - ✅ 已完成

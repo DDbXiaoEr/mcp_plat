@@ -64,6 +64,16 @@ const currentTools = computed(() => {
   return server ? parseTools(server.tools) : []
 })
 
+const isExpired = computed(() => {
+  if (!props.item || !props.item.expired_at) return false
+  return new Date(props.item.expired_at).getTime() <= Date.now()
+})
+
+const expiredAtText = computed(() => {
+  if (!props.item || !props.item.expired_at) return ''
+  return new Date(props.item.expired_at).toLocaleString('zh-CN')
+})
+
 function parseServers(raw) {
   try {
     const obj = JSON.parse(raw) || {}
@@ -126,15 +136,19 @@ function toggleTool(toolKey) {
 function onSave() {
   const payload = {
     name: form.name.trim(),
-    enabled: form.enabled,
     servers: JSON.stringify(cloneTools(form.tools))
   }
-  if (form.expireDays !== -1) {
-    const d = new Date()
-    d.setDate(d.getDate() + form.expireDays)
-    payload.expired_at = d.toISOString()
+  if (isExpired.value) {
+    payload.enabled = false
   } else {
-    payload.expired_at = null
+    payload.enabled = form.enabled
+    if (form.expireDays !== -1) {
+      const d = new Date()
+      d.setDate(d.getDate() + form.expireDays)
+      payload.expired_at = d.toISOString()
+    } else {
+      payload.expired_at = null
+    }
   }
   emit('save', payload)
 }
@@ -164,7 +178,8 @@ function onSave() {
 
         <div class="field">
           <span class="field__label">可用状态</span>
-          <label class="switch">
+          <span v-if="isExpired" class="field__hint">已过期，无法启用</span>
+          <label v-else class="switch">
             <input type="checkbox" v-model="form.enabled" />
             <span class="switch__track"><span class="switch__thumb"></span></span>
             <span class="switch__label">{{ form.enabled ? '启用' : '禁用' }}</span>
@@ -173,7 +188,8 @@ function onSave() {
 
         <div class="field">
           <span class="field__label">过期时间</span>
-          <select v-model="form.expireDays" class="field__input">
+          <span v-if="isExpired" class="field__hint">{{ expiredAtText }}</span>
+          <select v-else v-model="form.expireDays" class="field__input">
             <option
               v-for="opt in EXPIRATION_OPTIONS"
               :key="opt.value"
@@ -310,6 +326,12 @@ function onSave() {
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
+}
+
+.field__hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 6px 0;
 }
 
 .field__input {

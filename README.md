@@ -302,7 +302,7 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse 模式
 
 - 用户可创建多个 API Key，用于调用 MCP 服务（数量上限可在系统设置中配置）
 - 每个 Key 可指定允许访问的 MCP Server 及其工具（细粒度权限范围）
-- 支持启用/禁用、到期日期设置；定时任务自动禁用过期 Key
+- 支持启用/禁用、到期日期设置；定时任务自动禁用过期 Key，并邮件通知用户哪些 Key 因过期被禁用
 - 配合 APISIX 网关插件实现运行时的 AccessKey 校验
 
 ### RBAC 权限

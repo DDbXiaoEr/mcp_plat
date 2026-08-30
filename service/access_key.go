@@ -20,7 +20,9 @@ package service
 import (
 	"errors"
 	"fmt"
+	"html"
 	"log"
+	"strings"
 	"time"
 
 	"mcp_plat-console/config"
@@ -118,6 +120,10 @@ func UpdateAccessKey(id, userID uint, input UpdateAccessKeyInput) error {
 		return errors.New("AccessKey 不存在")
 	}
 
+	if input.Enabled != nil && *input.Enabled && ak.ExpiredAt != nil && ak.ExpiredAt.Before(time.Now()) {
+		return errors.New("该 AccessKey 已过期，无法启用，请删除后重新创建")
+	}
+
 	updates := map[string]interface{}{}
 	if input.Name != "" {
 		updates["name"] = input.Name
@@ -165,10 +171,65 @@ func generateAccessKey(keyID, userID uint, role string, expiredAt *time.Time) (s
 }
 
 func DisableExpiredAccessKeys() {
-	result := database.DB.Model(&model.AccessKey{}).
+	var keys []model.AccessKey
+	if err := database.DB.
 		Where("enabled = ? AND expired_at IS NOT NULL AND expired_at < ?", true, time.Now()).
-		Update("enabled", false)
-	if result.RowsAffected > 0 {
-		log.Printf("access_key scheduler: disabled %d expired key(s)", result.RowsAffected)
+		Find(&keys).Error; err != nil {
+		log.Printf("access_key scheduler: query expired keys failed: %v", err)
+		return
+	}
+	if len(keys) == 0 {
+		return
+	}
+
+	ids := make([]uint, 0, len(keys))
+	for _, k := range keys {
+		ids = append(ids, k.ID)
+	}
+	if err := database.DB.Model(&model.AccessKey{}).Where("id IN ?", ids).Update("enabled", false).Error; err != nil {
+		log.Printf("access_key scheduler: disable expired keys failed: %v", err)
+		return
+	}
+	log.Printf("access_key scheduler: disabled %d expired key(s)", len(keys))
+
+	notifyExpiredAccessKeys(keys)
+}
+
+func notifyExpiredAccessKeys(keys []model.AccessKey) {
+	byUser := make(map[uint][]model.AccessKey)
+	for _, k := range keys {
+		byUser[k.UserID] = append(byUser[k.UserID], k)
+	}
+
+	platform := GetPlatform().Name
+	for userID, list := range byUser {
+		var user model.User
+		if err := database.DB.First(&user, userID).Error; err != nil {
+			log.Printf("access_key scheduler: load user %d failed: %v", userID, err)
+			continue
+		}
+		if user.Email == "" {
+			continue
+		}
+
+		var rows strings.Builder
+		for _, k := range list {
+			name := html.EscapeString(k.Name)
+			exp := "永不过期"
+			if k.ExpiredAt != nil {
+				exp = k.ExpiredAt.Format("2006-01-02 15:04")
+			}
+			rows.WriteString(fmt.Sprintf("<li><strong>%s</strong>（到期时间：%s）</li>", name, html.EscapeString(exp)))
+		}
+
+		subject := fmt.Sprintf("%s：您的 AccessKey 已因过期被禁用", platform)
+		body := fmt.Sprintf(
+			"<p>您好，您有以下 AccessKey 因超过有效期已被自动禁用：</p><ul>%s</ul><p>请登录平台，在「AccessKey 管理」中删除这些已过期的 Key。如需继续使用，请重新创建。</p>",
+			rows.String(),
+		)
+
+		if err := SendNotificationMail(user.Email, subject, body); err != nil {
+			log.Printf("access_key scheduler: notify user %d (%s) failed: %v", userID, user.Email, err)
+		}
 	}
 }
