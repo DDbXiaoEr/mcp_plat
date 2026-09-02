@@ -19,7 +19,10 @@
 
 // Author: deepseek-v4-pro / opencode
 import { ref, computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { fetchServers, createServer, fetchServerTools, publishServers, setServersMaintenance, deleteServer, updateServer, fetchGatewayStatus } from '../api.js'
+
+const { t } = useI18n()
 
 const servers = ref([])
 const loading = ref(true)
@@ -120,7 +123,7 @@ async function removeServer() {
     }
     showingDeleteConfirm.value = false
     deleteTarget.value = null
-    alert('删除成功。请手动到 API 网关下线路由和上游规则。')
+    alert(t('servers.alert.deleteSuccess'))
   } catch {
     // ignore
   }
@@ -192,7 +195,7 @@ async function fetchTools() {
   const path = createForm.value.address.trim()
   fetchToolsError.value = ''
   if (!host) {
-    fetchToolsError.value = '请先选择或输入 MCP 服务地址'
+    fetchToolsError.value = t('servers.fetch.requireAddress')
     return
   }
   fetchingTools.value = true
@@ -206,7 +209,7 @@ async function fetchTools() {
     })
     createForm.value.tools = JSON.stringify(data.tools || [])
   } catch (err) {
-    fetchToolsError.value = err.message || '获取工具列表失败'
+    fetchToolsError.value = err.message || t('servers.fetch.failed')
   }
   fetchingTools.value = false
 }
@@ -351,11 +354,11 @@ async function executePublish() {
   publishing.value = true
   try {
     await publishServers(publishSelected.value, enableAuth.value, '', enableAuditLog.value)
-    alert('发布成功')
+    alert(t('servers.alert.publishSuccess'))
     showingPublishConfirm.value = false
     await loadServers()
   } catch (e) {
-    alert(e.message || '发布失败')
+    alert(e.message || t('servers.alert.publishFailed'))
   }
   publishing.value = false
 }
@@ -412,9 +415,9 @@ const maintenanceTargets = computed(() => {
 
 const maintenanceConfirmLabel = computed(() => {
   const { enter, restore } = maintenanceTargets.value
-  if (enter.length > 0 && restore.length > 0) return '确认维护配置'
-  if (restore.length > 0) return '确认取消维护'
-  return '确认维护'
+  if (enter.length > 0 && restore.length > 0) return t('servers.maintenance.confirmBoth')
+  if (restore.length > 0) return t('servers.maintenance.confirmCancel')
+  return t('servers.maintenance.confirm')
 })
 
 function openMaintenance() {
@@ -477,12 +480,12 @@ async function executeMaintenance() {
   maintaining.value = true
   try {
     await setServersMaintenance(enter.map((s) => s.id), restore.map((s) => s.id))
-    alert('维护设置成功')
+    alert(t('servers.alert.maintenanceSuccess'))
     showingMaintenanceConfirm.value = false
     showingMaintenance.value = false
     await loadServers()
   } catch (e) {
-    alert(e.message || '操作失败')
+    alert(e.message || t('servers.alert.operationFailed'))
   }
   maintaining.value = false
 }
@@ -491,27 +494,27 @@ async function executeMaintenance() {
 <template>
   <section class="servers">
     <div class="servers__head">
-      <h1 class="page__title">MCP 服务器管理</h1>
+      <h1 class="page__title">{{ t('servers.title') }}</h1>
       <div class="servers__actions">
         <button class="btn btn--primary" type="button" @click="openCreate">
-          增加
+          {{ t('servers.add') }}
         </button>
         <button class="btn btn--secondary" type="button" @click="openPublish">
-          发布
+          {{ t('servers.publish.button') }}
         </button>
         <button class="btn btn--secondary" type="button" @click="openMaintenance">
-          维护
+          {{ t('servers.maintenance.button') }}
         </button>
       </div>
     </div>
 
     <div class="server-list">
        <div class="server-list__header">
-        <span class="server-list__header-cell server-list__name-col">名称</span>
+        <span class="server-list__header-cell server-list__name-col">{{ t('common.name') }}</span>
         <span class="server-list__header-cell server-list__uuid-col">UUID</span>
-        <span class="server-list__header-cell server-list__dept-col">部门</span>
-        <span class="server-list__header-cell server-list__status-col">状态</span>
-        <span class="server-list__header-cell server-list__action-col">操作</span>
+        <span class="server-list__header-cell server-list__dept-col">{{ t('servers.department') }}</span>
+        <span class="server-list__header-cell server-list__status-col">{{ t('common.status') }}</span>
+        <span class="server-list__header-cell server-list__action-col">{{ t('common.actions') }}</span>
       </div>
       <button
         v-for="server in servers"
@@ -528,7 +531,7 @@ async function executeMaintenance() {
         <span class="server-list__dept server-list__dept-col">{{ server.department }}</span>
         <span class="server-list__status-col">
           <span class="server-list__status" :class="server.status === 'published' ? 'server-list__status--on' : server.status === 'maintenance' ? 'server-list__status--maint' : 'server-list__status--off'">
-            {{ server.status === 'published' ? '已发布' : server.status === 'maintenance' ? '维护中' : '未发布' }}
+            {{ server.status === 'published' ? t('servers.status.published') : server.status === 'maintenance' ? t('servers.status.maintenance') : t('servers.status.unpublished') }}
           </span>
         </span>
         <span class="server-list__action-col">
@@ -537,7 +540,7 @@ async function executeMaintenance() {
             type="button"
             @click.stop="openDeleteConfirm(server)"
           >
-            删除
+            {{ t('common.delete') }}
           </button>
         </span>
       </button>
@@ -548,7 +551,7 @@ async function executeMaintenance() {
       <aside class="drawer__panel">
         <header class="drawer__head">
           <h2 class="drawer__title">{{ selected.name }}</h2>
-          <button class="drawer__close" type="button" aria-label="关闭" @click="selected = null">
+          <button class="drawer__close" type="button" :aria-label="t('common.close')" @click="selected = null">
             ×
           </button>
         </header>
@@ -559,11 +562,11 @@ async function executeMaintenance() {
               <dd class="server-detail__uuid">{{ selected.id }}</dd>
             </div>
             <div class="server-detail__row">
-              <dt>MCP服务的URI</dt>
+              <dt>{{ t('servers.detail.uriPath') }}</dt>
               <dd>{{ selected.address }}</dd>
             </div>
             <div class="server-detail__row">
-              <dt>MCP 服务地址</dt>
+              <dt>{{ t('servers.detail.serviceAddress') }}</dt>
               <dd>
                 <template v-if="formatServiceAddresses(selected.service_address)">
                   <div
@@ -571,23 +574,23 @@ async function executeMaintenance() {
                     :key="i"
                   >{{ addr }}</div>
                 </template>
-                <span v-else>未填写</span>
+                <span v-else>{{ t('servers.notFilled') }}</span>
               </dd>
             </div>
             <div class="server-detail__row">
-              <dt>负责部门</dt>
+              <dt>{{ t('servers.detail.responsibleDepartment') }}</dt>
               <dd>{{ selected.department }}</dd>
             </div>
             <div class="server-detail__row">
-              <dt>协议类型</dt>
+              <dt>{{ t('servers.detail.protocolType') }}</dt>
               <dd>{{ selected.protocol }}</dd>
             </div>
             <div class="server-detail__row">
-              <dt>协议版本</dt>
+              <dt>{{ t('servers.detail.protocolVersion') }}</dt>
               <dd>{{ selected.protocol_version || '2026-07-28' }}</dd>
             </div>
             <div class="server-detail__row">
-              <dt>工具列表</dt>
+              <dt>{{ t('servers.detail.tools') }}</dt>
               <dd>
                 <ul class="server-detail__tools">
                   <li
@@ -601,37 +604,37 @@ async function executeMaintenance() {
               </dd>
             </div>
             <div class="server-detail__row">
-              <dt>发布状态</dt>
+              <dt>{{ t('servers.detail.publishStatus') }}</dt>
               <dd>
                 <span class="server-detail__status" :class="selected.status === 'published' ? 'server-detail__status--on' : selected.status === 'maintenance' ? 'server-detail__status--maint' : 'server-detail__status--off'">
-                  {{ selected.status === 'published' ? '已发布' : selected.status === 'maintenance' ? '维护中' : '未发布' }}
+                  {{ selected.status === 'published' ? t('servers.status.published') : selected.status === 'maintenance' ? t('servers.status.maintenance') : t('servers.status.unpublished') }}
                 </span>
               </dd>
             </div>
             <div class="server-detail__row">
               <div class="server-detail__label-row">
-                <dt>描述</dt>
+                <dt>{{ t('common.description') }}</dt>
                 <button
                   v-if="!editingDesc"
                   class="server-detail__edit-btn"
                   type="button"
                   @click="startEditDesc"
                 >
-                  编辑
+                  {{ t('common.edit') }}
                 </button>
               </div>
-              <dd v-if="!editingDesc">{{ selected.description || '暂无描述' }}</dd>
+              <dd v-if="!editingDesc">{{ selected.description || t('servers.detail.noDescription') }}</dd>
               <dd v-else class="server-detail__edit">
                 <textarea
                   v-model="editDescValue"
                   class="dialog__input dialog__textarea"
                   rows="3"
-                  placeholder="请输入描述信息"
+                  :placeholder="t('servers.detail.descriptionPlaceholder')"
                 ></textarea>
                 <div class="server-detail__edit-actions">
-                  <button class="btn btn--ghost" type="button" @click="cancelEditDesc">取消</button>
+                  <button class="btn btn--ghost" type="button" @click="cancelEditDesc">{{ t('common.cancel') }}</button>
                   <button class="btn btn--primary" type="button" :disabled="savingDesc" @click="saveDescription">
-                    {{ savingDesc ? '保存中…' : '保存' }}
+                    {{ savingDesc ? t('common.saving') : t('common.save') }}
                   </button>
                 </div>
               </dd>
@@ -644,25 +647,27 @@ async function executeMaintenance() {
     <Teleport to="body">
       <div v-if="showingCreate" class="dialog-overlay" @click.self="showingCreate = false">
         <div class="dialog">
-          <h2 class="dialog__title">新增 MCP 服务器</h2>
+          <h2 class="dialog__title">{{ t('servers.form.title') }}</h2>
           <div class="dialog__form">
             <div class="dialog__group">
-              <label class="dialog__label">名称</label>
+              <label class="dialog__label">{{ t('common.name') }}</label>
               <input
                 v-model="createForm.name"
                 class="dialog__input"
                 type="text"
-                placeholder="请输入服务器名称"
+                :placeholder="t('servers.form.namePlaceholder')"
               />
             </div>
             <div class="dialog__group">
               <label class="dialog__label">
-                MCP服务器URI路径
+                {{ t('servers.form.uriPathLabel') }}
                 <span class="dialog__help">
                   ?
                   <span class="dialog__tooltip">
-                    填写 MCP 提供服务的 URI，例如
-                    <code>192.168.1.100:8080/mcp</code> 的话就填写 <code>/mcp</code>。
+                    <i18n-t keypath="servers.form.uriPathHelp">
+                      <template #addr><code>192.168.1.100:8080/mcp</code></template>
+                      <template #path><code>/mcp</code></template>
+                    </i18n-t>
                   </span>
                 </span>
               </label>
@@ -670,17 +675,18 @@ async function executeMaintenance() {
                 v-model="createForm.address"
                 class="dialog__input"
                 type="text"
-                placeholder="/mcp/server（仅路径，不含域名）"
+                :placeholder="t('servers.form.uriPathPlaceholder', { path: '/mcp/server' })"
               />
             </div>
             <div class="dialog__group">
               <label class="dialog__label">
-                MCP 服务地址
+                {{ t('servers.detail.serviceAddress') }}
                 <span class="dialog__help">
                   ?
                   <span class="dialog__tooltip">
-                     填写 MCP 服务的实际 IP:端口，例如
-                    <code>192.168.1.100:8081</code>，支持多个地址（每行一个）。
+                    <i18n-t keypath="servers.form.serviceAddressHelp">
+                      <template #addr><code>192.168.1.100:8081</code></template>
+                    </i18n-t>
                   </span>
                 </span>
               </label>
@@ -692,48 +698,48 @@ async function executeMaintenance() {
               ></textarea>
             </div>
             <div class="dialog__group">
-              <label class="dialog__label">负责部门</label>
+              <label class="dialog__label">{{ t('servers.detail.responsibleDepartment') }}</label>
               <input
                 v-model="createForm.department"
                 class="dialog__input"
                 type="text"
-                placeholder="请输入负责部门"
+                :placeholder="t('servers.form.departmentPlaceholder')"
               />
             </div>
             <div class="dialog__group">
-              <label class="dialog__label">描述</label>
+              <label class="dialog__label">{{ t('common.description') }}</label>
               <textarea
                 v-model="createForm.description"
                 class="dialog__input dialog__textarea"
                 rows="2"
-                placeholder="请输入服务器描述信息"
+                :placeholder="t('servers.form.descriptionPlaceholder')"
               ></textarea>
             </div>
             <hr class="dialog__divider" />
-            <p class="dialog__section-label">获取工具</p>
+            <p class="dialog__section-label">{{ t('servers.fetch.sectionTitle') }}</p>
             <div class="dialog__group">
-              <label class="dialog__label">选择地址</label>
+              <label class="dialog__label">{{ t('servers.form.selectAddress') }}</label>
               <select v-model="fetchAddressValue" class="dialog__input">
-                <option value="" disabled>请选择地址</option>
+                <option value="" disabled>{{ t('servers.form.selectAddressPlaceholder') }}</option>
                 <option
                   v-for="addr in serviceAddressList"
                   :key="addr"
                   :value="addr"
                 >{{ addr }}</option>
-                <option value="__custom__">自定义地址...</option>
+                <option value="__custom__">{{ t('servers.form.customAddressOption') }}</option>
               </select>
             </div>
             <div v-if="isCustomFetchAddress" class="dialog__group">
-              <label class="dialog__label">自定义地址</label>
+              <label class="dialog__label">{{ t('servers.form.customAddressLabel') }}</label>
               <input
                 v-model="customAddressInput"
                 class="dialog__input"
                 type="text"
-                placeholder="IP:端口，例如 192.168.1.100:8081"
+                :placeholder="t('servers.form.customAddressPlaceholder', { example: '192.168.1.100:8081' })"
               />
             </div>
             <div class="dialog__group">
-              <label class="dialog__label">连接方式</label>
+              <label class="dialog__label">{{ t('servers.form.connectionMethod') }}</label>
               <div class="dialog__toggle">
                 <button
                   type="button"
@@ -748,18 +754,18 @@ async function executeMaintenance() {
               </div>
             </div>
             <div class="dialog__group">
-              <label class="dialog__label">协议类型</label>
+              <label class="dialog__label">{{ t('servers.detail.protocolType') }}</label>
               <select v-model="createForm.protocol" class="dialog__input">
                 <option v-for="p in PROTOCOLS" :key="p" :value="p">{{ p }}</option>
               </select>
             </div>
             <div class="dialog__group">
               <label class="dialog__label">
-                协议版本
+                {{ t('servers.detail.protocolVersion') }}
                 <span class="dialog__help">
                   ?
                   <span class="dialog__tooltip">
-                    MCP 协议规范版本，获取工具列表时用于与服务器协商。默认使用最新版 2026-07-28。
+                    {{ t('servers.form.protocolVersionHelp', { version: '2026-07-28' }) }}
                   </span>
                 </span>
               </label>
@@ -769,27 +775,27 @@ async function executeMaintenance() {
             </div>
             <div class="dialog__group">
               <div class="dialog__label-row">
-                <label class="dialog__label">工具列表</label>
+                <label class="dialog__label">{{ t('servers.detail.tools') }}</label>
                 <button
                   class="dialog__fetch"
                   type="button"
                   :disabled="fetchingTools"
                   @click="fetchTools"
                 >
-                  {{ fetchingTools ? '获取中...' : '自动获取工具列表' }}
+                  {{ fetchingTools ? t('servers.fetch.fetching') : t('servers.fetch.button') }}
                 </button>
               </div>
               <textarea
                 v-model="createForm.tools"
                 class="dialog__input dialog__textarea"
-                placeholder="多个工具以逗号或换行分隔"
+                :placeholder="t('servers.form.toolsPlaceholder')"
               ></textarea>
               <p v-if="fetchToolsError" class="dialog__error">{{ fetchToolsError }}</p>
             </div>
           </div>
           <div class="dialog__actions">
             <button class="btn btn--ghost" type="button" @click="showingCreate = false">
-              取消
+              {{ t('common.cancel') }}
             </button>
             <button
               class="btn btn--primary"
@@ -797,7 +803,7 @@ async function executeMaintenance() {
               :disabled="!createForm.name.trim()"
               @click="confirmCreate"
             >
-              确认新增
+              {{ t('servers.form.confirm') }}
             </button>
           </div>
         </div>
@@ -805,18 +811,18 @@ async function executeMaintenance() {
 
       <div v-if="showingPublish" class="dialog-overlay" @click.self="showingPublish = false">
         <div class="dialog dialog--wide dialog--publish">
-          <h2 class="dialog__title">发布到 API 网关</h2>
-          <p class="dialog__desc">选择要发布的 MCP 服务器：</p>
+          <h2 class="dialog__title">{{ t('servers.publish.title') }}</h2>
+          <p class="dialog__desc">{{ t('servers.publish.desc') }}</p>
           <p v-if="gatewayConfigured" class="publish-gateway__hint">
-            API 网关已配置{{ gatewayProvider === 'kong' ? '（Kong）' : '' }}
+            {{ t('servers.publish.gatewayConfigured', { kong: gatewayProvider === 'kong' ? t('servers.publish.kongSuffix') : '' }) }}
           </p>
           <p v-if="isKongGateway" class="publish-gateway__hint publish-gateway__hint--warn">
-            Kong 仅发布上游与路由，不会下发认证/审计插件，以下开关在 Kong 下不生效。
+            {{ t('servers.publish.kongHint') }}
           </p>
           <div class="shuttle">
             <div class="shuttle__panel">
               <div class="shuttle__head">
-                <span class="shuttle__label">可选服务器</span>
+                <span class="shuttle__label">{{ t('servers.shuttle.available') }}</span>
                 <span class="shuttle__count">{{ leftPublishServers.length }}</span>
               </div>
               <div class="shuttle__search">
@@ -824,7 +830,7 @@ async function executeMaintenance() {
                   v-model="publishSearchLeft"
                   type="text"
                   class="shuttle__search-input"
-                  placeholder="过滤名称/UUID"
+                  :placeholder="t('servers.shuttle.filterPlaceholder')"
                 />
               </div>
               <div class="shuttle__list">
@@ -834,7 +840,7 @@ async function executeMaintenance() {
                     :checked="isAllLeftPublishChecked"
                     @change="togglePublishSelectAll(leftPublishServers)"
                   />
-                  <span>全选</span>
+                  <span>{{ t('servers.shuttle.selectAll') }}</span>
                 </label>
                 <label
                   v-for="server in leftPublishServers"
@@ -850,7 +856,7 @@ async function executeMaintenance() {
                   <span class="shuttle__meta">{{ server.address }}</span>
                 </label>
                 <span v-if="leftPublishServers.length === 0" class="table__muted shuttle__empty">
-                  暂无可选服务器
+                  {{ t('servers.shuttle.emptyAvailable') }}
                 </span>
               </div>
             </div>
@@ -874,7 +880,7 @@ async function executeMaintenance() {
             </div>
             <div class="shuttle__panel">
               <div class="shuttle__head">
-                <span class="shuttle__label">已选服务器</span>
+                <span class="shuttle__label">{{ t('servers.shuttle.selected') }}</span>
                 <span class="shuttle__count">{{ rightPublishServers.length }}</span>
               </div>
               <div class="shuttle__search">
@@ -882,7 +888,7 @@ async function executeMaintenance() {
                   v-model="publishSearchRight"
                   type="text"
                   class="shuttle__search-input"
-                  placeholder="过滤名称/UUID"
+                  :placeholder="t('servers.shuttle.filterPlaceholder')"
                 />
               </div>
               <div class="shuttle__list">
@@ -892,7 +898,7 @@ async function executeMaintenance() {
                     :checked="isAllRightPublishChecked"
                     @change="togglePublishSelectAll(rightPublishServers)"
                   />
-                  <span>全选</span>
+                  <span>{{ t('servers.shuttle.selectAll') }}</span>
                 </label>
                 <label
                   v-for="server in rightPublishServers"
@@ -908,7 +914,7 @@ async function executeMaintenance() {
                   <span class="shuttle__meta">{{ server.address }}</span>
                 </label>
                 <span v-if="rightPublishServers.length === 0" class="table__muted shuttle__empty">
-                  暂未选择
+                  {{ t('servers.shuttle.emptySelected') }}
                 </span>
               </div>
             </div>
@@ -916,24 +922,24 @@ async function executeMaintenance() {
           <div class="publish-auth">
             <label class="publish-auth__label">
               <input type="checkbox" v-model="enableAuth" :disabled="isKongGateway" />
-              <span class="publish-auth__text">启用 Access Key 认证</span>
+              <span class="publish-auth__text">{{ t('servers.publish.optionAuth') }}</span>
             </label>
             <p class="publish-auth__hint">
-              启用后请求本 MCP 服务时需要携带有效的 access key
+              {{ t('servers.publish.authHint') }}
             </p>
           </div>
           <div class="publish-auth">
             <label class="publish-auth__label">
               <input type="checkbox" v-model="enableAuditLog" :disabled="isKongGateway" />
-              <span class="publish-auth__text">启用审计日志</span>
+              <span class="publish-auth__text">{{ t('servers.publish.optionAudit') }}</span>
             </label>
             <p class="publish-auth__hint">
-              启用后记录每次 MCP 服务调用的访问日志
+              {{ t('servers.publish.auditHint') }}
             </p>
           </div>
           <div class="dialog__actions">
             <button class="btn btn--ghost" type="button" @click="showingPublish = false">
-              取消
+              {{ t('common.cancel') }}
             </button>
             <button
               class="btn btn--primary"
@@ -941,7 +947,7 @@ async function executeMaintenance() {
               :disabled="publishSelected.length === 0"
               @click="confirmPublish"
             >
-              确认发布
+              {{ t('servers.publish.confirm') }}
             </button>
           </div>
         </div>
@@ -949,9 +955,9 @@ async function executeMaintenance() {
 
       <div v-if="showingPublishConfirm" class="dialog-overlay" @click.self="showingPublishConfirm = false">
         <div class="dialog">
-          <h2 class="dialog__title">确认发布配置</h2>
+          <h2 class="dialog__title">{{ t('servers.publish.confirmTitle') }}</h2>
           <p class="dialog__desc">
-            即将向 API 网关推送以下路由配置：
+            {{ t('servers.publish.confirmDesc') }}
           </p>
           <div class="publish-preview">
             <div
@@ -960,37 +966,37 @@ async function executeMaintenance() {
               class="publish-preview__card"
             >
               <div class="publish-preview__row">
-                <span class="publish-preview__label">服务名称</span>
+                <span class="publish-preview__label">{{ t('servers.preview.serviceName') }}</span>
                 <span class="publish-preview__value">{{ server.name }}</span>
               </div>
               <div class="publish-preview__row">
-                <span class="publish-preview__label">网关路径</span>
+                <span class="publish-preview__label">{{ t('servers.preview.gatewayPath') }}</span>
                 <span class="publish-preview__value">{{ server.address }}</span>
               </div>
               <div class="publish-preview__row">
-                <span class="publish-preview__label">后端地址</span>
+                <span class="publish-preview__label">{{ t('servers.preview.backendAddress') }}</span>
                 <span class="publish-preview__value">
                   <template v-if="formatServiceAddresses(server.service_address)">{{ formatServiceAddresses(server.service_address).split('\n').join(', ') }}</template>
-                  <span v-else>未填写</span>
+                  <span v-else>{{ t('servers.notFilled') }}</span>
                 </span>
               </div>
               <div class="publish-preview__row">
-                <span class="publish-preview__label">认证状态</span>
+                <span class="publish-preview__label">{{ t('servers.preview.authStatus') }}</span>
                 <span class="publish-preview__value" :class="{ 'publish-preview__auth-on': enableAuth }">
-                  {{ enableAuth ? '已启用 Access Key 认证' : '未启用' }}
+                  {{ enableAuth ? t('servers.preview.authEnabled') : t('servers.preview.disabled') }}
                 </span>
               </div>
               <div class="publish-preview__row">
-                <span class="publish-preview__label">审计日志</span>
+                <span class="publish-preview__label">{{ t('servers.preview.auditLog') }}</span>
                 <span class="publish-preview__value" :class="{ 'publish-preview__auth-on': enableAuditLog }">
-                  {{ enableAuditLog ? '已启用' : '未启用' }}
+                  {{ enableAuditLog ? t('servers.preview.enabled') : t('servers.preview.disabled') }}
                 </span>
               </div>
           </div>
           </div>
           <div class="dialog__actions">
             <button class="btn btn--ghost" type="button" @click="backToPublish">
-              返回修改
+              {{ t('servers.backToEdit') }}
             </button>
             <button
               class="btn btn--primary"
@@ -998,19 +1004,19 @@ async function executeMaintenance() {
               :disabled="publishing"
               @click="executePublish"
             >
-              {{ publishing ? '发布中...' : '确认推送' }}
+              {{ publishing ? t('servers.publish.progress') : t('servers.confirmPush') }}
             </button>
           </div>
         </div>
       </div>
       <div v-if="showingMaintenance" class="dialog-overlay" @click.self="showingMaintenance = false">
         <div class="dialog dialog--wide dialog--publish">
-          <h2 class="dialog__title">设置服务器维护</h2>
-          <p class="dialog__desc">选择要进入维护的服务器（移入右侧），或将维护中的服务器移回左侧取消维护：</p>
+          <h2 class="dialog__title">{{ t('servers.maintenance.title') }}</h2>
+          <p class="dialog__desc">{{ t('servers.maintenance.desc') }}</p>
           <div class="shuttle">
             <div class="shuttle__panel">
               <div class="shuttle__head">
-                <span class="shuttle__label">可选服务器</span>
+                <span class="shuttle__label">{{ t('servers.shuttle.available') }}</span>
                 <span class="shuttle__count">{{ leftMaintenanceServers.length }}</span>
               </div>
               <div class="shuttle__search">
@@ -1018,7 +1024,7 @@ async function executeMaintenance() {
                   v-model="maintenanceSearchLeft"
                   type="text"
                   class="shuttle__search-input"
-                  placeholder="过滤名称/UUID"
+                  :placeholder="t('servers.shuttle.filterPlaceholder')"
                 />
               </div>
               <div class="shuttle__list">
@@ -1028,7 +1034,7 @@ async function executeMaintenance() {
                     :checked="isAllLeftMaintenanceChecked"
                     @change="toggleMaintenanceSelectAll(leftMaintenanceServers)"
                   />
-                  <span>全选</span>
+                  <span>{{ t('servers.shuttle.selectAll') }}</span>
                 </label>
                 <label
                   v-for="server in leftMaintenanceServers"
@@ -1044,7 +1050,7 @@ async function executeMaintenance() {
                   <span class="shuttle__meta">{{ server.address }}</span>
                 </label>
                 <span v-if="leftMaintenanceServers.length === 0" class="table__muted shuttle__empty">
-                  暂无可选服务器
+                  {{ t('servers.shuttle.emptyAvailable') }}
                 </span>
               </div>
             </div>
@@ -1068,7 +1074,7 @@ async function executeMaintenance() {
             </div>
             <div class="shuttle__panel">
               <div class="shuttle__head">
-                <span class="shuttle__label">维护中</span>
+                <span class="shuttle__label">{{ t('servers.maintenance.underMaintenance') }}</span>
                 <span class="shuttle__count">{{ rightMaintenanceServers.length }}</span>
               </div>
               <div class="shuttle__search">
@@ -1076,7 +1082,7 @@ async function executeMaintenance() {
                   v-model="maintenanceSearchRight"
                   type="text"
                   class="shuttle__search-input"
-                  placeholder="过滤名称/UUID"
+                  :placeholder="t('servers.shuttle.filterPlaceholder')"
                 />
               </div>
               <div class="shuttle__list">
@@ -1086,7 +1092,7 @@ async function executeMaintenance() {
                     :checked="isAllRightMaintenanceChecked"
                     @change="toggleMaintenanceSelectAll(rightMaintenanceServers)"
                   />
-                  <span>全选</span>
+                  <span>{{ t('servers.shuttle.selectAll') }}</span>
                 </label>
                 <label
                   v-for="server in rightMaintenanceServers"
@@ -1102,14 +1108,14 @@ async function executeMaintenance() {
                   <span class="shuttle__meta">{{ server.address }}</span>
                 </label>
                 <span v-if="rightMaintenanceServers.length === 0" class="table__muted shuttle__empty">
-                  暂无维护中的服务器
+                  {{ t('servers.maintenance.emptyUnderMaintenance') }}
                 </span>
               </div>
             </div>
           </div>
           <div class="dialog__actions">
             <button class="btn btn--ghost" type="button" @click="showingMaintenance = false">
-              取消
+              {{ t('common.cancel') }}
             </button>
             <button
               class="btn btn--primary"
@@ -1125,41 +1131,41 @@ async function executeMaintenance() {
 
       <div v-if="showingMaintenanceConfirm" class="dialog-overlay" @click.self="showingMaintenanceConfirm = false">
         <div class="dialog">
-          <h2 class="dialog__title">确认维护配置</h2>
+          <h2 class="dialog__title">{{ t('servers.maintenance.confirmBoth') }}</h2>
           <p class="dialog__desc">
-            即将向 API 网关推送以下维护配置，维护中的路由将直接返回 503：
+            {{ t('servers.maintenance.confirmDesc') }}
           </p>
           <div class="publish-preview">
             <template v-if="maintenanceTargets.enter.length > 0">
-              <p class="maintenance-preview__section">进入维护</p>
+              <p class="maintenance-preview__section">{{ t('servers.maintenance.sectionEnter') }}</p>
               <div
                 v-for="server in maintenanceTargets.enter"
                 :key="server.id"
                 class="publish-preview__card"
               >
                 <div class="publish-preview__row">
-                  <span class="publish-preview__label">服务名称</span>
+                  <span class="publish-preview__label">{{ t('servers.preview.serviceName') }}</span>
                   <span class="publish-preview__value">{{ server.name }}</span>
                 </div>
                 <div class="publish-preview__row">
-                  <span class="publish-preview__label">网关路径</span>
+                  <span class="publish-preview__label">{{ t('servers.preview.gatewayPath') }}</span>
                   <span class="publish-preview__value">{{ server.address }}</span>
                 </div>
               </div>
             </template>
             <template v-if="maintenanceTargets.restore.length > 0">
-              <p class="maintenance-preview__section">取消维护</p>
+              <p class="maintenance-preview__section">{{ t('servers.maintenance.sectionRestore') }}</p>
               <div
                 v-for="server in maintenanceTargets.restore"
                 :key="server.id"
                 class="publish-preview__card"
               >
                 <div class="publish-preview__row">
-                  <span class="publish-preview__label">服务名称</span>
+                  <span class="publish-preview__label">{{ t('servers.preview.serviceName') }}</span>
                   <span class="publish-preview__value">{{ server.name }}</span>
                 </div>
                 <div class="publish-preview__row">
-                  <span class="publish-preview__label">网关路径</span>
+                  <span class="publish-preview__label">{{ t('servers.preview.gatewayPath') }}</span>
                   <span class="publish-preview__value">{{ server.address }}</span>
                 </div>
               </div>
@@ -1167,7 +1173,7 @@ async function executeMaintenance() {
           </div>
           <div class="dialog__actions">
             <button class="btn btn--ghost" type="button" @click="backToMaintenance">
-              返回修改
+              {{ t('servers.backToEdit') }}
             </button>
             <button
               class="btn btn--primary"
@@ -1175,7 +1181,7 @@ async function executeMaintenance() {
               :disabled="maintaining"
               @click="executeMaintenance"
             >
-              {{ maintaining ? '提交中...' : '确认推送' }}
+              {{ maintaining ? t('servers.maintenance.submitting') : t('servers.confirmPush') }}
             </button>
           </div>
         </div>
@@ -1183,16 +1189,16 @@ async function executeMaintenance() {
 
       <div v-if="showingDeleteConfirm" class="dialog-overlay" @click.self="showingDeleteConfirm = false">
         <div class="dialog">
-          <h2 class="dialog__title">确认删除</h2>
+          <h2 class="dialog__title">{{ t('servers.alert.deleteConfirm') }}</h2>
           <p class="dialog__desc">
-            确定要删除 MCP 服务器「{{ deleteTarget?.name }}」吗？
+            {{ t('servers.alert.deleteBody', { name: deleteTarget?.name }) }}
           </p>
           <p class="dialog__warn">
-            注意：此操作仅从数据库中移除记录，不会自动从 API 网关下线服务器，请手动到 API 网关删除相关路由和上游规则。
+            {{ t('servers.alert.deleteWarn') }}
           </p>
           <div class="dialog__actions">
             <button class="btn btn--ghost" type="button" @click="showingDeleteConfirm = false">
-              取消
+              {{ t('common.cancel') }}
             </button>
             <button
               class="btn btn--danger"
@@ -1200,7 +1206,7 @@ async function executeMaintenance() {
               :disabled="deleting"
               @click="removeServer"
             >
-              {{ deleting ? '删除中...' : '确认删除' }}
+              {{ deleting ? t('servers.alert.deleting') : t('servers.alert.deleteConfirm') }}
             </button>
           </div>
         </div>

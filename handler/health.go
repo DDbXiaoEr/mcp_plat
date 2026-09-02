@@ -19,25 +19,26 @@ import (
 	"net/http"
 
 	"mcp_plat-console/database"
+	"mcp_plat-console/resp"
 
 	"github.com/gin-gonic/gin"
 )
 
 // Healthz 存活探针：进程存活即返回 200
 func Healthz(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "ok"})
+	resp.OK(c, "ok")
 }
 
 // Readyz 就绪探针：进程存活且数据库可达才返回 200，否则 503
 func Readyz(c *gin.Context) {
 	sqlDB, err := database.DB.DB()
 	if err != nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "database unavailable"})
+		resp.Fail(c, http.StatusServiceUnavailable, "database unavailable")
 		return
 	}
 	if err := sqlDB.Ping(); err != nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "database unavailable"})
+		resp.Fail(c, http.StatusServiceUnavailable, "database unavailable")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "ok"})
+	resp.OK(c, "ok")
 }

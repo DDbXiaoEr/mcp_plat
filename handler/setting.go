@@ -22,7 +22,9 @@ import (
 	"io"
 	"net/http"
 
+	"mcp_plat-console/i18n"
 	"mcp_plat-console/logging"
+	"mcp_plat-console/resp"
 	"mcp_plat-console/service"
 
 	"github.com/gin-gonic/gin"
@@ -37,26 +39,26 @@ func NewSettingHandler() *SettingHandler {
 func (h *SettingHandler) Get(c *gin.Context) {
 	settings, err := service.GetSettings()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "查询失败"})
+		resp.Fail(c, http.StatusInternalServerError, "查询失败")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": settings})
+	resp.OK(c, "success", settings)
 }
 
 func (h *SettingHandler) GatewayStatus(c *gin.Context) {
 	status := service.CheckGatewayStatus()
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": status})
+	resp.OK(c, "success", status)
 }
 
 func (h *SettingHandler) GetByKey(c *gin.Context) {
 	key := c.Param("key")
 	val, err := service.GetSettingByKey(key)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		resp.Fail(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": val})
+	resp.OK(c, "success", val)
 }
 
 func (h *SettingHandler) Save(c *gin.Context) {
@@ -65,12 +67,12 @@ func (h *SettingHandler) Save(c *gin.Context) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 1<<20)
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil || len(body) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
+		resp.Fail(c, http.StatusBadRequest, "参数错误")
 		return
 	}
 
 	if err := service.SaveSetting(key, json.RawMessage(body)); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		resp.Fail(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -82,18 +84,19 @@ func (h *SettingHandler) Save(c *gin.Context) {
 		logging.Reconfigure()
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "保存成功"})
+	resp.OK(c, "保存成功")
 }
 
 func (h *SettingHandler) TestLdapMapping(c *gin.Context) {
 	var input service.TestLdapInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
+		resp.Fail(c, http.StatusBadRequest, "参数错误")
 		return
 	}
 
 	output := service.TestLdapMapping(input)
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": output})
+	output.Message = i18n.Translate(resp.Locale(c), output.Message)
+	resp.OK(c, "success", output)
 }
 
 func (h *SettingHandler) TestSmtp(c *gin.Context) {
@@ -102,14 +105,14 @@ func (h *SettingHandler) TestSmtp(c *gin.Context) {
 		To   string              `json:"to" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "收件人邮箱不能为空"})
+		resp.Fail(c, http.StatusBadRequest, "收件人邮箱不能为空")
 		return
 	}
 
 	if err := service.TestSmtp(input.Smtp, input.To); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		resp.Fail(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "测试邮件发送成功"})
+	resp.OK(c, "测试邮件发送成功")
 }

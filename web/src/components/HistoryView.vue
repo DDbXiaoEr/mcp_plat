@@ -17,7 +17,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { fetchHistory, fetchAccessKeys, fetchServers } from '../api.js'
+
+const { t, n } = useI18n()
 
 const accessKeys = ref([])
 const servers = ref([])
@@ -120,50 +123,50 @@ onMounted(async () => {
 
 <template>
   <section class="page">
-    <h1 class="page__title">使用历史</h1>
-    <p class="page__hint">近一周的调用记录</p>
+    <h1 class="page__title">{{ t('history.title') }}</h1>
+    <p class="page__hint">{{ t('history.hint') }}</p>
 
     <div class="filters">
       <label class="filters__field">
-        <span>开始时间</span>
+        <span>{{ t('history.startTime') }}</span>
         <input v-model="filters.start" type="date" />
       </label>
       <label class="filters__field">
-        <span>结束时间</span>
+        <span>{{ t('history.endTime') }}</span>
         <input v-model="filters.end" type="date" />
       </label>
       <label class="filters__field">
         <span>AccessKey</span>
         <select v-model="filters.access_key">
-          <option value="">全部</option>
+          <option value="">{{ t('common.all') }}</option>
           <option v-for="key in accessKeys" :key="key.id" :value="key.key">
             {{ key.name }}
           </option>
         </select>
       </label>
       <label class="filters__field">
-        <span>MCP 服务器</span>
+        <span>{{ t('history.server') }}</span>
         <select v-model="filters.server_id">
-          <option value="">全部</option>
+          <option value="">{{ t('common.all') }}</option>
           <option v-for="s in servers" :key="s.id" :value="s.id">{{ s.name }}</option>
         </select>
       </label>
-      <button class="filters__reset" type="button" @click="reset">重置</button>
-      <button class="filters__search" type="button" @click="search">查询</button>
+      <button class="filters__reset" type="button" @click="reset">{{ t('history.reset') }}</button>
+      <button class="filters__search" type="button" @click="search">{{ t('history.query') }}</button>
     </div>
 
-    <div v-if="loading" class="history__status">加载中...</div>
+    <div v-if="loading" class="history__status">{{ t('history.loading') }}</div>
 
     <template v-else>
       <table class="history">
         <thead>
           <tr>
-            <th>时间</th>
+            <th>{{ t('history.time') }}</th>
             <th>AccessKey</th>
-            <th>MCP 服务器</th>
-            <th>工具</th>
-            <th>来源 IP</th>
-            <th>状态</th>
+            <th>{{ t('history.server') }}</th>
+            <th>{{ t('history.tool') }}</th>
+            <th>{{ t('history.sourceIp') }}</th>
+            <th>{{ t('common.status') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -173,16 +176,16 @@ onMounted(async () => {
             <td>{{ getServerName(r.server_id) }}</td>
             <td>{{ r.tool_name }}</td>
             <td>{{ r.client_ip || '—' }}</td>
-            <td>{{ r.success ? '成功' : '失败' }}</td>
+            <td>{{ r.success ? t('history.success') : t('history.failed') }}</td>
           </tr>
           <tr v-if="!history.list.length">
-            <td class="history__empty" colspan="6">暂无匹配的记录</td>
+            <td class="history__empty" colspan="6">{{ t('history.empty') }}</td>
           </tr>
         </tbody>
       </table>
 
       <div v-if="totalPages > 1" class="history__pager">
-        <button :disabled="page <= 1" @click="goPage(page - 1)">上一页</button>
+        <button :disabled="page <= 1" @click="goPage(page - 1)">{{ t('history.prevPage') }}</button>
         <template v-for="(p, i) in pageNumbers" :key="i">
           <span v-if="p === '...'" class="history__ellipsis">…</span>
           <button
@@ -194,14 +197,14 @@ onMounted(async () => {
             {{ p }}
           </button>
         </template>
-        <button :disabled="page >= totalPages" @click="goPage(page + 1)">下一页</button>
+        <button :disabled="page >= totalPages" @click="goPage(page + 1)">{{ t('history.nextPage') }}</button>
         <span class="history__jump">
-          前往
+          {{ t('history.jumpPrefix') }}
           <input v-model="jumpPage" type="number" min="1" :max="totalPages" @keyup.enter="goJump" />
-          页
-          <button type="button" @click="goJump">跳转</button>
+          {{ t('history.jumpUnit') }}
+          <button type="button" @click="goJump">{{ t('history.jumpBtn') }}</button>
         </span>
-        <span>共 {{ history.total }} 条</span>
+        <span>{{ t('history.total', { count: n(history.total) }) }}</span>
       </div>
     </template>
   </section>

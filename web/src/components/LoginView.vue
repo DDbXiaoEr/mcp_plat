@@ -19,8 +19,18 @@
 
 // Author: deepseek-v4-pro / opencode
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { login, fetchAuthMethod } from '../stores/auth.js'
 import { platformSettings, loadPublicPlatform } from '../stores/settings.js'
+import { locale, setLocale } from '../stores/locale.js'
+
+const { t } = useI18n()
+
+const currentLocale = computed(() => locale.locale)
+
+function onLocaleChange(event) {
+  setLocale(event.target.value)
+}
 
 const username = ref('')
 const password = ref('')
@@ -53,7 +63,7 @@ onMounted(async () => {
 async function onSubmit() {
   error.value = ''
   if (!username.value || !password.value) {
-    error.value = '请输入账号和密码'
+    error.value = t('login.emptyHint')
     return
   }
   loading.value = true
@@ -67,39 +77,45 @@ async function onSubmit() {
 
 <template>
   <div class="login" :style="bgStyle">
+    <select class="login__lang" name="lang" :value="currentLocale" :aria-label="t('app.langLabel')" @change="onLocaleChange">
+      <option value="zh-CN">中文</option>
+      <option value="en-US">English</option>
+    </select>
     <form class="login__card" @submit.prevent="onSubmit">
       <div class="login__brand">
         <span class="brand__mark" aria-hidden="true">MCP</span>
         <div class="brand__text">
-          <strong>某某大学 MCP 服务平台</strong>
-          <em>管理控制台</em>
+          <strong>{{ t('login.brand') }}</strong>
+          <em>{{ t('login.tagline') }}</em>
         </div>
       </div>
 
       <label class="field">
-        <span>账号</span>
+        <span>{{ t('login.username') }}</span>
         <input
           v-model="username"
+          name="username"
           type="text"
           autocomplete="username"
-          placeholder="请输入账号"
+          :placeholder="t('login.usernamePlaceholder')"
         />
       </label>
 
       <label class="field">
-        <span>密码</span>
+        <span>{{ t('login.password') }}</span>
         <input
           v-model="password"
+          name="password"
           type="password"
           autocomplete="current-password"
-          placeholder="请输入密码"
+          :placeholder="t('login.passwordPlaceholder')"
         />
       </label>
 
       <p v-if="error" class="login__error">{{ error }}</p>
 
       <button type="submit" class="login__submit" :disabled="loading">
-        {{ loading ? '登录中…' : '登录' }}
+        {{ loading ? t('login.submitting') : t('login.submit') }}
       </button>
     </form>
   </div>
@@ -107,6 +123,7 @@ async function onSubmit() {
 
 <style scoped>
 .login {
+  position: relative;
   min-height: 100vh;
   display: grid;
   place-items: center;
@@ -115,6 +132,20 @@ async function onSubmit() {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+}
+
+.login__lang {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  padding: 5px 8px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
 }
 
 .login__card {

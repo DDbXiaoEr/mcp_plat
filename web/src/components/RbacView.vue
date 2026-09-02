@@ -19,11 +19,14 @@
 
 // Author: deepseek-v4-pro / opencode
 import { ref, onMounted, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   fetchRoles, createRole, updateRole, deleteRole,
   fetchUsers, createUser, updateUser, deleteUser,
   fetchRoleUsers, assignRoleUsers, fetchServers
 } from '../api.js'
+
+const { t } = useI18n()
 
 const tab = ref('roles')
 
@@ -314,7 +317,7 @@ async function removeUser(user) {
 <template>
   <section class="rbac">
     <div class="rbac__head">
-      <h1 class="page__title">RBAC 设置</h1>
+      <h1 class="page__title">{{ t('nav.rbac') }}</h1>
       <div class="rbac__actions">
         <button
           v-if="tab === 'roles'"
@@ -322,7 +325,7 @@ async function removeUser(user) {
           type="button"
           @click="openRoleCreate"
         >
-          增加角色
+          {{ t('rbac.addRole') }}
         </button>
         <button
           v-if="tab === 'users'"
@@ -330,7 +333,7 @@ async function removeUser(user) {
           type="button"
           @click="openUserCreate"
         >
-          增加用户
+          {{ t('rbac.addUser') }}
         </button>
       </div>
     </div>
@@ -342,7 +345,7 @@ async function removeUser(user) {
         type="button"
         @click="tab = 'roles'"
       >
-        角色管理
+        {{ t('rbac.rolesTab') }}
       </button>
       <button
         class="rbac__tab"
@@ -350,27 +353,27 @@ async function removeUser(user) {
         type="button"
         @click="tab = 'users'"
       >
-        用户管理
+        {{ t('rbac.usersTab') }}
       </button>
     </div>
 
     <table v-if="tab === 'roles' && !loadingRoles" class="table">
       <thead>
         <tr>
-          <th>名称</th>
-          <th>描述</th>
-          <th>MCP 服务器</th>
-          <th class="table__col-num">用户数</th>
-          <th class="table__col-action">操作</th>
+          <th>{{ t('common.name') }}</th>
+          <th>{{ t('common.description') }}</th>
+          <th>{{ t('rbac.mcpServers') }}</th>
+          <th class="table__col-num">{{ t('rbac.userCount') }}</th>
+          <th class="table__col-action">{{ t('common.actions') }}</th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="roles.length === 0">
-          <td colspan="5" class="table__empty">暂无角色</td>
+          <td colspan="5" class="table__empty">{{ t('rbac.noRoles') }}</td>
         </tr>
         <tr v-for="role in roles" :key="role.id">
           <td class="table__name">{{ role.name }}</td>
-          <td class="table__desc">{{ role.description || '—' }}</td>
+          <td class="table__desc">{{ role.description || t('common.emptyDash') }}</td>
           <td>
             <div class="table__tags">
               <template v-if="serverNames(role).length">
@@ -380,19 +383,19 @@ async function removeUser(user) {
                   class="table__tag"
                 >{{ name }}</span>
               </template>
-              <span v-else class="table__muted">—</span>
+              <span v-else class="table__muted">{{ t('common.emptyDash') }}</span>
             </div>
           </td>
           <td class="table__col-num">{{ role.user_count }}</td>
           <td class="table__col-action">
             <button class="table__btn" type="button" @click="openAssign(role)">
-              分配用户
+              {{ t('rbac.assign') }}
             </button>
             <button class="table__btn" type="button" @click="openRoleEdit(role)">
-              编辑
+              {{ t('common.edit') }}
             </button>
             <button class="table__btn" type="button" @click="removeRole(role)">
-              删除
+              {{ t('common.delete') }}
             </button>
           </td>
         </tr>
@@ -404,7 +407,7 @@ async function removeUser(user) {
         v-model="userKeyword"
         class="rbac__search-input"
         type="text"
-        placeholder="搜索学号/工号"
+        :placeholder="t('rbac.uidSearchPlaceholder')"
       />
     </div>
 
@@ -412,33 +415,33 @@ async function removeUser(user) {
       <thead>
         <tr>
           <th>
-            学号/工号
+            {{ t('rbac.uidHeader') }}
             <select v-model="userFilter" class="table__filter">
-              <option value="all">全部</option>
-              <option value="assigned">已分配角色</option>
-              <option value="unassigned">未分配角色</option>
+              <option value="all">{{ t('common.all') }}</option>
+              <option value="assigned">{{ t('rbac.filterAssigned') }}</option>
+              <option value="unassigned">{{ t('rbac.filterUnassigned') }}</option>
             </select>
           </th>
-          <th>角色</th>
-          <th class="table__col-action">操作</th>
+          <th>{{ t('rbac.role') }}</th>
+          <th class="table__col-action">{{ t('common.actions') }}</th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="filteredUsers.length === 0">
-          <td colspan="3" class="table__empty">暂无用户</td>
+          <td colspan="3" class="table__empty">{{ t('rbac.noUsers') }}</td>
         </tr>
         <tr v-for="user in filteredUsers" :key="user.id">
           <td class="table__name">{{ user.uid }}</td>
           <td>
             <span v-if="user.role_name" class="table__tag">{{ user.role_name }}</span>
-            <span v-else class="table__muted">未分配</span>
+            <span v-else class="table__muted">{{ t('rbac.unassigned') }}</span>
           </td>
           <td class="table__col-action">
             <button class="table__btn" type="button" @click="openUserEdit(user)">
-              编辑
+              {{ t('common.edit') }}
             </button>
             <button class="table__btn" type="button" @click="removeUser(user)">
-              删除
+              {{ t('common.delete') }}
             </button>
           </td>
         </tr>
@@ -449,29 +452,29 @@ async function removeUser(user) {
       <div v-if="showingRoleForm" class="dialog-overlay" @click.self="showingRoleForm = false">
         <div class="dialog">
           <h2 class="dialog__title">
-            {{ roleFormMode === 'create' ? '新增角色' : '编辑角色' }}
+            {{ roleFormMode === 'create' ? t('rbac.roleDialogCreate') : t('rbac.roleDialogEdit') }}
           </h2>
           <div class="dialog__form">
             <div class="dialog__group">
-              <label class="dialog__label">名称</label>
+              <label class="dialog__label">{{ t('common.name') }}</label>
               <input
                 v-model="roleForm.name"
                 class="dialog__input"
                 type="text"
-                placeholder="请输入角色名称"
+                :placeholder="t('rbac.namePlaceholder')"
               />
             </div>
             <div class="dialog__group">
-              <label class="dialog__label">描述</label>
+              <label class="dialog__label">{{ t('common.description') }}</label>
               <input
                 v-model="roleForm.description"
                 class="dialog__input"
                 type="text"
-                placeholder="请输入角色描述"
+                :placeholder="t('rbac.descriptionPlaceholder')"
               />
             </div>
             <div class="dialog__group">
-              <label class="dialog__label">MCP 服务器权限</label>
+              <label class="dialog__label">{{ t('rbac.serverPermLabel') }}</label>
               <div class="dialog__checklist">
                 <label
                   v-for="s in servers"
@@ -485,13 +488,13 @@ async function removeUser(user) {
                   />
                   <span>{{ s.name }}</span>
                 </label>
-                <span v-if="servers.length === 0" class="table__muted">暂无 MCP 服务器</span>
+                <span v-if="servers.length === 0" class="table__muted">{{ t('rbac.noServers') }}</span>
               </div>
             </div>
           </div>
           <div class="dialog__actions">
             <button class="btn btn--ghost" type="button" @click="showingRoleForm = false">
-              取消
+              {{ t('common.cancel') }}
             </button>
             <button
               class="btn btn--primary"
@@ -499,7 +502,7 @@ async function removeUser(user) {
               :disabled="!roleForm.name.trim()"
               @click="confirmRole"
             >
-              保存
+              {{ t('common.save') }}
             </button>
           </div>
         </div>
@@ -509,11 +512,11 @@ async function removeUser(user) {
     <Teleport to="body">
       <div v-if="showingAssign" class="dialog-overlay" @click.self="showingAssign = false">
         <div class="dialog dialog--wide">
-          <h2 class="dialog__title">分配用户 - {{ assigningRole?.name }}</h2>
+          <h2 class="dialog__title">{{ t('rbac.assignDialogTitle', { name: assigningRole?.name }) }}</h2>
           <div class="shuttle">
             <div class="shuttle__panel">
               <div class="shuttle__head">
-                <span class="shuttle__label">可选用户</span>
+                <span class="shuttle__label">{{ t('rbac.availableUsers') }}</span>
                 <span class="shuttle__count">{{ leftUsers.length }}</span>
               </div>
               <div class="shuttle__search">
@@ -521,7 +524,7 @@ async function removeUser(user) {
                   v-model="assignSearchLeft"
                   type="text"
                   class="shuttle__search-input"
-                  placeholder="过滤账号"
+                  :placeholder="t('rbac.filterAccount')"
                 />
               </div>
               <div class="shuttle__list">
@@ -531,7 +534,7 @@ async function removeUser(user) {
                     :checked="isAllLeftChecked"
                     @change="toggleSelectAll(leftUsers)"
                   />
-                  <span>全选</span>
+                  <span>{{ t('rbac.selectAll') }}</span>
                 </label>
                 <label
                   v-for="user in leftUsers"
@@ -546,7 +549,7 @@ async function removeUser(user) {
                   <span>{{ user.uid }}</span>
                 </label>
                 <span v-if="leftUsers.length === 0" class="table__muted shuttle__empty">
-                  暂无可选用户
+                  {{ t('rbac.noAvailableUsers') }}
                 </span>
               </div>
             </div>
@@ -570,7 +573,7 @@ async function removeUser(user) {
             </div>
             <div class="shuttle__panel">
               <div class="shuttle__head">
-                <span class="shuttle__label">已选用户</span>
+                <span class="shuttle__label">{{ t('rbac.selectedUsers') }}</span>
                 <span class="shuttle__count">{{ rightUsers.length }}</span>
               </div>
               <div class="shuttle__search">
@@ -578,7 +581,7 @@ async function removeUser(user) {
                   v-model="assignSearchRight"
                   type="text"
                   class="shuttle__search-input"
-                  placeholder="过滤账号"
+                  :placeholder="t('rbac.filterAccount')"
                 />
               </div>
               <div class="shuttle__list">
@@ -588,7 +591,7 @@ async function removeUser(user) {
                     :checked="isAllRightChecked"
                     @change="toggleSelectAll(rightUsers)"
                   />
-                  <span>全选</span>
+                  <span>{{ t('rbac.selectAll') }}</span>
                 </label>
                 <label
                   v-for="user in rightUsers"
@@ -603,17 +606,17 @@ async function removeUser(user) {
                   <span>{{ user.uid }}</span>
                 </label>
                 <span v-if="rightUsers.length === 0" class="table__muted shuttle__empty">
-                  暂未选择
+                  {{ t('rbac.noneSelected') }}
                 </span>
               </div>
             </div>
           </div>
           <div class="dialog__actions">
             <button class="btn btn--ghost" type="button" @click="showingAssign = false">
-              取消
+              {{ t('common.cancel') }}
             </button>
             <button class="btn btn--primary" type="button" @click="confirmAssign">
-              保存
+              {{ t('common.save') }}
             </button>
           </div>
         </div>
@@ -624,31 +627,31 @@ async function removeUser(user) {
       <div v-if="showingUserForm" class="dialog-overlay" @click.self="showingUserForm = false">
         <div class="dialog">
           <h2 class="dialog__title">
-            {{ userFormMode === 'create' ? '新增用户' : '编辑用户' }}
+            {{ userFormMode === 'create' ? t('rbac.userDialogCreate') : t('rbac.userDialogEdit') }}
           </h2>
           <div class="dialog__form">
             <div class="dialog__group">
-              <label class="dialog__label">用户名</label>
+              <label class="dialog__label">{{ t('rbac.username') }}</label>
               <input
                 v-model="userForm.username"
                 class="dialog__input"
                 type="text"
-                placeholder="请输入用户名"
+                :placeholder="t('rbac.usernamePlaceholder')"
               />
             </div>
             <div class="dialog__group">
-              <label class="dialog__label">{{ userFormMode === 'create' ? '密码' : '新密码（留空不修改）' }}</label>
+              <label class="dialog__label">{{ userFormMode === 'create' ? t('rbac.password') : t('rbac.newPasswordHint') }}</label>
               <input
                 v-model="userForm.password"
                 class="dialog__input"
                 type="password"
-                placeholder="请输入密码"
+                :placeholder="t('rbac.passwordPlaceholder')"
               />
             </div>
             <div class="dialog__group">
-              <label class="dialog__label">角色</label>
+              <label class="dialog__label">{{ t('rbac.role') }}</label>
               <select v-model="userForm.role_id" class="dialog__input">
-                <option :value="0">无角色</option>
+                <option :value="0">{{ t('rbac.noRole') }}</option>
                 <option v-for="role in roles" :key="role.id" :value="role.id">
                   {{ role.name }}
                 </option>
@@ -657,7 +660,7 @@ async function removeUser(user) {
           </div>
           <div class="dialog__actions">
             <button class="btn btn--ghost" type="button" @click="showingUserForm = false">
-              取消
+              {{ t('common.cancel') }}
             </button>
             <button
               class="btn btn--primary"
@@ -665,7 +668,7 @@ async function removeUser(user) {
               :disabled="!userForm.username.trim() || (userFormMode === 'create' && !userForm.password.trim())"
               @click="confirmUser"
             >
-              保存
+              {{ t('common.save') }}
             </button>
           </div>
         </div>

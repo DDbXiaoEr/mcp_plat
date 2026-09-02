@@ -53,6 +53,8 @@
 | 邮件通知 | service/notify.go | ✅ 已完成 | 封装 SendNotificationMail / SendNotificationMailToMany / SendNotificationMailToUser，SMTP 配置读取系统设置并校验 enabled 开关 |
 | 邮件通知 | AccessKey 到期禁用通知 | ✅ 已完成 | 定时任务 DisableExpiredAccessKeys 禁用过期 Key 后，按用户聚合发邮件，正文仅列出 Key 名称 + 到期时间（HTML 转义），提示登录平台删除；复用 SMTP enabled 开关 |
 | 快速接入（前端） | — | ✅ 已完成 | 用户侧边栏新增「快速接入」页，支持 CherryStudio 客户端生成带 AccessKey 的 mcpServers 配置，并一键通过 `cherrystudio://mcp/install?servers=` 深链打开应用导入；未开启 Key 验证的服务器（auth_enabled=false）无需选择 AccessKey；客户端启停与接入协议由管理员运营设置控制；仅展示已发布服务器并按 Key 权限过滤 |
+| i18n（后端） | 全部接口 | ✅ 已完成 | 新增 `i18n` 包与 `resp` 统一响应助手 + `Locale` 语言中间件（全局注册）。`message` 按请求头 `Accept-Language` 返回中/英文（中文为原文，英文为词典式近似翻译）；LDAP 测试 `data.message` 与概况图表兜底标签随语言本地化；通知邮件/网关维护文案保持中文（本期不含） |
+| i18n（前端） | 全站 | ✅ 已完成 | 引入 vue-i18n（zh-CN/en-US，默认跟随浏览器并可切换，localStorage `mcp-console-locale` 记忆）；13 个组件 + stores/api 文案全部词条化；`<html lang>`、`document.title` 随语言更新；日期/数字按当前 locale 格式化；语言切换入口位于登录页与顶栏右侧 |
 
 - ✅ 已完成
 - 🚧 开发中

@@ -21,6 +21,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"mcp_plat-console/i18n"
+	"mcp_plat-console/resp"
 	"mcp_plat-console/service"
 
 	"github.com/gin-gonic/gin"
@@ -35,20 +37,40 @@ func NewOverviewHandler() *OverviewHandler {
 func (h *OverviewHandler) Stats(c *gin.Context) {
 	stats, err := service.GetOverviewStats()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "查询失败"})
+		resp.Fail(c, http.StatusInternalServerError, "查询失败")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": stats})
+	resp.OK(c, "success", stats)
 }
 
 func (h *OverviewHandler) CallTrend(c *gin.Context) {
 	days, _ := strconv.Atoi(c.DefaultQuery("days", "30"))
 	trend, err := service.GetCallTrend(days)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "查询失败"})
+		resp.Fail(c, http.StatusInternalServerError, "查询失败")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": trend})
+	localizeCallTrend(c, trend)
+
+	resp.OK(c, "success", trend)
+}
+
+// localizeCallTrend translates the backend fallback labels embedded in chart
+// data ("未知服务器" / "其他" / "未分组") according to the request locale.
+func localizeCallTrend(c *gin.Context, trend *service.CallTrendOutput) {
+	locale := resp.Locale(c)
+	if locale == "zh" {
+		return
+	}
+	for i := range trend.ServerCalls {
+		trend.ServerCalls[i].Name = i18n.Translate(locale, trend.ServerCalls[i].Name)
+	}
+	for i := range trend.UserGroups {
+		trend.UserGroups[i].Name = i18n.Translate(locale, trend.UserGroups[i].Name)
+	}
+	for i := range trend.ServerNames {
+		trend.ServerNames[i] = i18n.Translate(locale, trend.ServerNames[i])
+	}
 }

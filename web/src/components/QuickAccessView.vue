@@ -19,19 +19,22 @@
 
 // Author: deepseek-v4-pro / opencode
 import { ref, computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { fetchServers, fetchAccessKeys, fetchGatewayStatus, fetchSetting } from '../api.js'
 import { setActive } from '../stores/nav.js'
+
+const { t } = useI18n()
 
 const CLIENTS = {
   cherrystudio: {
     key: 'cherrystudio',
     name: 'CherryStudio',
-    description: '多模型 AI 客户端，支持通过 JSON 导入 MCP 服务器',
-    steps: [
-      '点击上方「在 CherryStudio 中打开」按钮，一键唤起应用并弹出导入确认',
-      '若浏览器提示是否打开 CherryStudio，请选择允许',
-      '在弹窗中确认导入该 MCP 服务器',
-      '在 Agent 编辑中绑定该 MCP 服务器后即可使用'
+    descriptionKey: 'quickaccess.clients.cherrystudio.description',
+    stepKeys: [
+      'quickaccess.clients.cherrystudio.step1',
+      'quickaccess.clients.cherrystudio.step2',
+      'quickaccess.clients.cherrystudio.step3',
+      'quickaccess.clients.cherrystudio.step4'
     ]
   }
 }
@@ -223,34 +226,34 @@ function goAccessKey() {
 
 <template>
   <section class="page">
-    <h1 class="page__title">快速接入</h1>
+    <h1 class="page__title">{{ t('quickaccess.title') }}</h1>
     <p class="page__desc">
-      选择客户端并绑定服务器与 AccessKey，即可生成可直接导入的配置。
+      {{ t('quickaccess.description') }}
     </p>
 
-    <div v-if="loading" class="qa__loading">加载中…</div>
+    <div v-if="loading" class="qa__loading">{{ t('common.loading') }}</div>
 
     <template v-else>
       <div v-if="!gateway.configured" class="qa__notice qa__notice--warn">
-        平台尚未配置 API 网关，无法生成接入地址，请先联系管理员完成配置。
+        {{ t('quickaccess.gatewayNotConfigured') }}
       </div>
 
       <div v-else-if="enabledClients.length === 0" class="qa__notice qa__notice--warn">
-        管理员暂未开放任何快速接入客户端，请稍后再试。
+        {{ t('quickaccess.noClients') }}
       </div>
 
       <div v-else-if="servers.length === 0" class="qa__notice">
-        暂无可接入的已发布 MCP 服务器，请等待管理员发布后再试。
+        {{ t('quickaccess.noServers') }}
       </div>
 
       <div v-else-if="keys.length === 0 && openServers.length === 0" class="qa__notice">
-        您还没有可用的 AccessKey，
-        <button class="qa__link" type="button" @click="goAccessKey">去创建</button>
+        {{ t('quickaccess.noAccessKey') }}
+        <button class="qa__link" type="button" @click="goAccessKey">{{ t('quickaccess.createKeyAction') }}</button>
       </div>
 
       <template v-else>
         <div class="qa__card">
-          <h2 class="qa__card-title">① 选择客户端</h2>
+          <h2 class="qa__card-title">{{ t('quickaccess.selectClient') }}</h2>
           <div class="qa__clients">
             <div
               v-for="c in enabledClients"
@@ -259,16 +262,16 @@ function goAccessKey() {
               :class="{ 'qa__client--active': client && c.key === client.key }"
             >
               <span class="qa__client-name">{{ c.name }}</span>
-              <span class="qa__client-desc">{{ c.description }}</span>
+              <span class="qa__client-desc">{{ t(c.descriptionKey) }}</span>
             </div>
           </div>
         </div>
 
         <div class="qa__card">
-          <h2 class="qa__card-title">② 选择服务器与 AccessKey</h2>
+          <h2 class="qa__card-title">{{ t('quickaccess.selectServerAndKey') }}</h2>
           <div class="qa__form">
             <label class="qa__field">
-              <span class="qa__label">MCP 服务器</span>
+              <span class="qa__label">{{ t('quickaccess.serverLabel') }}</span>
               <select v-model="selectedServerId" class="qa__select">
                 <option
                   v-for="s in serverOptions"
@@ -280,9 +283,9 @@ function goAccessKey() {
               </select>
             </label>
             <label class="qa__field">
-              <span class="qa__label">AccessKey</span>
+              <span class="qa__label">{{ t('quickaccess.accessKeyLabel') }}</span>
               <template v-if="selectedServerIsOpen">
-                <span class="qa__note">该服务器未开启 Key 验证，无需选择 AccessKey</span>
+                <span class="qa__note">{{ t('quickaccess.openServerNote') }}</span>
               </template>
               <select v-else v-model="selectedKeyId" class="qa__select">
                 <option
@@ -297,40 +300,40 @@ function goAccessKey() {
           </div>
           <dl class="qa__meta">
             <div class="qa__meta-row">
-              <dt>接入地址</dt>
-              <dd>{{ endpointURL || '—' }}</dd>
+              <dt>{{ t('quickaccess.endpointLabel') }}</dt>
+              <dd>{{ endpointURL || t('common.emptyDash') }}</dd>
             </div>
             <div class="qa__meta-row">
-              <dt>鉴权</dt>
+              <dt>{{ t('quickaccess.authLabel') }}</dt>
               <template v-if="selectedServerIsOpen">
-                <dd>无需 AccessKey</dd>
+                <dd>{{ t('quickaccess.authNone') }}</dd>
               </template>
               <template v-else>
-                <dd>{{ accesskeyHeader }}: {{ selectedKey ? maskKey(selectedKey.key) : '—' }}</dd>
+                <dd>{{ accesskeyHeader }}: {{ selectedKey ? maskKey(selectedKey.key) : t('common.emptyDash') }}</dd>
               </template>
             </div>
           </dl>
         </div>
 
         <div class="qa__card">
-          <h2 class="qa__card-title">③ 生成配置</h2>
+          <h2 class="qa__card-title">{{ t('quickaccess.generateConfig') }}</h2>
           <div v-if="!endpointURL" class="qa__notice qa__notice--warn qa__notice--block">
-            无法生成接入配置：网关未配置默认发布域名（defaultPublishDomain），且该服务器未填写完整接入地址，请先联系管理员配置。
+            {{ t('quickaccess.noConfigWarn') }}
           </div>
           <template v-else>
             <div class="qa__code-head">
-              <span class="qa__code-name">{{ client.name }} 导入配置</span>
+              <span class="qa__code-name">{{ t('quickaccess.importConfig', { client: client.name }) }}</span>
               <div class="qa__code-actions">
                 <a
                   v-if="cherryInstallLink"
                   class="btn btn--primary"
                   :href="cherryInstallLink"
-                  :title="`在 ${client.name} 中打开并导入`"
+                  :title="t('quickaccess.openInClientTitle', { client: client.name })"
                 >
-                  在 {{ client.name }} 中打开
+                  {{ t('quickaccess.openInClient', { client: client.name }) }}
                 </a>
                 <button class="btn btn--ghost" type="button" :disabled="!configJSON" @click="copyConfig">
-                  {{ copied ? '已复制' : '复制' }}
+                  {{ copied ? t('common.copied') : t('common.copy') }}
                 </button>
               </div>
             </div>
@@ -339,9 +342,9 @@ function goAccessKey() {
         </div>
 
         <div class="qa__card">
-          <h2 class="qa__card-title">接入步骤（{{ client.name }}）</h2>
+          <h2 class="qa__card-title">{{ t('quickaccess.setupSteps', { client: client.name }) }}</h2>
           <ol class="qa__steps">
-            <li v-for="(step, i) in client.steps" :key="i">{{ step }}</li>
+            <li v-for="(stepKey, i) in client.stepKeys" :key="i">{{ t(stepKey, { client: client.name }) }}</li>
           </ol>
         </div>
       </template>

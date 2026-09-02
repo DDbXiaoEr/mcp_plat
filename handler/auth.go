@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"mcp_plat-console/resp"
 	"mcp_plat-console/service"
 
 	"github.com/gin-gonic/gin"
@@ -97,53 +98,53 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	clientIP := c.ClientIP()
 
 	if !loginLimiter.allow(clientIP) {
-		c.JSON(http.StatusTooManyRequests, gin.H{"code": 429, "message": "登录请求过于频繁，请稍后再试"})
+		resp.Fail(c, http.StatusTooManyRequests, "登录请求过于频繁，请稍后再试")
 		return
 	}
 
 	var input service.LoginInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
+		resp.Fail(c, http.StatusBadRequest, "参数错误")
 		return
 	}
 
 	output, err := service.Login(input)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": err.Error()})
+		resp.Fail(c, http.StatusUnauthorized, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "登录成功", "data": output})
+	resp.OK(c, "登录成功", output)
 }
 
 func (h *AuthHandler) CASValidate(c *gin.Context) {
 	var input service.CASValidateInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
+		resp.Fail(c, http.StatusBadRequest, "参数错误")
 		return
 	}
 
 	output, err := service.CASLogin(input)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": err.Error()})
+		resp.Fail(c, http.StatusUnauthorized, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "登录成功", "data": output})
+	resp.OK(c, "登录成功", output)
 }
 
 func (h *AuthHandler) GetPlatform(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": service.GetPlatform()})
+	resp.OK(c, "success", service.GetPlatform())
 }
 
 func (h *AuthHandler) GetAuthMethod(c *gin.Context) {
 	output, err := service.GetAuthMethod()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": err.Error()})
+		resp.Fail(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": output})
+	resp.OK(c, "success", output)
 }
 
 func (h *AuthHandler) Profile(c *gin.Context) {
@@ -151,38 +152,38 @@ func (h *AuthHandler) Profile(c *gin.Context) {
 	role := c.GetString("role")
 
 	if userID == 0 {
-		c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": gin.H{
+		resp.OK(c, "success", gin.H{
 			"username": c.GetString("username"),
 			"role":     role,
-		}})
+		})
 		return
 	}
 
 	user, err := service.GetProfile(userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": err.Error()})
+		resp.Fail(c, http.StatusNotFound, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": user})
+	resp.OK(c, "success", user)
 }
 
 func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	if userID == 0 {
-		c.JSON(http.StatusForbidden, gin.H{"code": 403, "message": "管理员账号不支持修改邮箱"})
+		resp.Fail(c, http.StatusForbidden, "管理员账号不支持修改邮箱")
 		return
 	}
 
 	var input service.UpdateProfileInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
+		resp.Fail(c, http.StatusBadRequest, "参数错误")
 		return
 	}
 
 	user, err := service.UpdateProfile(userID, input)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		resp.Fail(c, http.StatusBadRequest, err.Error())
 		return
 	}
 

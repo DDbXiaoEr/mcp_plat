@@ -18,6 +18,8 @@
 // Author: deepseek-v4-pro / opencode
 import { createApp } from 'vue'
 import App from './App.vue'
+import { i18n } from './i18n.js'
+import './stores/locale.js'
 import './styles/global.css'
 
-createApp(App).mount('#app')
+createApp(App).use(i18n).mount('#app')

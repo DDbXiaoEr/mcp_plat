@@ -18,6 +18,7 @@ package handler
 import (
 	"net/http"
 
+	"mcp_plat-console/resp"
 	"mcp_plat-console/service"
 
 	"github.com/gin-gonic/gin"
@@ -34,15 +35,15 @@ func (h *AuditLogHandler) List(c *gin.Context) {
 
 	var query service.AuditLogQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
+		resp.Fail(c, http.StatusBadRequest, "参数错误")
 		return
 	}
 
 	output, err := service.ListAuditLogs(userID, query)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "查询失败"})
+		resp.Fail(c, http.StatusInternalServerError, "查询失败")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "success", "data": output})
+	resp.OK(c, "success", output)
 }

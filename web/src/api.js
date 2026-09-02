@@ -17,6 +17,7 @@
 
 // Author: deepseek-v4-pro / opencode
 import { getToken } from './stores/auth.js'
+import { i18n } from './i18n.js'
 
 const BASE = '/api'
 
@@ -34,10 +35,12 @@ async function request(path, options = {}) {
     json = await res.json()
   } catch {
     const text = await res.text()
-    throw new Error(`请求失败 (${res.status}): ${text || res.statusText}`)
+    throw new Error(
+      `${i18n.global.t('common.requestFailedStatus', { status: res.status })}${text ? `: ${text}` : ''}`
+    )
   }
   if (json.code !== 200) {
-    throw new Error(json.message || '请求失败')
+    throw new Error(json.message || i18n.global.t('common.requestFailed'))
   }
   return json.data
 }

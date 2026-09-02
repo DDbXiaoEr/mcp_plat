@@ -26,6 +26,7 @@ import (
 
 func Setup() *gin.Engine {
 	r := gin.Default()
+	r.Use(middleware.Locale())
 
 	authHandler := handler.NewAuthHandler()
 	accessKeyHandler := handler.NewAccessKeyHandler()

@@ -17,11 +17,7 @@
 
 // Author: deepseek-v4-pro / opencode
 import { reactive, readonly } from 'vue'
-
-const ROLE_LABELS = {
-  admin: '管理员',
-  user: '用户'
-}
+import { i18n } from '../i18n.js'
 
 const STORAGE_KEY = 'mcp-console-auth'
 
@@ -38,12 +34,12 @@ const state = reactive({
   user: loadUser()
 })
 
-function roleLabel(role) {
-  return ROLE_LABELS[role] || '未知角色'
-}
-
 export function getToken() {
   return state.user?.token || ''
+}
+
+function t(key) {
+  return i18n.global.t(key)
 }
 
 export async function login(username, password) {
@@ -55,12 +51,12 @@ export async function login(username, password) {
     })
     const json = await res.json()
     if (json.code !== 200) {
-      return { ok: false, message: json.message || '登录失败' }
+      return { ok: false, message: json.message || t('auth.loginFailed') }
     }
     saveLogin(json.data)
     return { ok: true }
   } catch {
-    return { ok: false, message: '网络错误，请稍后重试' }
+    return { ok: false, message: t('auth.networkError') }
   }
 }
 
@@ -73,12 +69,12 @@ export async function casLogin(ticket, serviceUrl) {
     })
     const json = await res.json()
     if (json.code !== 200) {
-      return { ok: false, message: json.message || 'CAS 登录失败' }
+      return { ok: false, message: json.message || t('auth.casFailed') }
     }
     saveLogin(json.data)
     return { ok: true }
   } catch {
-    return { ok: false, message: '网络错误，请稍后重试' }
+    return { ok: false, message: t('auth.networkError') }
   }
 }
 
@@ -100,7 +96,6 @@ function saveLogin(data) {
     username: data.username,
     name: data.name || data.username,
     role: data.role,
-    roleLabel: roleLabel(data.role),
     token: data.token
   }
   state.user = user

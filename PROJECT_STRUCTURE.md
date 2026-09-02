@@ -64,6 +64,15 @@ mcp_plat-console/
 │   ├── rbac_user.go          # CRUD /api/users（仅管理员）
 │   └── setting.go            # GET/PUT /api/settings（仅管理员）
 │
+├── i18n/                     # 轻量消息翻译包（词典式，无第三方依赖）
+│   ├── i18n.go               # 语言检测 Lang + Translate（整句/正则模板/短语最长优先替换）
+│   ├── zh_en.go              # 中文→英文翻译表（handler/middleware/service 全部直达用户消息）
+│   └── i18n_test.go
+│
+├── resp/                     # 统一 JSON 响应助手（所有 c.JSON 出口，按请求语言翻译 message）
+│   ├── resp.go               # OK / Fail / JSON / Locale
+│   └── resp_test.go
+│
 ├── service/
 │   ├── auth.go               # 登录业务逻辑 + JWT 生成
 │   ├── access_key.go         # AccessKey 业务逻辑
@@ -81,7 +90,8 @@ mcp_plat-console/
 │   └── setting.go            # 系统设置业务逻辑（键值 JSON 存取）
 │
 ├── middleware/
-│   └── auth.go               # JWT Bearer Token 鉴权中间件 + AdminRequired
+│   ├── auth.go               # JWT Bearer Token 鉴权中间件 + AdminRequired
+│   └── locale.go             # 语言中间件（解析 Accept-Language → c.Set("locale")）
 │
 ├── plugin/
 │   ├── access_key.go         # AccessKey grpc 插件注册
@@ -138,14 +148,17 @@ mcp_plat-console/
     │   ├── favicon.svg
     │   └── assets/
     └── src/
-        ├── main.js           # Vue 入口
+        ├── main.js           # Vue 入口（挂载 vue-i18n）
         ├── App.vue           # 根组件（按登录状态条件渲染）
         ├── api.js            # HTTP API 封装
+        ├── i18n.js           # vue-i18n 实例（zh-CN/en-US）+ roleLabel 助手
+        ├── locales/          # 国际化词条：zh-CN/（中文原文）+ en-US/（英文），按视图拆域，index.js 合并
         ├── styles/
         │   └── global.css    # 全局 CSS 变量
         ├── stores/
-        │   ├── auth.js       # 鉴权状态（登录/登出/角色）
-        │   ├── nav.js        # 侧边栏导航状态（无 Vue Router）
+        │   ├── auth.js       # 鉴权状态（登录/登出/角色 code）
+        │   ├── locale.js     # 语言状态（localStorage mcp-console-locale 持久化）
+        │   ├── nav.js        # 侧边栏导航状态（无 Vue Router，菜单存 labelKey）
         │   ├── settings.js   # 平台设置共享态（名称/logo/跳转链接）
         │   └── theme.js      # 亮暗主题状态（localStorage 持久化）
         └── components/
@@ -212,6 +225,8 @@ mcp_plat-console/
 | GET | `/api/settings/:key` | 是 | - | handler/setting.go → GetByKey |
 | GET | `/api/settings/gateway-status` | 是 | - | handler/setting.go → GatewayStatus |
 | POST | `/api/settings/test-smtp` | 是 | 是 | handler/setting.go → TestSmtp |
+
+> **i18n**：所有接口的 `message` 支持中/英双语，按请求头 `Accept-Language` 返回（`en*` → 英文近似翻译，其余 → 中文原文）；由 `router.Setup()` 全局注册的 `middleware.Locale()` + `resp` 响应助手实现，词条表见 `i18n/`。
 
 ## 内嵌版本前端路由（重要）
 

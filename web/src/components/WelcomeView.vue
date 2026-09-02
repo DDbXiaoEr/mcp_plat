@@ -18,13 +18,17 @@
 <script setup>
 
 // Author: deepseek-v4-pro / opencode
+import { useI18n } from 'vue-i18n'
 import { auth } from '../stores/auth.js'
+import { roleLabel } from '../i18n.js'
+
+const { t } = useI18n()
 </script>
 
 <template>
   <!-- TODO: 后期按角色拆分为不同的功能页面 -->
   <section v-if="auth.user" class="welcome">
-    <h1 class="welcome__title">欢迎，{{ auth.user.roleLabel }}登录</h1>
+    <h1 class="welcome__title">{{ t('welcome.title', { role: roleLabel(auth.user.role) }) }}</h1>
   </section>
 </template>
 

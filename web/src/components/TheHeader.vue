@@ -18,9 +18,19 @@
 <script setup>
 
 // Author: deepseek-v4-pro / opencode
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { auth, logout } from '../stores/auth.js'
 import { platformSettings, loadSettings } from '../stores/settings.js'
+import { locale, setLocale } from '../stores/locale.js'
+
+const { t } = useI18n()
+
+const currentLocale = computed(() => locale.locale)
+
+function onLocaleChange(event) {
+  setLocale(event.target.value)
+}
 
 onMounted(() => loadSettings())
 </script>
@@ -39,18 +49,22 @@ onMounted(() => loadSettings())
         </span>
         <span class="brand__text">
           <strong>{{ platformSettings.platform.name }}</strong>
-          <em>MCP 服务平台 · 控制台</em>
+          <em>{{ t('app.headerTagline') }}</em>
         </span>
       </a>
     </div>
 
     <div class="header__actions">
       <span v-if="auth.user" class="header__user">
-        <span class="header__role">{{ auth.user.roleLabel }}</span>
+        <span class="header__role">{{ t('role.' + (auth.user.role || 'unknown')) }}</span>
         <span class="header__name">{{ auth.user.name || auth.user.username }}</span>
       </span>
+      <select class="header__lang" name="lang" :value="currentLocale" :aria-label="t('app.langLabel')" @change="onLocaleChange">
+        <option value="zh-CN">中文</option>
+        <option value="en-US">English</option>
+      </select>
       <button class="header__logout" type="button" @click="logout">
-        退出登录
+        {{ t('app.logout') }}
       </button>
     </div>
   </header>
@@ -116,6 +130,17 @@ onMounted(() => loadSettings())
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.header__lang {
+  padding: 5px 8px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
 }
 
 .header__user {

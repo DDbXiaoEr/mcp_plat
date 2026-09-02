@@ -19,8 +19,11 @@
 
 // Author: deepseek-v4-pro / opencode
 import { ref, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { fetchRoles, fetchSettings, saveSetting, testLdap, testSmtp } from '../api.js'
 import { applyPlatform } from '../stores/settings.js'
+
+const { t } = useI18n()
 
 const tab = ref('ops')
 
@@ -125,10 +128,10 @@ const ldapForm = ref({
 const savedLdap = ref({})
 
 const PLATFORM_FIELDS = [
-  { key: 'name', label: '姓名' },
-  { key: 'email', label: '邮箱' },
-  { key: 'phone', label: '电话' },
-  { key: 'organization', label: '组织' }
+  { key: 'name', labelKey: 'settings.fields.name' },
+  { key: 'email', labelKey: 'settings.fields.email' },
+  { key: 'phone', labelKey: 'settings.fields.phone' },
+  { key: 'organization', labelKey: 'settings.fields.organization' }
 ]
 
 const ldapAttrMapping = ref([])
@@ -166,6 +169,11 @@ function unusedFields(rowIndex) {
   return PLATFORM_FIELDS.filter(f => !used.has(f.key))
 }
 
+function platformFieldLabel(key) {
+  const f = PLATFORM_FIELDS.find(item => item.key === key)
+  return f ? t(f.labelKey) : key
+}
+
 const ldapTestUser = ref('')
 const ldapTestResult = ref(null)
 const ldapTesting = ref(false)
@@ -189,7 +197,7 @@ async function runLdapTest() {
     })
     ldapTestResult.value = data
   } catch (e) {
-    ldapTestResult.value = { success: false, message: e.message || '测试失败' }
+    ldapTestResult.value = { success: false, message: e.message || t('settings.auth.ldap.testFailed') }
   }
   ldapTesting.value = false
 }
@@ -229,12 +237,12 @@ const maxAccessKeys = ref(5)
 const accessKeyCron = ref('')
 
 const ROLE_ATTRS = [
-  { key: 'username', label: '用户名' },
-  { key: 'uid', label: 'UID' },
-  { key: 'name', label: '姓名' },
-  { key: 'email', label: '邮箱' },
-  { key: 'phone', label: '电话' },
-  { key: 'organization', label: '组织' }
+  { key: 'username', labelKey: 'settings.fields.username' },
+  { key: 'uid', labelKey: 'settings.fields.uid' },
+  { key: 'name', labelKey: 'settings.fields.name' },
+  { key: 'email', labelKey: 'settings.fields.email' },
+  { key: 'phone', labelKey: 'settings.fields.phone' },
+  { key: 'organization', labelKey: 'settings.fields.organization' }
 ]
 
 const apiGwConfigured = ref(false)
@@ -246,9 +254,9 @@ async function saveSection(key, payload) {
   saving.value = key
   try {
     await saveSetting(key, payload)
-    tips.value = { ...tips.value, [key]: '已保存' }
+    tips.value = { ...tips.value, [key]: t('settings.general.saved') }
   } catch (e) {
-    tips.value = { ...tips.value, [key]: e.message || '保存失败' }
+    tips.value = { ...tips.value, [key]: e.message || t('settings.general.saveFailed') }
   }
   saving.value = ''
   setTimeout(() => {
@@ -281,9 +289,9 @@ async function runSmtpTest() {
       },
       to: smtpTestTo.value.trim()
     })
-    smtpTestResult.value = { ok: true, message: '测试邮件发送成功，请检查收件箱' }
+    smtpTestResult.value = { ok: true, message: t('settings.mail.testOk') }
   } catch (e) {
-    smtpTestResult.value = { ok: false, message: e.message || '发送失败' }
+    smtpTestResult.value = { ok: false, message: e.message || t('settings.mail.sendFailed') }
   }
   smtpTesting.value = false
 }
@@ -465,7 +473,7 @@ onMounted(async () => {
 <template>
   <section class="settings">
     <div class="settings__head">
-      <h1 class="page__title">系统设置</h1>
+      <h1 class="page__title">{{ t('nav.settings') }}</h1>
     </div>
 
     <div class="settings__tabs">
@@ -475,7 +483,7 @@ onMounted(async () => {
         type="button"
         @click="tab = 'ops'"
       >
-        运维设置
+        {{ t('settings.tabs.ops') }}
       </button>
       <button
         class="settings__tab"
@@ -483,32 +491,32 @@ onMounted(async () => {
         type="button"
         @click="tab = 'operation'"
       >
-        运营设置
+        {{ t('settings.tabs.operation') }}
       </button>
     </div>
 
     <div v-if="tab === 'ops'" class="settings__panel">
       <div class="collapse">
         <button class="collapse__head" type="button" @click="logOpen = !logOpen">
-          <span class="collapse__title">日志设置</span>
+          <span class="collapse__title">{{ t('settings.log.title') }}</span>
           <span class="collapse__arrow" :class="{ 'collapse__arrow--open': logOpen }">▾</span>
         </button>
         <div v-show="logOpen" class="collapse__body">
           <div class="field">
-            <span class="field__label">启用 Syslog</span>
+            <span class="field__label">{{ t('settings.log.enableSyslog') }}</span>
             <label class="switch">
               <input type="checkbox" v-model="logForm.syslogEnabled" />
               <span class="switch__track"><span class="switch__thumb"></span></span>
-              <span class="switch__label">{{ logForm.syslogEnabled ? '启用' : '禁用' }}</span>
+              <span class="switch__label">{{ logForm.syslogEnabled ? t('common.enabled') : t('common.disabled') }}</span>
             </label>
           </div>
 
           <template v-if="!logForm.syslogEnabled">
             <div class="ldap-notice">
-              未启用 Syslog 时，日志同时输出到标准输出与本地文件（支持轮转）。
+              {{ t('settings.log.offNotice') }}
             </div>
             <label class="field">
-              <span class="field__label">日志目录</span>
+              <span class="field__label">{{ t('settings.log.pathLabel') }}</span>
               <input
                 v-model="logForm.logPath"
                 class="field__input"
@@ -517,26 +525,26 @@ onMounted(async () => {
               />
             </label>
             <label class="field">
-              <span class="field__label">日志级别</span>
+              <span class="field__label">{{ t('settings.log.levelLabel') }}</span>
               <select v-model="logForm.logLevel" class="field__input">
                 <option v-for="lv in LOG_LEVELS" :key="lv" :value="lv">{{ lv }}</option>
               </select>
             </label>
             <label class="field">
-              <span class="field__label">日志文件名</span>
+              <span class="field__label">{{ t('settings.log.fileNameLabel') }}</span>
               <input
                 v-model="logForm.logPrefix"
                 class="field__input"
                 type="text"
                 placeholder="mcp_plat"
               />
-              <span class="field__help-text">日志文件为 {前缀}.log，默认 mcp_plat.log</span>
+              <span class="field__help-text">{{ t('settings.log.fileNameHelp') }}</span>
             </label>
 
-            <p class="field__section-title">日志轮转</p>
+            <p class="field__section-title">{{ t('settings.log.rotation') }}</p>
             <div class="field-row">
               <label class="field">
-                <span class="field__label">单文件大小上限（MB）</span>
+                <span class="field__label">{{ t('settings.log.maxSizeLabel') }}</span>
                 <input
                   v-model.number="logForm.maxSize"
                   class="field__input"
@@ -546,7 +554,7 @@ onMounted(async () => {
                 />
               </label>
               <label class="field">
-                <span class="field__label">保留历史文件数</span>
+                <span class="field__label">{{ t('settings.log.maxBackupsLabel') }}</span>
                 <input
                   v-model.number="logForm.maxBackups"
                   class="field__input"
@@ -558,7 +566,7 @@ onMounted(async () => {
             </div>
             <div class="field-row">
               <label class="field">
-                <span class="field__label">保留天数</span>
+                <span class="field__label">{{ t('settings.log.maxAgeLabel') }}</span>
                 <input
                   v-model.number="logForm.maxAge"
                   class="field__input"
@@ -568,10 +576,10 @@ onMounted(async () => {
                 />
               </label>
               <label class="field">
-                <span class="field__label">压缩历史日志</span>
+                <span class="field__label">{{ t('settings.log.compressLabel') }}</span>
                 <select v-model="logForm.compress" class="field__input">
-                  <option :value="false">不压缩</option>
-                  <option :value="true">gzip 压缩</option>
+                  <option :value="false">{{ t('settings.log.compressNone') }}</option>
+                  <option :value="true">{{ t('settings.log.compressGzip') }}</option>
                 </select>
               </label>
             </div>
@@ -579,20 +587,20 @@ onMounted(async () => {
 
           <template v-else>
             <div class="ldap-notice">
-              启用 Syslog 后，标准输出与本地文件日志均失效，仅输出到 Syslog 服务器。
+              {{ t('settings.log.onNotice') }}
             </div>
             <label class="field">
-              <span class="field__label">Syslog 服务器地址</span>
+              <span class="field__label">{{ t('settings.log.syslogHostLabel') }}</span>
               <input
                 v-model="logForm.syslogHost"
                 class="field__input"
                 type="text"
-                placeholder="请输入 Syslog 服务器地址"
+                :placeholder="t('settings.log.syslogHostPlaceholder')"
               />
             </label>
             <div class="field-row">
               <label class="field">
-                <span class="field__label">端口</span>
+                <span class="field__label">{{ t('settings.log.portLabel') }}</span>
                 <input
                   v-model.number="logForm.syslogPort"
                   class="field__input"
@@ -601,7 +609,7 @@ onMounted(async () => {
                 />
               </label>
               <label class="field">
-                <span class="field__label">协议</span>
+                <span class="field__label">{{ t('settings.log.protocolLabel') }}</span>
                 <select v-model="logForm.syslogProtocol" class="field__input">
                   <option value="tcp">TCP</option>
                   <option value="udp">UDP</option>
@@ -613,7 +621,7 @@ onMounted(async () => {
           <div class="collapse__actions">
             <span v-if="tips.log" class="save-tip">{{ tips.log }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'log'" @click="saveLogSettings">
-              {{ saving === 'log' ? '保存中…' : '保存' }}
+              {{ saving === 'log' ? t('common.saving') : t('common.save') }}
             </button>
           </div>
         </div>
@@ -621,23 +629,23 @@ onMounted(async () => {
 
       <div class="collapse">
         <button class="collapse__head" type="button" @click="smtpOpen = !smtpOpen">
-          <span class="collapse__title">SMTP 设置</span>
+          <span class="collapse__title">{{ t('settings.mail.title') }}</span>
           <span class="collapse__arrow" :class="{ 'collapse__arrow--open': smtpOpen }">▾</span>
         </button>
         <div v-show="smtpOpen" class="collapse__body">
           <div class="field">
-            <span class="field__label">启用邮件通知</span>
+            <span class="field__label">{{ t('settings.mail.enable') }}</span>
             <label class="switch">
               <input type="checkbox" v-model="smtpForm.enabled" />
               <span class="switch__track"><span class="switch__thumb"></span></span>
-              <span class="switch__label">{{ smtpForm.enabled ? '启用' : '禁用' }}</span>
+              <span class="switch__label">{{ smtpForm.enabled ? t('common.enabled') : t('common.disabled') }}</span>
             </label>
-            <span class="field__help-text">开关控制是否实际发送通知邮件；下方配置项始终可编辑，用于测试与预先配置</span>
+            <span class="field__help-text">{{ t('settings.mail.toggleHint') }}</span>
           </div>
 
           <div class="field-row">
             <label class="field">
-              <span class="field__label">SMTP 服务器地址</span>
+              <span class="field__label">{{ t('settings.mail.hostLabel') }}</span>
               <input
                 v-model="smtpForm.host"
                 class="field__input"
@@ -646,7 +654,7 @@ onMounted(async () => {
               />
             </label>
             <label class="field">
-              <span class="field__label">端口</span>
+              <span class="field__label">{{ t('settings.mail.portLabel') }}</span>
               <input
                 v-model.number="smtpForm.port"
                 class="field__input"
@@ -656,34 +664,34 @@ onMounted(async () => {
             </label>
           </div>
           <label class="field">
-            <span class="field__label">加密方式</span>
+            <span class="field__label">{{ t('settings.mail.encryptionLabel') }}</span>
             <select v-model="smtpForm.encryption" class="field__input">
-              <option value="none">无</option>
+              <option value="none">{{ t('settings.mail.encryptionNone') }}</option>
               <option value="ssl">SSL/TLS</option>
               <option value="starttls">STARTTLS</option>
             </select>
           </label>
           <label class="field">
-            <span class="field__label">用户名</span>
+            <span class="field__label">{{ t('settings.mail.usernameLabel') }}</span>
             <input
               v-model="smtpForm.username"
               class="field__input"
               type="text"
-              placeholder="请输入 SMTP 用户名"
+              :placeholder="t('settings.mail.usernamePlaceholder')"
             />
           </label>
           <label class="field">
-            <span class="field__label">密码</span>
+            <span class="field__label">{{ t('settings.mail.passwordLabel') }}</span>
             <input
               v-model="smtpForm.password"
               class="field__input"
               type="password"
-              placeholder="请输入 SMTP 密码"
+              :placeholder="t('settings.mail.passwordPlaceholder')"
             />
           </label>
           <div class="field-row">
             <label class="field">
-              <span class="field__label">发件人地址</span>
+              <span class="field__label">{{ t('settings.mail.fromAddressLabel') }}</span>
               <input
                 v-model="smtpForm.fromAddress"
                 class="field__input"
@@ -692,24 +700,24 @@ onMounted(async () => {
               />
             </label>
             <label class="field">
-              <span class="field__label">发件人名称</span>
+              <span class="field__label">{{ t('settings.mail.fromNameLabel') }}</span>
               <input
                 v-model="smtpForm.fromName"
                 class="field__input"
                 type="text"
-                placeholder="MCP 服务平台"
+                :placeholder="t('settings.mail.fromNamePlaceholder')"
               />
             </label>
           </div>
 
           <div class="smtp-test">
-            <p class="field__section-title">发送测试邮件</p>
+            <p class="field__section-title">{{ t('settings.mail.sendTest') }}</p>
             <div class="smtp-test__row">
               <input
                 v-model="smtpTestTo"
                 class="field__input smtp-test__input"
                 type="text"
-                placeholder="输入收件人邮箱，验证 SMTP 配置"
+                :placeholder="t('settings.mail.testToPlaceholder')"
                 @keyup.enter="runSmtpTest"
               />
               <button
@@ -718,7 +726,7 @@ onMounted(async () => {
                 :disabled="!smtpTestTo.trim() || smtpTesting"
                 @click="runSmtpTest"
               >
-                {{ smtpTesting ? '发送中…' : '发送测试邮件' }}
+                {{ smtpTesting ? t('settings.mail.sending') : t('settings.mail.sendTest') }}
               </button>
             </div>
             <div
@@ -733,7 +741,7 @@ onMounted(async () => {
           <div class="collapse__actions">
             <span v-if="tips.smtp" class="save-tip">{{ tips.smtp }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'smtp'" @click="saveSmtpSettings">
-              {{ saving === 'smtp' ? '保存中…' : '保存' }}
+              {{ saving === 'smtp' ? t('common.saving') : t('common.save') }}
             </button>
           </div>
         </div>
@@ -741,16 +749,16 @@ onMounted(async () => {
 
       <div class="collapse">
         <button class="collapse__head" type="button" @click="apiGwOpen = !apiGwOpen">
-          <span class="collapse__title">API 网关设置</span>
+          <span class="collapse__title">{{ t('settings.apiGw.title') }}</span>
           <span class="collapse__arrow" :class="{ 'collapse__arrow--open': apiGwOpen }">▾</span>
         </button>
         <div v-show="apiGwOpen" class="collapse__body">
           <div v-if="apiGwConfigured" class="api-gw-warning">
             <span class="api-gw-warning__icon">!</span>
-            已检测到当前系统配置了 API 网关，修改保存后会覆盖当前配置。
+            {{ t('settings.apiGw.configuredWarning') }}
           </div>
           <label class="field">
-            <span class="field__label">API 网关</span>
+            <span class="field__label">{{ t('settings.apiGw.providerLabel') }}</span>
             <select v-model="apiGwForm.provider" class="field__input">
               <option
                 v-for="gw in API_GW_PROVIDERS"
@@ -761,24 +769,24 @@ onMounted(async () => {
               </option>
             </select>
             <span v-if="apiGwForm.provider === 'kong'" class="field__help-text">
-              Kong 仅发布上游与服务路由，不下发插件；本地 Docker 测试时 Admin API 默认
-              <code>http://127.0.0.1:8001</code>，未启用 RBAC 时 Admin Key 可留空。
+              {{ t('settings.apiGw.kongHelpPre') }}
+              <code>http://127.0.0.1:8001</code>{{ t('settings.apiGw.kongHelpPost') }}
             </span>
           </label>
 
           <label class="field">
             <span class="field__label">
-              网关 Admin API 地址
+              {{ t('settings.apiGw.adminUrlLabel') }}
               <span class="field__help">
                 ?
                 <span class="field__tooltip">
                   <template v-if="apiGwForm.provider === 'kong'">
-                    填写 Kong Admin API 的基础地址，不要附带路径，例如
-                    <code>http://127.0.0.1:8001</code>。
+                    {{ t('settings.apiGw.adminUrlTooltipKongPre') }}
+                    <code>http://127.0.0.1:8001</code>{{ t('settings.apiGw.adminUrlTooltipKongPost') }}
                   </template>
                   <template v-else>
-                    填写网关 Admin API 的基础地址，不要附带路径，例如
-                    <code>http://127.0.0.1:9180</code>（而非 .../apisix/admin）。
+                    {{ t('settings.apiGw.adminUrlTooltipDefaultPre') }}
+                    <code>http://127.0.0.1:9180</code>{{ t('settings.apiGw.adminUrlTooltipDefaultPost') }}
                   </template>
                 </span>
               </span>
@@ -792,38 +800,36 @@ onMounted(async () => {
           </label>
 
           <label class="field">
-            <span class="field__label">默认发布域名</span>
+            <span class="field__label">{{ t('settings.apiGw.defaultPublishLabel') }}</span>
             <input
               v-model="apiGwForm.defaultPublishDomain"
               class="field__input"
               type="text"
-              placeholder="例如 mcp.xauat.edu.cn"
+              :placeholder="t('settings.apiGw.defaultPublishPlaceholder')"
             />
           </label>
 
           <label class="field">
-            <span class="field__label">Admin API Key</span>
+            <span class="field__label">{{ t('settings.apiGw.adminKeyLabel') }}</span>
             <input
               v-model="apiGwForm.adminKey"
               class="field__input"
               type="password"
-              placeholder="请输入管理员 API Key"
+              :placeholder="t('settings.apiGw.adminKeyPlaceholder')"
             />
             <span v-if="apiGwForm.provider === 'kong'" class="field__help-text">
-              Kong 未启用 RBAC 时可不填；启用后填写 RBAC Admin 令牌。
+              {{ t('settings.apiGw.adminKeyKongHint') }}
             </span>
           </label>
 
           <div class="field">
             <span class="field__label">
-              Access Key 认证 gRPC 地址
+              {{ t('settings.apiGw.authGrpcLabel') }}
               <span class="field__help">
                 ?
                 <span class="field__tooltip">
-                  对应 accesskey-auth-server 的 gRPC 监听地址，例如
-                  <code>:9090</code> 或 <code>127.0.0.1:9090</code>。
-                  支持配置多个地址，发布时会下发到 accesskey_verify 插件，
-                  并按连接数（最少连接）负载均衡。每行一个地址。
+                  {{ t('settings.apiGw.authGrpcTip1') }}
+                  <code>:9090</code>{{ t('settings.apiGw.authGrpcTip2') }}<code>127.0.0.1:9090</code>{{ t('settings.apiGw.authGrpcTip3') }}
                 </span>
               </span>
             </span>
@@ -841,7 +847,7 @@ onMounted(async () => {
               <button
                 class="addr-row__remove"
                 type="button"
-                title="移除"
+                :title="t('settings.general.remove')"
                 @click="removeAddr(apiGwForm.authGrpcAddrs, i)"
               >
                 ×
@@ -852,19 +858,19 @@ onMounted(async () => {
               type="button"
               @click="addAddr(apiGwForm.authGrpcAddrs)"
             >
-              + 添加地址
+              {{ t('settings.general.addAddress') }}
             </button>
           </div>
 
           <label class="field">
             <span class="field__label">
-              Access Key Header 名称
+              {{ t('settings.apiGw.headerLabel') }}
               <span class="field__help">
                 ?
                 <span class="field__tooltip">
-                  指定请求中携带 Access Key 的 HTTP Header 名称。<br />
-                  发布路由时若已配置则使用自定义 Header，未配置则默认使用
-                  <code>X-Access-Key</code>。
+                  {{ t('settings.apiGw.headerTip1') }}<br />
+                  {{ t('settings.apiGw.headerTip2') }}
+                  <code>X-Access-Key</code>{{ t('settings.apiGw.headerTip3') }}
                 </span>
               </span>
             </span>
@@ -879,7 +885,7 @@ onMounted(async () => {
           <div class="collapse__actions">
             <span v-if="tips.api_gateway" class="save-tip">{{ tips.api_gateway }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'api_gateway'" @click="saveApiGwSettings">
-              {{ saving === 'api_gateway' ? '保存中…' : '保存' }}
+              {{ saving === 'api_gateway' ? t('common.saving') : t('common.save') }}
             </button>
           </div>
         </div>
@@ -887,22 +893,22 @@ onMounted(async () => {
 
       <div v-if="showKongNotice" class="dialog-overlay" @click.self="showKongNotice = false">
         <div class="dialog">
-          <h2 class="dialog__title">Kong 网关接入说明</h2>
+          <h2 class="dialog__title">{{ t('settings.kongDialog.title') }}</h2>
           <p class="dialog__desc">
-            当前 API 网关已切换为 <strong>Kong</strong>，发布 MCP 服务时请注意以下限制：
+            {{ t('settings.kongDialog.intro1') }}<strong>Kong</strong>{{ t('settings.kongDialog.intro2') }}
           </p>
           <ul class="kong-notice__list">
-            <li>仅发布「上游（Upstream）」「Service」「路由（Route）」，<strong>不会下发任何插件</strong>。</li>
-            <li>Access Key 认证、审计日志、路径重写等能力在 Kong 下不生效。</li>
-            <li>发布后的网关路径使用 MCP 服务器配置的 URI 路径（address），而非服务器 UUID。</li>
+            <li>{{ t('settings.kongDialog.item1a') }}<strong>{{ t('settings.kongDialog.item1b') }}</strong>{{ t('settings.kongDialog.item1c') }}</li>
+            <li>{{ t('settings.kongDialog.item2') }}</li>
+            <li>{{ t('settings.kongDialog.item3') }}</li>
           </ul>
           <p class="dialog__desc">
-            本地 Docker 测试：Admin API 默认 <code>http://127.0.0.1:8001</code>，
-            未启用 RBAC 时 Admin API Key 可留空。
+            {{ t('settings.kongDialog.dockerPre') }}
+            <code>http://127.0.0.1:8001</code>{{ t('settings.kongDialog.dockerPost') }}
           </p>
           <div class="dialog__actions">
             <button class="btn btn--primary" type="button" @click="showKongNotice = false">
-              知道了
+              {{ t('settings.general.gotIt') }}
             </button>
           </div>
         </div>
@@ -910,19 +916,20 @@ onMounted(async () => {
 
       <div class="collapse">
         <button class="collapse__head" type="button" @click="networkSecurityOpen = !networkSecurityOpen">
-          <span class="collapse__title">网络安全</span>
+          <span class="collapse__title">{{ t('settings.network.title') }}</span>
           <span class="collapse__arrow" :class="{ 'collapse__arrow--open': networkSecurityOpen }">▾</span>
         </button>
         <div v-show="networkSecurityOpen" class="collapse__body">
           <label class="field">
             <span class="field__label">
-              允许连接的内网 CIDR
+              {{ t('settings.network.allowLabel') }}
               <span class="field__help">
                 ?
                 <span class="field__tooltip">
-                  每行一个 CIDR 地址段，例如 <code>10.0.0.0/8</code>。<br />
-                  配置后，获取工具列表时将允许连接这些内网地址。<br />
-                  如需连接 MCP 服务器内网 IP，在此添加对应的地址段即可。
+                  {{ t('settings.network.tip1') }}
+                  <code>10.0.0.0/8</code>{{ t('settings.network.tip2') }}<br />
+                  {{ t('settings.network.tip3') }}<br />
+                  {{ t('settings.network.tip4') }}
                 </span>
               </span>
             </span>
@@ -937,36 +944,34 @@ onMounted(async () => {
           <div class="collapse__actions">
             <span v-if="tips.network_security" class="save-tip">{{ tips.network_security }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'network_security'" @click="saveNetworkSecuritySettings">
-              {{ saving === 'network_security' ? '保存中…' : '保存' }}
+              {{ saving === 'network_security' ? t('common.saving') : t('common.save') }}
             </button>
           </div>
         </div>
       </div>
       <div class="collapse">
         <button class="collapse__head" type="button" @click="auditLogOpen = !auditLogOpen">
-          <span class="collapse__title">审计日志</span>
+          <span class="collapse__title">{{ t('settings.audit.title') }}</span>
           <span class="collapse__arrow" :class="{ 'collapse__arrow--open': auditLogOpen }">▾</span>
         </button>
         <div v-show="auditLogOpen" class="collapse__body">
           <div class="field">
-            <span class="field__label">启用审计日志</span>
+            <span class="field__label">{{ t('settings.audit.enable') }}</span>
             <label class="switch">
               <input type="checkbox" v-model="auditLogForm.enabled" />
               <span class="switch__track"><span class="switch__thumb"></span></span>
-              <span class="switch__label">{{ auditLogForm.enabled ? '启用' : '禁用' }}</span>
+              <span class="switch__label">{{ auditLogForm.enabled ? t('common.enabled') : t('common.disabled') }}</span>
             </label>
           </div>
 
           <div class="field">
             <span class="field__label">
-              审计日志 gRPC 地址
+              {{ t('settings.audit.grpcAddrLabel') }}
               <span class="field__help">
                 ?
                 <span class="field__tooltip">
-                  对应 audit-log-server 的 gRPC 监听地址，例如
-                  <code>:9091</code> 或 <code>127.0.0.1:9091</code>。
-                  支持配置多个地址，发布时会下发到 audit_log 插件，
-                  并按连接数（最少连接）负载均衡。每行一个地址。
+                  {{ t('settings.audit.tip1') }}
+                  <code>:9091</code>{{ t('settings.audit.tip2') }}<code>127.0.0.1:9091</code>{{ t('settings.audit.tip3') }}
                 </span>
               </span>
             </span>
@@ -984,7 +989,7 @@ onMounted(async () => {
               <button
                 class="addr-row__remove"
                 type="button"
-                title="移除"
+                :title="t('settings.general.remove')"
                 @click="removeAddr(auditLogForm.grpcAddrs, i)"
               >
                 ×
@@ -995,14 +1000,14 @@ onMounted(async () => {
               type="button"
               @click="addAddr(auditLogForm.grpcAddrs)"
             >
-              + 添加地址
+              {{ t('settings.general.addAddress') }}
             </button>
           </div>
 
           <div class="collapse__actions">
             <span v-if="tips.audit_log" class="save-tip">{{ tips.audit_log }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'audit_log'" @click="saveAuditLogSettings">
-              {{ saving === 'audit_log' ? '保存中…' : '保存' }}
+              {{ saving === 'audit_log' ? t('common.saving') : t('common.save') }}
             </button>
           </div>
         </div>
@@ -1012,55 +1017,55 @@ onMounted(async () => {
     <div v-if="tab === 'operation'" class="settings__panel">
       <div class="collapse">
         <button class="collapse__head" type="button" @click="platformOpen = !platformOpen">
-          <span class="collapse__title">平台设置</span>
+          <span class="collapse__title">{{ t('settings.platform.title') }}</span>
           <span class="collapse__arrow" :class="{ 'collapse__arrow--open': platformOpen }">▾</span>
         </button>
         <div v-show="platformOpen" class="collapse__body">
           <label class="field">
-            <span class="field__label">平台名称</span>
+            <span class="field__label">{{ t('settings.platform.nameLabel') }}</span>
             <input
               v-model="platformForm.name"
               class="field__input"
               type="text"
-              placeholder="请输入平台名称，如：某某大学"
+              :placeholder="t('settings.platform.namePlaceholder')"
             />
           </label>
 
           <label class="field">
-            <span class="field__label">Logo 图片地址</span>
+            <span class="field__label">{{ t('settings.platform.logoLabel') }}</span>
             <input
               v-model="platformForm.logoUrl"
               class="field__input"
               type="text"
-              placeholder="请输入 Logo 图片的 URL 地址"
+              :placeholder="t('settings.platform.logoPlaceholder')"
             />
           </label>
 
           <label class="field">
-            <span class="field__label">登录页背景图</span>
+            <span class="field__label">{{ t('settings.platform.loginBgLabel') }}</span>
             <input
               v-model="platformForm.loginBackground"
               class="field__input"
               type="text"
-              placeholder="请输入登录页背景图片的 URL 地址"
+              :placeholder="t('settings.platform.loginBgPlaceholder')"
             />
-            <span class="field__help-text">留空则使用默认渐变背景；填写后登录页自适应填充显示该图片</span>
+            <span class="field__help-text">{{ t('settings.platform.loginBgHint') }}</span>
           </label>
 
           <label class="field">
-            <span class="field__label">跳转链接</span>
+            <span class="field__label">{{ t('settings.platform.siteUrlLabel') }}</span>
             <input
               v-model="platformForm.siteUrl"
               class="field__input"
               type="text"
-              placeholder="点击 Logo 时跳转到的网址，如：https://www.example.edu.cn"
+              :placeholder="t('settings.platform.siteUrlPlaceholder')"
             />
           </label>
 
           <div class="collapse__actions">
             <span v-if="tips.platform" class="save-tip">{{ tips.platform }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'platform'" @click="savePlatformSettings">
-              {{ saving === 'platform' ? '保存中…' : '保存' }}
+              {{ saving === 'platform' ? t('common.saving') : t('common.save') }}
             </button>
           </div>
         </div>
@@ -1068,12 +1073,12 @@ onMounted(async () => {
 
       <div class="collapse">
         <button class="collapse__head" type="button" @click="authOpen = !authOpen">
-          <span class="collapse__title">用户认证</span>
+          <span class="collapse__title">{{ t('settings.auth.title') }}</span>
           <span class="collapse__arrow" :class="{ 'collapse__arrow--open': authOpen }">▾</span>
         </button>
         <div v-show="authOpen" class="collapse__body">
           <div class="field">
-            <span class="field__label">认证方式</span>
+            <span class="field__label">{{ t('settings.auth.methodLabel') }}</span>
             <div class="seg">
               <button
                 v-for="m in AUTH_METHODS"
@@ -1090,7 +1095,7 @@ onMounted(async () => {
 
           <template v-if="authMethod === 'cas'">
             <label class="field">
-              <span class="field__label">CAS 服务器地址</span>
+              <span class="field__label">{{ t('settings.auth.cas.serverUrlLabel') }}</span>
               <input
                 v-model="casForm.serverUrl"
                 class="field__input"
@@ -1099,7 +1104,7 @@ onMounted(async () => {
               />
             </label>
             <label class="field">
-              <span class="field__label">服务回调地址</span>
+              <span class="field__label">{{ t('settings.auth.cas.serviceUrlLabel') }}</span>
               <input
                 v-model="casForm.serviceUrl"
                 class="field__input"
@@ -1108,7 +1113,7 @@ onMounted(async () => {
               />
             </label>
             <label class="field">
-              <span class="field__label">协议版本</span>
+              <span class="field__label">{{ t('settings.auth.cas.versionLabel') }}</span>
               <select v-model="casForm.version" class="field__input">
                 <option value="2.0">2.0</option>
                 <option value="3.0">3.0</option>
@@ -1118,11 +1123,11 @@ onMounted(async () => {
 
           <template v-if="authMethod === 'ldap'">
             <div class="ldap-notice">
-              LDAP 认证已启用。出于安全考虑，不显示当前已配置的值；输入框留空表示保持现有配置不变。
+              {{ t('settings.auth.ldap.enabledNotice') }}
             </div>
             <div class="field-row">
               <label class="field">
-                <span class="field__label">服务器地址</span>
+                <span class="field__label">{{ t('settings.auth.ldap.hostLabel') }}</span>
                 <input
                   v-model="ldapForm.host"
                   class="field__input"
@@ -1131,7 +1136,7 @@ onMounted(async () => {
                 />
               </label>
               <label class="field">
-                <span class="field__label">端口</span>
+                <span class="field__label">{{ t('settings.auth.ldap.portLabel') }}</span>
                 <input
                   v-model.number="ldapForm.port"
                   class="field__input"
@@ -1159,16 +1164,16 @@ onMounted(async () => {
               />
             </label>
             <label class="field">
-              <span class="field__label">Bind 密码</span>
+              <span class="field__label">{{ t('settings.auth.ldap.bindPasswordLabel') }}</span>
               <input
                 v-model="ldapForm.bindPassword"
                 class="field__input"
                 type="password"
-                placeholder="请输入 Bind 密码"
+                :placeholder="t('settings.auth.ldap.bindPasswordPlaceholder')"
               />
             </label>
             <label class="field">
-              <span class="field__label">用户过滤器</span>
+              <span class="field__label">{{ t('settings.auth.ldap.userFilterLabel') }}</span>
               <input
                 v-model="ldapForm.userFilter"
                 class="field__input"
@@ -1177,7 +1182,7 @@ onMounted(async () => {
               />
             </label>
 
-            <p class="field__section-title">属性映射（平台字段 → LDAP 属性）</p>
+            <p class="field__section-title">{{ t('settings.auth.ldap.mappingTitle') }}</p>
             <div
               v-for="(item, i) in ldapAttrMapping"
               :key="i"
@@ -1187,13 +1192,13 @@ onMounted(async () => {
                 v-model="item.field"
                 class="field__input mapping-row__select"
               >
-                <option value="" disabled>选择平台字段</option>
+                <option value="" disabled>{{ t('settings.auth.ldap.selectPlatformField') }}</option>
                 <option
                   v-for="f in unusedFields(i)"
                   :key="f.key"
                   :value="f.key"
                 >
-                  {{ f.label }}
+                  {{ t(f.labelKey) }}
                 </option>
               </select>
               <span class="mapping-row__arrow">→</span>
@@ -1201,13 +1206,13 @@ onMounted(async () => {
                 v-model="item.ldapAttr"
                 class="field__input mapping-row__input"
                 type="text"
-                placeholder="LDAP 属性名"
+                :placeholder="t('settings.auth.ldap.ldapAttrPlaceholder')"
               />
               <button
                 class="mapping-row__remove"
                 type="button"
                 @click="removeAttrMappingRow(i)"
-                title="移除"
+                :title="t('settings.general.remove')"
               >
                 ×
               </button>
@@ -1218,17 +1223,17 @@ onMounted(async () => {
               type="button"
               @click="addAttrMappingRow"
             >
-              + 添加映射
+              {{ t('settings.auth.ldap.addMapping') }}
             </button>
 
             <div class="ldap-test">
-              <p class="field__section-title">测试映射</p>
+              <p class="field__section-title">{{ t('settings.auth.ldap.testTitle') }}</p>
               <div class="ldap-test__row">
                 <input
                   v-model="ldapTestUser"
                   class="field__input ldap-test__input"
                   type="text"
-                  placeholder="输入用户名测试映射效果"
+                  :placeholder="t('settings.auth.ldap.testPlaceholder')"
                   @keyup.enter="runLdapTest"
                 />
                 <button
@@ -1237,7 +1242,7 @@ onMounted(async () => {
                   :disabled="!ldapTestUser.trim() || ldapTesting"
                   @click="runLdapTest"
                 >
-                  {{ ldapTesting ? '测试中…' : '测试映射' }}
+                  {{ ldapTesting ? t('settings.auth.ldap.testing') : t('settings.auth.ldap.testTitle') }}
                 </button>
               </div>
 
@@ -1251,7 +1256,7 @@ onMounted(async () => {
 
                 <template v-if="ldapTestResult.success">
                   <div class="ldap-result__section">
-                    <p class="ldap-result__subtitle">LDAP 全部属性（{{ ldapTestResult.attributes.length }} 个）</p>
+                    <p class="ldap-result__subtitle">{{ t('settings.auth.ldap.allAttributes', { count: ldapTestResult.attributes.length }) }}</p>
                     <div class="ldap-result__tags">
                       <code
                         v-for="attr in ldapTestResult.attributes"
@@ -1259,28 +1264,28 @@ onMounted(async () => {
                         class="ldap-result__tag"
                       >
                         <strong>{{ attr.name }}</strong>
-                        <span>{{ attr.values.join(', ') || '—' }}</span>
+                        <span>{{ attr.values.join(', ') || t('common.emptyDash') }}</span>
                       </code>
                     </div>
                   </div>
 
                   <div class="ldap-result__section">
-                    <p class="ldap-result__subtitle">当前映射结果</p>
+                    <p class="ldap-result__subtitle">{{ t('settings.auth.ldap.currentMapping') }}</p>
                     <div class="ldap-result__table">
                       <div
                         v-for="(_v, field) in ldapTestResult.mapped"
                         :key="field"
                         class="ldap-result__row"
                       >
-                        <span class="ldap-result__field">{{ PLATFORM_FIELDS.find(f => f.key === field)?.label || field }}</span>
+                        <span class="ldap-result__field">{{ platformFieldLabel(field) }}</span>
                         <span class="ldap-result__arrow">=</span>
-                        <code class="ldap-result__value">{{ _v || '—' }}</code>
+                        <code class="ldap-result__value">{{ _v || t('common.emptyDash') }}</code>
                       </div>
                       <div
                         v-if="Object.keys(ldapTestResult.mapped).length === 0"
                         class="ldap-result__row ldap-result__row--empty"
                       >
-                        暂无映射配置
+                        {{ t('settings.auth.ldap.noMapping') }}
                     </div>
                   </div>
                   </div>
@@ -1291,7 +1296,7 @@ onMounted(async () => {
 
           <template v-if="authMethod === 'oauth'">
             <label class="field">
-              <span class="field__label">授权地址</span>
+              <span class="field__label">{{ t('settings.auth.oauth.authorizeUrlLabel') }}</span>
               <input
                 v-model="oauthForm.authorizeUrl"
                 class="field__input"
@@ -1300,7 +1305,7 @@ onMounted(async () => {
               />
             </label>
             <label class="field">
-              <span class="field__label">Token 地址</span>
+              <span class="field__label">{{ t('settings.auth.oauth.tokenUrlLabel') }}</span>
               <input
                 v-model="oauthForm.tokenUrl"
                 class="field__input"
@@ -1309,7 +1314,7 @@ onMounted(async () => {
               />
             </label>
             <label class="field">
-              <span class="field__label">用户信息地址</span>
+              <span class="field__label">{{ t('settings.auth.oauth.userinfoUrlLabel') }}</span>
               <input
                 v-model="oauthForm.userinfoUrl"
                 class="field__input"
@@ -1324,7 +1329,7 @@ onMounted(async () => {
                   v-model="oauthForm.clientId"
                   class="field__input"
                   type="text"
-                  placeholder="请输入 Client ID"
+                  :placeholder="t('settings.auth.oauth.clientIdPlaceholder')"
                 />
               </label>
               <label class="field">
@@ -1333,12 +1338,12 @@ onMounted(async () => {
                   v-model="oauthForm.clientSecret"
                   class="field__input"
                   type="password"
-                  placeholder="请输入 Client Secret"
+                  :placeholder="t('settings.auth.oauth.clientSecretPlaceholder')"
                 />
               </label>
             </div>
             <label class="field">
-              <span class="field__label">回调地址</span>
+              <span class="field__label">{{ t('settings.auth.oauth.redirectUrlLabel') }}</span>
               <input
                 v-model="oauthForm.redirectUrl"
                 class="field__input"
@@ -1360,28 +1365,28 @@ onMounted(async () => {
           <div class="collapse__actions">
             <span v-if="tips.auth" class="save-tip">{{ tips.auth }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'auth'" @click="saveAuthSettings">
-              {{ saving === 'auth' ? '保存中…' : '保存' }}
+              {{ saving === 'auth' ? t('common.saving') : t('common.save') }}
             </button>
           </div>
           <div
             v-if="ldapTestResult && ldapTestResult.success"
             class="ldap-result__hint ldap-result__hint--under"
           >
-            <p>请确保已点击上方「保存」按钮保存认证设置，保存后用户需<span class="ldap-result__em">重新登录</span>才能同步 LDAP 属性到个人信息。</p>
+            <p>{{ t('settings.auth.ldap.saveHint1') }}<span class="ldap-result__em">{{ t('settings.auth.ldap.saveHint2') }}</span>{{ t('settings.auth.ldap.saveHint3') }}</p>
           </div>
         </div>
       </div>
 
       <div class="collapse">
         <button class="collapse__head" type="button" @click="userOpsOpen = !userOpsOpen">
-          <span class="collapse__title">用户运营</span>
+          <span class="collapse__title">{{ t('settings.userOps.title') }}</span>
           <span class="collapse__arrow" :class="{ 'collapse__arrow--open': userOpsOpen }">▾</span>
         </button>
         <div v-show="userOpsOpen" class="collapse__body">
           <div class="user-ops-grid">
             <div class="user-ops-col">
               <label class="field">
-                <span class="field__label">每用户最大 AccessKey 数量</span>
+                <span class="field__label">{{ t('settings.userOps.maxAccessKeysLabel') }}</span>
                 <input
                   v-model.number="maxAccessKeys"
                   class="field__input"
@@ -1392,27 +1397,27 @@ onMounted(async () => {
               </label>
 
               <label class="field">
-                <span class="field__label">过期扫描 cron 表达式</span>
+                <span class="field__label">{{ t('settings.userOps.accessKeyCronLabel') }}</span>
                 <input
                   v-model="accessKeyCron"
                   class="field__input"
                   type="text"
                   placeholder="0 */6 * * *"
                 />
-                <span class="field__help-text">每隔一段时间自动扫描过期 AccessKey 并禁用，支持标准 crontab 格式</span>
+                <span class="field__help-text">{{ t('settings.userOps.accessKeyCronHint') }}</span>
               </label>
             </div>
 
             <div class="user-ops-col">
-              <p class="field__section-title">新用户角色自动分配规则</p>
+              <p class="field__section-title">{{ t('settings.userOps.roleRuleTitle') }}</p>
               <label class="field">
-                <span class="field__label">过滤属性</span>
+                <span class="field__label">{{ t('settings.userOps.filterAttrLabel') }}</span>
                 <select v-model="filterAttribute" class="field__input">
                   <option v-for="a in ROLE_ATTRS" :key="a.key" :value="a.key">
-                    {{ a.label }}
+                    {{ t(a.labelKey) }}
                   </option>
                 </select>
-                <span class="field__help-text">所有角色条件共用同一个过滤属性，用户该属性匹配到哪条规则就分配对应角色</span>
+                <span class="field__help-text">{{ t('settings.userOps.filterAttrHint') }}</span>
               </label>
 
               <div
@@ -1420,17 +1425,17 @@ onMounted(async () => {
                 :key="i"
                 class="role-rule-row"
               >
-                <span class="role-rule-row__index">条件 {{ i + 1 }}</span>
-                <span class="role-rule-row__label">满足</span>
+                <span class="role-rule-row__index">{{ t('settings.userOps.conditionIndex', { n: i + 1 }) }}</span>
+                <span class="role-rule-row__label">{{ t('settings.userOps.satisfies') }}</span>
                 <input
                   v-model="rule.pattern"
                   class="field__input role-rule-row__input"
                   type="text"
-                  placeholder="正则表达式，如 ^\d{7}$"
+                  :placeholder="t('settings.userOps.patternPlaceholder')"
                 />
-                <span class="role-rule-row__label">自动分配角色</span>
+                <span class="role-rule-row__label">{{ t('settings.userOps.assignRole') }}</span>
                 <select v-model="rule.roleId" class="field__input role-rule-row__select">
-                  <option value="" disabled>选择角色</option>
+                  <option value="" disabled>{{ t('settings.userOps.selectRole') }}</option>
                   <option v-for="r in roles" :key="r.id" :value="r.id">
                     {{ r.name }}
                   </option>
@@ -1438,7 +1443,7 @@ onMounted(async () => {
                 <button
                   class="role-rule-row__remove"
                   type="button"
-                  title="移除条件"
+                  :title="t('settings.userOps.removeCondition')"
                   @click="removeRoleRule(i)"
                 >
                   ×
@@ -1446,7 +1451,7 @@ onMounted(async () => {
               </div>
 
               <button class="role-rule-row__add" type="button" @click="addRoleRule">
-                + 添加条件
+                {{ t('settings.userOps.addCondition') }}
               </button>
             </div>
           </div>
@@ -1454,7 +1459,7 @@ onMounted(async () => {
           <div class="collapse__actions">
             <span v-if="tips.user_ops" class="save-tip">{{ tips.user_ops }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'user_ops'" @click="saveUserOpsSettings">
-              {{ saving === 'user_ops' ? '保存中…' : '保存' }}
+              {{ saving === 'user_ops' ? t('common.saving') : t('common.save') }}
             </button>
           </div>
         </div>
@@ -1462,13 +1467,13 @@ onMounted(async () => {
 
       <div class="collapse">
         <button class="collapse__head" type="button" @click="quickAccessOpen = !quickAccessOpen">
-          <span class="collapse__title">快速接入</span>
+          <span class="collapse__title">{{ t('nav.quickaccess') }}</span>
           <span class="collapse__arrow" :class="{ 'collapse__arrow--open': quickAccessOpen }">▾</span>
         </button>
         <div v-show="quickAccessOpen" class="collapse__body">
           <div class="field">
-            <span class="field__label">支持的客户端</span>
-            <span class="field__help-text">控制用户「快速接入」页可选用的客户端，勾选后该客户端对用户开放。</span>
+            <span class="field__label">{{ t('settings.quickAccess.supportedClients') }}</span>
+            <span class="field__help-text">{{ t('settings.quickAccess.supportedClientsHint') }}</span>
             <div class="qa-clients">
               <label
                 v-for="c in QUICK_ACCESS_CLIENTS"
@@ -1486,8 +1491,8 @@ onMounted(async () => {
           </div>
 
           <div class="field">
-            <span class="field__label">接入协议</span>
-            <span class="field__help-text">决定生成接入地址使用的协议（HTTP 或 HTTPS）。</span>
+            <span class="field__label">{{ t('settings.quickAccess.schemeLabel') }}</span>
+            <span class="field__help-text">{{ t('settings.quickAccess.schemeHint') }}</span>
             <div class="seg">
               <button
                 type="button"
@@ -1505,7 +1510,7 @@ onMounted(async () => {
           <div class="collapse__actions">
             <span v-if="tips.quick_access" class="save-tip">{{ tips.quick_access }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'quick_access'" @click="saveQuickAccessSettings">
-              {{ saving === 'quick_access' ? '保存中…' : '保存' }}
+              {{ saving === 'quick_access' ? t('common.saving') : t('common.save') }}
             </button>
           </div>
         </div>

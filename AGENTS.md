@@ -17,7 +17,8 @@
 
 - Go 代码放在项目根目录
 - 分层架构：`handler` → `service` → `model`
-- 所有 HTTP 接口统一返回 JSON 格式：`{"code": 200, "message": "success", "data": {}}`
+- 所有 HTTP 接口统一返回 JSON 格式：`{"code": 200, "message": "success", "data": {}}`，**必须通过 `resp` 响应助手（resp.OK / resp.Fail）输出**，禁止直接 `c.JSON(gin.H{...})`，以便 `message` 按 `Accept-Language` 自动中英翻译
+- `message` 中文字面量即翻译表主键；新增直达用户的中文消息时须在 `i18n/zh_en.go` 补充对应英文词条（整句或短语），英文为近似翻译
 - 数据库操作使用 GORM，所有模型定义在 `model/` 目录
 - 鉴权使用 JWT，中间件在 `middleware/` 目录
 - 环境变量配置模板在 `.env.example`

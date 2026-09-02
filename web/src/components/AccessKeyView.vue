@@ -19,9 +19,12 @@
 
 // Author: deepseek-v4-pro / opencode
 import { ref, onMounted, watch, onBeforeUnmount } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { setActive } from '../stores/nav.js'
 import { fetchAccessKeys, createAccessKey, updateAccessKey, deleteAccessKey, fetchServers, fetchSetting } from '../api.js'
 import AccessKeyDrawer from './AccessKeyDrawer.vue'
+
+const { t, locale } = useI18n()
 
 const servers = ref([])
 
@@ -63,13 +66,18 @@ onMounted(async () => {
 })
 
 const EXPIRATION_OPTIONS = [
-  { label: '7 天', value: 7 },
-  { label: '30 天', value: 30 },
-  { label: '90 天', value: 90 },
-  { label: '180 天', value: 180 },
-  { label: '365 天', value: 365 },
-  { label: '永不过期', value: -1 }
+  { value: 7 },
+  { value: 30 },
+  { value: 90 },
+  { value: 180 },
+  { value: 365 },
+  { value: -1 }
 ]
+
+function expiryLabel(value) {
+  if (value === -1) return t('accesskey.neverExpires')
+  return t('accesskey.expiryDays', { days: value })
+}
 
 const keys = ref([])
 const maxKeys = ref(0)
@@ -103,7 +111,7 @@ async function confirmCreate() {
     createdKey.value = key
     showingCreate.value = false
   } catch (e) {
-    alert(e.message || '创建失败')
+    alert(e.message || t('accesskey.createFailed'))
   }
 }
 
@@ -145,9 +153,9 @@ async function copyDialogKey() {
 }
 
 function formatExpire(key) {
-  if (!key.expired_at) return '永不过期'
+  if (!key.expired_at) return t('accesskey.neverExpires')
   const d = new Date(key.expired_at)
-  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
+  return d.toLocaleDateString(locale.value, { year: 'numeric', month: '2-digit', day: '2-digit' })
 }
 
 function maskKey(value) {
@@ -163,7 +171,7 @@ async function toggle(key) {
     await updateAccessKey(key.id, { enabled: !key.enabled })
     key.enabled = !key.enabled
   } catch (e) {
-    alert(e.message || '操作失败')
+    alert(e.message || t('accesskey.operateFailed'))
   }
 }
 
@@ -202,7 +210,7 @@ async function onSave(payload) {
       keys.value[idx] = { ...editingKey.value }
     }
   } catch (e) {
-    alert(e.message || '保存失败')
+    alert(e.message || t('accesskey.saveFailed'))
     return
   }
   editingKey.value = null
@@ -216,52 +224,52 @@ function goHistory() {
 <template>
   <section class="page">
     <div class="page__head">
-      <h1 class="page__title">AccessKey 管理</h1>
+      <h1 class="page__title">{{ t('nav.accesskey') }}</h1>
       <div class="page__actions">
         <span v-if="maxKeys > 0" class="keys__limit">
           {{ keys.length }} / {{ maxKeys }}
         </span>
         <button class="btn btn--ghost" type="button" @click="goHistory">
-          使用历史
+          {{ t('nav.history') }}
         </button>
         <button
           class="btn btn--primary"
           type="button"
           :disabled="maxKeys > 0 && keys.length >= maxKeys"
-          :title="maxKeys > 0 && keys.length >= maxKeys ? '已达上限' : ''"
+          :title="maxKeys > 0 && keys.length >= maxKeys ? t('accesskey.limitReached') : ''"
           @click="openCreate"
         >
-          创建 AccessKey
+          {{ t('accesskey.create') }}
         </button>
       </div>
     </div>
 
     <div v-if="showingCreate" class="create-form">
       <div class="create-form__group">
-        <label class="create-form__label">名称</label>
+        <label class="create-form__label">{{ t('common.name') }}</label>
         <input
           v-model="createForm.name"
           class="create-form__name"
           type="text"
-          placeholder="请输入 AccessKey 名称"
+          :placeholder="t('accesskey.namePlaceholder')"
           @keyup.enter="confirmCreate"
         />
       </div>
       <div class="create-form__group">
-        <label class="create-form__label">过期时间</label>
+        <label class="create-form__label">{{ t('accesskey.expireTime') }}</label>
         <select v-model="createForm.expireDays" class="create-form__select">
           <option
             v-for="opt in EXPIRATION_OPTIONS"
             :key="opt.value"
             :value="opt.value"
           >
-            {{ opt.label }}
+            {{ expiryLabel(opt.value) }}
           </option>
         </select>
       </div>
       <div class="create-form__actions">
         <button class="btn btn--ghost" type="button" @click="showingCreate = false">
-          取消
+          {{ t('common.cancel') }}
         </button>
         <button
           class="btn btn--primary"
@@ -269,7 +277,7 @@ function goHistory() {
           :disabled="!createForm.name.trim()"
           @click="confirmCreate"
         >
-          确认创建
+          {{ t('accesskey.confirmCreate') }}
         </button>
       </div>
     </div>
@@ -277,16 +285,16 @@ function goHistory() {
     <table v-if="!loading" class="keys">
       <thead>
         <tr>
-          <th>名称</th>
+          <th>{{ t('common.name') }}</th>
           <th>AccessKey</th>
-          <th class="keys__col-expire">过期时间</th>
-          <th class="keys__col-status">状态</th>
-          <th class="keys__col-action">操作</th>
+          <th class="keys__col-expire">{{ t('accesskey.expireTime') }}</th>
+          <th class="keys__col-status">{{ t('common.status') }}</th>
+          <th class="keys__col-action">{{ t('common.actions') }}</th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="keys.length === 0">
-          <td colspan="5" class="keys__empty">暂无 AccessKey</td>
+          <td colspan="5" class="keys__empty">{{ t('accesskey.empty') }}</td>
         </tr>
         <tr v-for="key in keys" :key="key.id">
           <td>{{ key.name }}</td>
@@ -297,13 +305,13 @@ function goHistory() {
                 :class="{ 'keys__value--off': !key.enabled }"
               >{{ maskKey(key.key) }}</code>
               <button class="keys__copy" type="button" @click="copyKey(key)">
-                {{ copiedId === key.id ? '已复制' : '复制' }}
+                {{ copiedId === key.id ? t('common.copied') : t('common.copy') }}
               </button>
             </div>
           </td>
           <td class="keys__col-expire">{{ formatExpire(key) }}</td>
           <td class="keys__col-status">
-            <span v-if="key.is_expired" class="keys__expired-badge">已过期</span>
+            <span v-if="key.is_expired" class="keys__expired-badge">{{ t('accesskey.expired') }}</span>
             <label v-else class="switch">
               <input
                 type="checkbox"
@@ -311,15 +319,15 @@ function goHistory() {
                 @change="toggle(key)"
               />
               <span class="switch__track"><span class="switch__thumb"></span></span>
-              <span class="switch__label">{{ key.enabled ? '启用' : '禁用' }}</span>
+              <span class="switch__label">{{ key.enabled ? t('common.enabled') : t('common.disabled') }}</span>
             </label>
           </td>
           <td class="keys__col-action">
             <button class="keys__edit" type="button" @click="openEdit(key)">
-              编辑
+              {{ t('common.edit') }}
             </button>
             <button class="keys__del" type="button" @click="removeKey(key)">
-              删除
+              {{ t('common.delete') }}
             </button>
           </td>
         </tr>
@@ -336,15 +344,15 @@ function goHistory() {
     <Teleport to="body">
       <div v-if="createdKey" class="dialog-overlay" @click.self="closeDialog">
         <div class="dialog">
-          <p class="dialog__warn">请妥善保存以下 AccessKey，关闭后将无法再次查看完整密钥。</p>
+          <p class="dialog__warn">{{ t('accesskey.createdWarn') }}</p>
           <div class="dialog__key">
             <code class="dialog__value">{{ createdKey.key }}</code>
             <button class="keys__copy" type="button" @click="copyDialogKey">
-              {{ dialogCopyId === createdKey.id ? '已复制' : '复制' }}
+              {{ dialogCopyId === createdKey.id ? t('common.copied') : t('common.copy') }}
             </button>
           </div>
           <button class="btn btn--primary" type="button" @click="closeDialog">
-            我知道了
+            {{ t('accesskey.gotIt') }}
           </button>
         </div>
       </div>

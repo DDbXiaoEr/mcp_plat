@@ -23,22 +23,25 @@ import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/compon
 import { CanvasRenderer } from 'echarts/renderers'
 import { fetchOverviewStats, fetchOverviewCallTrend } from '../api.js'
 import { theme } from '../stores/theme.js'
+import { useI18n } from 'vue-i18n'
 
 echarts.use([LineChart, BarChart, PieChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer])
+
+const { t, locale, n } = useI18n()
 
 // Author: deepseek-v4-pro / opencode
 const stats = ref([])
 const statsLoading = ref(true)
 
 const STATS_DEF = [
-  { key: 'users', label: '平台用户数' },
-  { key: 'servers', label: '接入业务系统数（MCP 服务器数）' },
-  { key: 'tools', label: 'MCP 工具数' },
-  { key: 'today_calls', label: '当天 AI 调用次数' }
+  { key: 'users', labelKey: 'overview.statUsers' },
+  { key: 'servers', labelKey: 'overview.statServers' },
+  { key: 'tools', labelKey: 'overview.statTools' },
+  { key: 'today_calls', labelKey: 'overview.statTodayCalls' }
 ]
 
-function formatCount(n) {
-  return (n ?? 0).toLocaleString()
+function formatCount(value) {
+  return n(value ?? 0)
 }
 
 async function loadStats(silent = false) {
@@ -52,11 +55,11 @@ async function loadStats(silent = false) {
 }
 
 const AUTO_REFRESH_OPTIONS = [
-  { value: 0, label: '自动刷新：关闭' },
-  { value: 10000, label: '自动刷新：10 秒' },
-  { value: 30000, label: '自动刷新：30 秒' },
-  { value: 60000, label: '自动刷新：1 分钟' },
-  { value: 300000, label: '自动刷新：5 分钟' }
+  { value: 0, labelKey: 'overview.autoRefreshOff' },
+  { value: 10000, labelKey: 'overview.autoRefresh10s' },
+  { value: 30000, labelKey: 'overview.autoRefresh30s' },
+  { value: 60000, labelKey: 'overview.autoRefresh1m' },
+  { value: 300000, labelKey: 'overview.autoRefresh5m' }
 ]
 const autoRefresh = ref(0)
 const refreshing = ref(false)
@@ -64,7 +67,7 @@ const lastUpdated = ref(null)
 let refreshTimer = null
 
 function formatTime(d) {
-  return d.toLocaleTimeString('zh-CN', { hour12: false })
+  return d.toLocaleTimeString(locale.value, { hour12: false })
 }
 
 async function refreshAll() {
@@ -84,8 +87,8 @@ const gitCommit = __GIT_COMMIT__
 const buildTime = __BUILD_TIME__
 
 const periods = [
-  { key: '7', label: '近7天' },
-  { key: '30', label: '近30天' }
+  { key: '7', labelKey: 'overview.period7' },
+  { key: '30', labelKey: 'overview.period30' }
 ]
 const period = ref('30')
 const trend = ref({ dates: [], counts: [], server_calls: [], user_groups: [], server_names: [], server_counts_by_day: [] })
@@ -149,7 +152,7 @@ function renderChart() {
     })
   })
   series.push({
-    name: 'AI 调用次数',
+    name: t('overview.callsSeries'),
     type: 'line',
     symbol: 'circle',
     symbolSize: 6,
@@ -199,7 +202,7 @@ function renderPie(el, holder, data) {
     return
   }
   holder.value.setOption({
-    tooltip: { trigger: 'item', formatter: '{b}: {c}（{d}%）' },
+    tooltip: { trigger: 'item', formatter: (p) => t('overview.pieTooltip', { name: p.name, count: n(p.value), percent: p.percent }) },
     legend: {
       bottom: 0,
       icon: 'circle',
@@ -269,6 +272,15 @@ watch(
   }
 )
 
+watch(
+  () => locale.value,
+  () => {
+    renderChart()
+    renderServerPie()
+    renderGroupPie()
+  }
+)
+
 watch(autoRefresh, (ms) => {
   if (refreshTimer) {
     clearInterval(refreshTimer)
@@ -303,28 +315,28 @@ onBeforeUnmount(() => {
 <template>
   <section class="overview">
     <div class="overview__head">
-      <h1 class="page__title">平台概况</h1>
-      <span class="overview__version" :title="`commit ${gitCommit}, built at ${buildTime}`">{{ version }}</span>
+      <h1 class="page__title">{{ t('overview.title') }}</h1>
+      <span class="overview__version" :title="t('overview.versionInfo', { commit: gitCommit, time: buildTime })">{{ version }}</span>
       <div class="overview__controls">
-        <select v-model="autoRefresh" class="overview__select" title="自动刷新间隔">
-          <option v-for="opt in AUTO_REFRESH_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+        <select v-model="autoRefresh" class="overview__select" :title="t('overview.autoRefreshTitle')">
+          <option v-for="opt in AUTO_REFRESH_OPTIONS" :key="opt.value" :value="opt.value">{{ t(opt.labelKey) }}</option>
         </select>
         <button type="button" class="overview__refresh" :disabled="refreshing" @click="refreshAll">
           <span class="overview__refresh-icon" :class="{ 'is-spinning': refreshing }">↻</span>
-          <span>{{ refreshing ? '刷新中' : '刷新' }}</span>
+          <span>{{ refreshing ? t('overview.refreshing') : t('common.refresh') }}</span>
         </button>
-        <span v-if="lastUpdated" class="overview__updated">更新于 {{ formatTime(lastUpdated) }}</span>
+        <span v-if="lastUpdated" class="overview__updated">{{ t('overview.updatedAt', { time: formatTime(lastUpdated) }) }}</span>
       </div>
     </div>
     <div class="overview__stats">
       <div v-for="item in STATS_DEF" :key="item.key" class="stat-card">
-        <span class="stat-card__label">{{ item.label }}</span>
+        <span class="stat-card__label">{{ t(item.labelKey) }}</span>
         <span class="stat-card__value">{{ statsLoading ? '—' : formatCount(stats[item.key]) }}</span>
       </div>
     </div>
     <div class="trend">
       <div class="trend__head">
-        <h2 class="trend__title">AI 调用历史趋势</h2>
+        <h2 class="trend__title">{{ t('overview.trendTitle') }}</h2>
         <div class="trend__tabs">
           <button
             v-for="p in periods"
@@ -334,27 +346,27 @@ onBeforeUnmount(() => {
             :class="{ 'is-active': period === p.key }"
             @click="period = p.key"
           >
-            {{ p.label }}
+            {{ t(p.labelKey) }}
           </button>
         </div>
       </div>
       <div class="trend__body">
         <div ref="chartEl" class="trend__canvas"></div>
-        <div v-show="!trend.dates.length" class="trend__empty">暂无数据</div>
+        <div v-show="!trend.dates.length" class="trend__empty">{{ t('overview.emptyData') }}</div>
       </div>
       <div class="trend__pies">
         <div class="pie-card">
-          <h3 class="pie-card__title">服务器调用量占比</h3>
+          <h3 class="pie-card__title">{{ t('overview.pieServerTitle') }}</h3>
           <div class="pie-card__body">
             <div ref="serverPieEl" class="pie-card__canvas"></div>
-            <div v-show="!trend.server_calls?.length" class="pie-card__empty">暂无数据</div>
+            <div v-show="!trend.server_calls?.length" class="pie-card__empty">{{ t('overview.emptyData') }}</div>
           </div>
         </div>
         <div class="pie-card">
-          <h3 class="pie-card__title">用户组用户数占比</h3>
+          <h3 class="pie-card__title">{{ t('overview.pieGroupTitle') }}</h3>
           <div class="pie-card__body">
             <div ref="groupPieEl" class="pie-card__canvas"></div>
-            <div v-show="!trend.user_groups?.length" class="pie-card__empty">暂无数据</div>
+            <div v-show="!trend.user_groups?.length" class="pie-card__empty">{{ t('overview.emptyData') }}</div>
           </div>
         </div>
       </div>

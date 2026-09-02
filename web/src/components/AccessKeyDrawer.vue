@@ -19,15 +19,23 @@
 
 // Author: deepseek-v4-pro / opencode
 import { reactive, ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t, locale } = useI18n()
 
 const EXPIRATION_OPTIONS = [
-  { label: '7 天', value: 7 },
-  { label: '30 天', value: 30 },
-  { label: '90 天', value: 90 },
-  { label: '180 天', value: 180 },
-  { label: '365 天', value: 365 },
-  { label: '永不过期', value: -1 }
+  { value: 7 },
+  { value: 30 },
+  { value: 90 },
+  { value: 180 },
+  { value: 365 },
+  { value: -1 }
 ]
+
+function expiryLabel(value) {
+  if (value === -1) return t('accesskey.neverExpires')
+  return t('accesskey.expiryDays', { days: value })
+}
 
 const props = defineProps({
   item: { type: Object, default: null },
@@ -71,7 +79,7 @@ const isExpired = computed(() => {
 
 const expiredAtText = computed(() => {
   if (!props.item || !props.item.expired_at) return ''
-  return new Date(props.item.expired_at).toLocaleString('zh-CN')
+  return new Date(props.item.expired_at).toLocaleString(locale.value)
 })
 
 function parseServers(raw) {
@@ -159,35 +167,35 @@ function onSave() {
     <div class="drawer__overlay" @click="emit('close')"></div>
     <aside class="drawer__panel">
       <header class="drawer__head">
-        <h2 class="drawer__title">编辑 AccessKey</h2>
-        <button class="drawer__close" type="button" aria-label="关闭" @click="emit('close')">
+        <h2 class="drawer__title">{{ t('accesskey.editTitle') }}</h2>
+        <button class="drawer__close" type="button" :aria-label="t('common.close')" @click="emit('close')">
           ×
         </button>
       </header>
 
       <div v-if="item" class="drawer__body">
         <label class="field">
-          <span class="field__label">名称</span>
+          <span class="field__label">{{ t('common.name') }}</span>
           <input
             v-model="form.name"
             type="text"
             class="field__input"
-            placeholder="请输入名称"
+            :placeholder="t('accesskey.editNamePlaceholder')"
           />
         </label>
 
         <div class="field">
-          <span class="field__label">可用状态</span>
-          <span v-if="isExpired" class="field__hint">已过期，无法启用</span>
+          <span class="field__label">{{ t('accesskey.availability') }}</span>
+          <span v-if="isExpired" class="field__hint">{{ t('accesskey.expiredDisabled') }}</span>
           <label v-else class="switch">
             <input type="checkbox" v-model="form.enabled" />
             <span class="switch__track"><span class="switch__thumb"></span></span>
-            <span class="switch__label">{{ form.enabled ? '启用' : '禁用' }}</span>
+            <span class="switch__label">{{ form.enabled ? t('common.enabled') : t('common.disabled') }}</span>
           </label>
         </div>
 
         <div class="field">
-          <span class="field__label">过期时间</span>
+          <span class="field__label">{{ t('accesskey.expireTime') }}</span>
           <span v-if="isExpired" class="field__hint">{{ expiredAtText }}</span>
           <select v-else v-model="form.expireDays" class="field__input">
             <option
@@ -195,13 +203,13 @@ function onSave() {
               :key="opt.value"
               :value="opt.value"
             >
-              {{ opt.label }}
+              {{ expiryLabel(opt.value) }}
             </option>
           </select>
         </div>
 
         <div class="field">
-          <span class="field__label">工具使用权限</span>
+          <span class="field__label">{{ t('accesskey.toolsPermission') }}</span>
           <select v-model="selectedServer" class="field__input">
             <option v-for="s in servers" :key="s.id" :value="s.id">
               {{ s.name }}
@@ -222,10 +230,10 @@ function onSave() {
 
       <footer class="drawer__foot">
         <button class="btn btn--ghost" type="button" @click="emit('close')">
-          取消
+          {{ t('common.cancel') }}
         </button>
         <button class="btn btn--primary" type="button" @click="onSave">
-          保存
+          {{ t('common.save') }}
         </button>
       </footer>
     </aside>

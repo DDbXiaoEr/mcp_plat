@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"mcp_plat-console/config"
+	"mcp_plat-console/resp"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -38,14 +39,14 @@ func AuthRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "未提供认证令牌"})
+			resp.Fail(c, http.StatusUnauthorized, "未提供认证令牌")
 			c.Abort()
 			return
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "认证格式错误"})
+			resp.Fail(c, http.StatusUnauthorized, "认证格式错误")
 			c.Abort()
 			return
 		}
@@ -57,7 +58,7 @@ func AuthRequired() gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "令牌无效或已过期"})
+			resp.Fail(c, http.StatusUnauthorized, "令牌无效或已过期")
 			c.Abort()
 			return
 		}
@@ -73,7 +74,7 @@ func AdminRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get("role")
 		if !exists || role.(string) != "admin" {
-			c.JSON(http.StatusForbidden, gin.H{"code": 403, "message": "仅管理员可操作"})
+			resp.Fail(c, http.StatusForbidden, "仅管理员可操作")
 			c.Abort()
 			return
 		}

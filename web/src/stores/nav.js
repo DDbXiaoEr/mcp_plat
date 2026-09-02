@@ -21,16 +21,16 @@ import { reactive, readonly } from 'vue'
 // TODO: 后端/路由接入后，菜单可改为配置化或路由驱动
 const MENUS = {
   user: [
-    { key: 'profile', label: '个人信息' },
-    { key: 'accesskey', label: 'AccessKey 管理' },
-    { key: 'quickaccess', label: '快速接入' },
-    { key: 'history', label: '使用历史' }
+    { key: 'profile', labelKey: 'nav.profile' },
+    { key: 'accesskey', labelKey: 'nav.accesskey' },
+    { key: 'quickaccess', labelKey: 'nav.quickaccess' },
+    { key: 'history', labelKey: 'nav.history' }
   ],
   admin: [
-    { key: 'overview', label: '平台概况' },
-    { key: 'servers', label: 'MCP 服务器管理' },
-    { key: 'rbac', label: 'RBAC设置' },
-    { key: 'settings', label: '系统设置' }
+    { key: 'overview', labelKey: 'nav.overview' },
+    { key: 'servers', labelKey: 'nav.servers' },
+    { key: 'rbac', labelKey: 'nav.rbac' },
+    { key: 'settings', labelKey: 'nav.settings' }
   ]
 }
 

@@ -8,6 +8,7 @@
 
 - Vue 3（`<script setup>` 组合式 API）
 - Vite 6
+- vue-i18n（zh-CN/en-US 双语，`src/i18n.js` + `src/locales/`）
 - 纯 CSS，无 UI 框架；样式写在组件 `<style scoped>` 内，全局变量在 `src/styles/global.css`
 
 ## 常用命令
@@ -38,11 +39,12 @@ src/
 
 ## 约定
 
-- 有文件新增或删除时，必须同步更新仓库根目录的 `PROJECT_STRUCTURE.md`。
+- 有文件新增或删除时，必须同步更新仓库根目录的 `PROJECT_STRUCTURE.md`（及本目录的 `PROJECT_STRUCTURE.md`）。
 - 组件用 `<script setup>` + 组合式 API；单文件组件命名 PascalCase，布局类组件以 `The` 前缀（如 `TheHeader`）。
 - 颜色、圆角、间距等统一用 `global.css` 里的 CSS 变量（`--xauat-blue`、`--radius`、`--header-height` 等），不要硬编码。
 - 未完成或待接后端的地方用 `// TODO:` 标注。
 - 除非明确要求，不要新增注释。
+- 界面文案支持中英双语（vue-i18n）：新增/修改文案必须同步维护 `src/locales/zh-CN/<domain>.js` 与 `en-US/<domain>.js` 的同名键（zh 为原文）；通用词复用 `common.*`，页面文案用各自视图域键。禁止在模板/脚本中硬编码中文 UI 文案。
 
 ## 当前状态
 

@@ -19,9 +19,12 @@
 
 // Author: deepseek-v4-pro / opencode
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { auth } from '../stores/auth.js'
 import { nav, menusFor, setActive } from '../stores/nav.js'
 import { theme, toggleTheme } from '../stores/theme.js'
+
+const { t } = useI18n()
 
 const menus = computed(() => menusFor(auth.user?.role))
 </script>
@@ -37,7 +40,7 @@ const menus = computed(() => menusFor(auth.user?.role))
         type="button"
         @click="setActive(item.key)"
       >
-        {{ item.label }}
+        {{ t(item.labelKey) }}
       </button>
     </nav>
     <div class="sidebar__footer">
@@ -52,7 +55,7 @@ const menus = computed(() => menusFor(auth.user?.role))
           <span class="theme-toggle__thumb"></span>
         </span>
         <span class="theme-toggle__label">
-          {{ theme.theme === 'dark' ? '暗色模式' : '亮色模式' }}
+          {{ theme.theme === 'dark' ? t('app.themeDark') : t('app.themeLight') }}
         </span>
       </button>
     </div>
