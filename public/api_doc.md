@@ -835,6 +835,77 @@ DELETE /api/users/:id
 }
 ```
 
+#### 5.2.5 批量创建用户
+
+```
+POST /api/users/batch
+```
+
+> 一次请求创建多个用户。列表内用户名/学号/邮箱重复、或与库中已有账号冲突时，整个批次不创建任何用户（事务回滚），返回具体冲突项便于修正后重提。
+
+**请求参数（JSON Body）：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| role_id | uint/null | 否 | 本批次统一绑定的角色 ID，null 表示不分配 |
+| users | []object | 是 | 待创建用户列表，不能为空 |
+
+**users[]. 字段：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| username | string | 是 | 用户名（登录账号），唯一 |
+| password | string | 是 | 登录密码 |
+| name | string | 否 | 姓名 |
+| email | string | 否 | 邮箱（非空需通过格式校验，且不可与已有账号重复） |
+| uid | string | 否 | 学号/工号，唯一；留空则自动生成 |
+| phone | string | 否 | 电话 |
+| organization | string | 否 | 单位/组织 |
+
+**请求示例：**
+```json
+{
+  "role_id": 2,
+  "users": [
+    {
+      "username": "newuser1",
+      "password": "pass123",
+      "name": "张三",
+      "email": "zhangsan@example.edu.cn",
+      "uid": "20260001",
+      "phone": "13800000001",
+      "organization": "计算机学院"
+    },
+    {
+      "username": "newuser2",
+      "password": "pass456",
+      "email": "lisi@example.edu.cn"
+    }
+  ]
+}
+```
+
+**成功响应：**
+```json
+{
+  "code": 200,
+  "message": "批量创建成功",
+  "data": [
+    {
+      "id": 8,
+      "uid": "20260001",
+      "username": "newuser1",
+      "role_id": 2,
+      "role_name": "普通用户",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+> `data` 为已创建的用户数组，结构与「获取用户列表」单项一致。冲突失败时 `message` 形如 `用户名 'xxx' 已存在` / `邮箱 'xxx' 已被其他账号使用` / `学号/工号 'xxx' 已被使用` / `列表中存在重复的用户名 'xxx'`。
+
 ---
 
 ### 5.3 角色-用户批量分配

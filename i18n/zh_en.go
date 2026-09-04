@@ -57,6 +57,10 @@ var zhEnMessages = map[string]string{
 	"CAS 响应解析失败":     "Failed to parse CAS response",
 	"CAS 认证失败":       "CAS authentication failed",
 	"用户不存在":          "User not found",
+	"批量创建成功":         "Users created successfully",
+	"用户列表不能为空":       "The user list is empty",
+	"用户名和密码不能为空":     "Username and password are required",
+	"生成学号/工号失败，请重试":  "Failed to generate a student/staff ID, please try again",
 	"邮箱不能为空":         "Email cannot be empty",
 	"邮箱格式不正确":        "Invalid email format",
 	"邮箱长度超出限制":       "Email exceeds the maximum length",
@@ -165,4 +169,8 @@ var zhEnPatterns = []struct {
 }{
 	{`^未找到用户 '(.*)'$`, "No user found for '$1'"},
 	{`^搜索到 (\d+) 个匹配结果，请精确用户过滤器$`, "Found $1 matching entries; please make the user filter more precise"},
+	{`^列表中存在重复的用户名 '(.*)'$`, "Duplicate username in the list: '$1'"},
+	{`^用户名 '(.*)' 已存在$`, "Username '$1' already exists"},
+	{`^学号/工号 '(.*)' 已被使用$`, "Student/Staff ID '$1' is already in use"},
+	{`^邮箱 '(.*)' 已被其他账号使用$`, "Email '$1' is already used by another account"},
 }

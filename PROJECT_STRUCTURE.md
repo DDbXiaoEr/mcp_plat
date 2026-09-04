@@ -218,6 +218,7 @@ mcp_plat-console/
 | PUT | `/api/roles/:id/users` | 是 | 是 | handler/role.go → AssignUsers |
 | GET | `/api/users` | 是 | 是 | handler/rbac_user.go → List |
 | POST | `/api/users` | 是 | 是 | handler/rbac_user.go → Create |
+| POST | `/api/users/batch` | 是 | 是 | handler/rbac_user.go → BatchCreate |
 | PUT | `/api/users/:id` | 是 | 是 | handler/rbac_user.go → Update |
 | DELETE | `/api/users/:id` | 是 | 是 | handler/rbac_user.go → Delete |
 | GET | `/api/settings` | 是 | 是 | handler/setting.go → Get |

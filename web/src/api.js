@@ -144,6 +144,13 @@ export function createUser(body) {
   })
 }
 
+export function batchCreateUsers(users, roleId) {
+  return request('/users/batch', {
+    method: 'POST',
+    body: JSON.stringify({ users, role_id: roleId || null })
+  })
+}
+
 export function updateUser(id, body) {
   return request(`/users/${id}`, {
     method: 'PUT',

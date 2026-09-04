@@ -85,6 +85,7 @@ func Setup() *gin.Engine {
 
 		admin.GET("/users", userHandler.List)
 		admin.POST("/users", userHandler.Create)
+		admin.POST("/users/batch", userHandler.BatchCreate)
 		admin.PUT("/users/:id", userHandler.Update)
 		admin.DELETE("/users/:id", userHandler.Delete)
 

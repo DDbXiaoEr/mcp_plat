@@ -36,6 +36,7 @@
 | RBAC | PUT /api/roles/:id/users | ✅ 已完成 | |
 | RBAC | GET /api/users | ✅ 已完成 | 用户管理页新增搜索框，支持按学号/工号（uid）模糊搜索（?q=），可与角色筛选（?role_id=）叠加 |
 | RBAC | POST /api/users | ✅ 已完成 | |
+| RBAC | POST /api/users/batch | ✅ 已完成 | 批量创建用户：一次提交整批（含姓名/邮箱/学号工号/电话/单位），整批统一角色 role_id；库内冲突或列表内重复则整批回滚，返回具体冲突项 |
 | RBAC | PUT /api/users/:id | ✅ 已完成 | |
 | RBAC | DELETE /api/users/:id | ✅ 已完成 | |
 | 平台概况 | GET /api/overview/stats | ✅ 已完成 | 统计卡片已接入（用户/服务器/工具/当天调用数） |

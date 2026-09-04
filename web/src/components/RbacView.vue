@@ -22,7 +22,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   fetchRoles, createRole, updateRole, deleteRole,
-  fetchUsers, createUser, updateUser, deleteUser,
+  fetchUsers, updateUser, deleteUser, batchCreateUsers,
   fetchRoleUsers, assignRoleUsers, fetchServers
 } from '../api.js'
 
@@ -250,17 +250,9 @@ async function confirmAssign() {
 }
 
 const showingUserForm = ref(false)
-const userFormMode = ref('create')
-const userForm = ref({ username: '', password: '', role_id: 0 })
-
-function openUserCreate() {
-  userFormMode.value = 'create'
-  userForm.value = { username: '', password: '', role_id: 0 }
-  showingUserForm.value = true
-}
+const userForm = ref({ id: null, username: '', password: '', role_id: 0 })
 
 function openUserEdit(user) {
-  userFormMode.value = 'edit'
   userForm.value = {
     id: user.id,
     username: user.username,
@@ -279,28 +271,77 @@ async function confirmUser() {
   if (userForm.value.password) {
     body.password = userForm.value.password.trim()
   }
-
-  if (userFormMode.value === 'create') {
-    body.password = body.password || userForm.value.password.trim()
-    if (!body.password) return
-    body.role_id = userForm.value.role_id > 0 ? userForm.value.role_id : null
-    try {
-      const user = await createUser(body)
-      users.value.unshift(user)
-    } catch {
-      // ignore
-    }
-  } else {
-    body.role_id = userForm.value.role_id > 0 ? userForm.value.role_id : 0
-    try {
-      await updateUser(userForm.value.id, body)
-      await loadUsers()
-      await loadRoles()
-    } catch {
-      // ignore
-    }
+  body.role_id = userForm.value.role_id > 0 ? userForm.value.role_id : 0
+  try {
+    await updateUser(userForm.value.id, body)
+    await loadUsers()
+    await loadRoles()
+  } catch {
+    // ignore
   }
   showingUserForm.value = false
+}
+
+function emptyUserEntry() {
+  return { username: '', password: '', name: '', email: '', uid: '', phone: '', organization: '' }
+}
+
+const showingBatchCreate = ref(false)
+const batchSubmitting = ref(false)
+const batchRoleId = ref(0)
+const batchDraft = ref([])
+const entryForm = ref(emptyUserEntry())
+
+function openBatchCreate() {
+  batchDraft.value = []
+  batchRoleId.value = 0
+  entryForm.value = emptyUserEntry()
+  showingBatchCreate.value = true
+}
+
+function addToDraft() {
+  const e = entryForm.value
+  if (!e.username.trim() || !e.password.trim()) {
+    alert(t('rbac.missingRequired'))
+    return
+  }
+  if (batchDraft.value.some((u) => u.username === e.username.trim())) {
+    alert(t('rbac.duplicateInList'))
+    return
+  }
+  batchDraft.value.push({
+    username: e.username.trim(),
+    password: e.password.trim(),
+    name: e.name.trim(),
+    email: e.email.trim(),
+    uid: e.uid.trim(),
+    phone: e.phone.trim(),
+    organization: e.organization.trim()
+  })
+  entryForm.value = emptyUserEntry()
+}
+
+function removeDraftItem(index) {
+  batchDraft.value.splice(index, 1)
+}
+
+function clearDraft() {
+  batchDraft.value = []
+}
+
+async function submitBatchCreate() {
+  if (batchDraft.value.length === 0 || batchSubmitting.value) return
+  batchSubmitting.value = true
+  try {
+    await batchCreateUsers(batchDraft.value, batchRoleId.value)
+    await loadUsers()
+    await loadRoles()
+    showingBatchCreate.value = false
+  } catch (e) {
+    alert(e.message || t('rbac.createFailed'))
+  } finally {
+    batchSubmitting.value = false
+  }
 }
 
 async function removeUser(user) {
@@ -331,7 +372,7 @@ async function removeUser(user) {
           v-if="tab === 'users'"
           class="btn btn--primary"
           type="button"
-          @click="openUserCreate"
+          @click="openBatchCreate"
         >
           {{ t('rbac.addUser') }}
         </button>
@@ -626,9 +667,7 @@ async function removeUser(user) {
     <Teleport to="body">
       <div v-if="showingUserForm" class="dialog-overlay" @click.self="showingUserForm = false">
         <div class="dialog">
-          <h2 class="dialog__title">
-            {{ userFormMode === 'create' ? t('rbac.userDialogCreate') : t('rbac.userDialogEdit') }}
-          </h2>
+          <h2 class="dialog__title">{{ t('rbac.userDialogEdit') }}</h2>
           <div class="dialog__form">
             <div class="dialog__group">
               <label class="dialog__label">{{ t('rbac.username') }}</label>
@@ -640,7 +679,7 @@ async function removeUser(user) {
               />
             </div>
             <div class="dialog__group">
-              <label class="dialog__label">{{ userFormMode === 'create' ? t('rbac.password') : t('rbac.newPasswordHint') }}</label>
+              <label class="dialog__label">{{ t('rbac.newPasswordHint') }}</label>
               <input
                 v-model="userForm.password"
                 class="dialog__input"
@@ -665,10 +704,145 @@ async function removeUser(user) {
             <button
               class="btn btn--primary"
               type="button"
-              :disabled="!userForm.username.trim() || (userFormMode === 'create' && !userForm.password.trim())"
+              :disabled="!userForm.username.trim()"
               @click="confirmUser"
             >
               {{ t('common.save') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div v-if="showingBatchCreate" class="dialog-overlay" @click.self="showingBatchCreate = false">
+        <div class="dialog dialog--wide">
+          <h2 class="dialog__title">{{ t('rbac.batchCreateTitle') }}</h2>
+          <div class="dialog__form">
+            <div class="dialog__group">
+              <label class="dialog__label">
+                {{ t('rbac.batchRole') }}
+                <span class="dialog__label-hint">{{ t('rbac.batchRoleHint') }}</span>
+              </label>
+              <select v-model="batchRoleId" class="dialog__input">
+                <option :value="0">{{ t('rbac.noRole') }}</option>
+                <option v-for="role in roles" :key="role.id" :value="role.id">
+                  {{ role.name }}
+                </option>
+              </select>
+            </div>
+            <div class="batch__grid">
+              <div class="dialog__group">
+                <label class="dialog__label">{{ t('rbac.username') }}</label>
+                <input
+                  v-model="entryForm.username"
+                  class="dialog__input"
+                  type="text"
+                  :placeholder="t('rbac.usernamePlaceholder')"
+                />
+              </div>
+              <div class="dialog__group">
+                <label class="dialog__label">{{ t('rbac.password') }}</label>
+                <input
+                  v-model="entryForm.password"
+                  class="dialog__input"
+                  type="password"
+                  :placeholder="t('rbac.passwordPlaceholder')"
+                />
+              </div>
+              <div class="dialog__group">
+                <label class="dialog__label">{{ t('rbac.fullName') }}</label>
+                <input
+                  v-model="entryForm.name"
+                  class="dialog__input"
+                  type="text"
+                  :placeholder="t('rbac.namePlaceholder')"
+                />
+              </div>
+              <div class="dialog__group">
+                <label class="dialog__label">{{ t('rbac.email') }}</label>
+                <input
+                  v-model="entryForm.email"
+                  class="dialog__input"
+                  type="text"
+                  :placeholder="t('rbac.emailPlaceholder')"
+                />
+              </div>
+              <div class="dialog__group">
+                <label class="dialog__label">{{ t('rbac.uidLabel') }}</label>
+                <input
+                  v-model="entryForm.uid"
+                  class="dialog__input"
+                  type="text"
+                  :placeholder="t('rbac.uidPlaceholder')"
+                />
+              </div>
+              <div class="dialog__group">
+                <label class="dialog__label">{{ t('rbac.phone') }}</label>
+                <input
+                  v-model="entryForm.phone"
+                  class="dialog__input"
+                  type="text"
+                  :placeholder="t('rbac.phonePlaceholder')"
+                />
+              </div>
+              <div class="dialog__group batch__grid-full">
+                <label class="dialog__label">{{ t('rbac.organization') }}</label>
+                <input
+                  v-model="entryForm.organization"
+                  class="dialog__input"
+                  type="text"
+                  :placeholder="t('rbac.organizationPlaceholder')"
+                />
+              </div>
+            </div>
+            <div class="batch__add-row">
+              <button
+                class="btn btn--primary"
+                type="button"
+                @click="addToDraft"
+              >
+                {{ t('rbac.addToList') }}
+              </button>
+            </div>
+            <div class="batch__pending">
+              <div class="batch__pending-head">
+                <span class="batch__pending-title">{{ t('rbac.pendingList', { count: batchDraft.length }) }}</span>
+                <button
+                  v-if="batchDraft.length"
+                  class="batch__clear"
+                  type="button"
+                  @click="clearDraft"
+                >
+                  {{ t('rbac.clearList') }}
+                </button>
+              </div>
+              <div class="batch__list">
+                <div v-if="batchDraft.length === 0" class="batch__empty">{{ t('rbac.pendingEmpty') }}</div>
+                <div v-for="(item, index) in batchDraft" :key="item.username" class="batch__item">
+                  <span class="batch__item-idx">{{ index + 1 }}</span>
+                  <span class="batch__item-main">
+                    <span class="batch__item-username">{{ item.username }}</span>
+                    <span class="batch__item-sub">{{ item.name || item.email || item.uid || t('common.emptyDash') }}</span>
+                  </span>
+                  <button class="table__btn" type="button" @click="removeDraftItem(index)">
+                    {{ t('common.delete') }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="dialog__actions">
+            <button class="btn btn--ghost" type="button" @click="showingBatchCreate = false">
+              {{ t('common.cancel') }}
+            </button>
+            <button
+              class="btn btn--primary"
+              type="button"
+              :disabled="batchDraft.length === 0 || batchSubmitting"
+              @click="submitBatchCreate"
+            >
+              {{ batchSubmitting ? t('common.saving') : t('rbac.submitCreate') }}
             </button>
           </div>
         </div>
@@ -996,6 +1170,121 @@ async function removeUser(user) {
 
 .dialog--wide {
   max-width: 640px;
+}
+
+.dialog__label-hint {
+  margin-left: 6px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.batch__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+}
+
+.batch__grid-full {
+  grid-column: 1 / -1;
+}
+
+.batch__add-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.batch__pending {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.batch__pending-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.batch__pending-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.batch__clear {
+  padding: 2px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.batch__clear:hover {
+  color: var(--xauat-blue);
+  border-color: rgba(10, 61, 122, 0.25);
+}
+
+.batch__list {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.batch__empty {
+  padding: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.batch__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.batch__item:last-child {
+  border-bottom: none;
+}
+
+.batch__item-idx {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--xauat-blue);
+  background: rgba(30, 95, 176, 0.1);
+  border-radius: 999px;
+}
+
+.batch__item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.batch__item-username {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.batch__item-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .shuttle {

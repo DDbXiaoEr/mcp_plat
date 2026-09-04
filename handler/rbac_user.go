@@ -68,6 +68,22 @@ func (h *RBACUserHandler) Create(c *gin.Context) {
 	resp.OK(c, "创建成功", user)
 }
 
+func (h *RBACUserHandler) BatchCreate(c *gin.Context) {
+	var input service.BatchCreateUsersInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		resp.Fail(c, http.StatusBadRequest, "参数错误")
+		return
+	}
+
+	users, err := service.BatchCreateUsers(input)
+	if err != nil {
+		resp.Fail(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp.OK(c, "批量创建成功", users)
+}
+
 func (h *RBACUserHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
