@@ -133,12 +133,17 @@ GET /api/auth/method
   "message": "success",
   "data": {
     "method": "cas",
-    "cas": { "serverUrl": "https://cas.example.edu.cn", "serviceUrl": "http://localhost:5174", "version": "3.0" }
+    "cas": {
+      "serverUrl": "https://cas.example.edu.cn",
+      "serviceUrl": "http://localhost:5174",
+      "version": "3.0",
+      "attrMapping": { "name": "displayName", "email": "mail" }
+    }
   }
 }
 ```
 
-`method` 可能的值：`local`（本地数据库）、`ldap`、`cas`。
+`method` 可能的值：`local`（本地数据库）、`ldap`、`cas`。`cas.attrMapping` 为属性映射（平台字段 → CAS 返回的属性名），平台字段可取 `uid` / `name` / `email` / `phone` / `organization`，用于创建/更新 CAS 用户资料；CAS 无独立测试映射接口。
 
 ### 1.5 获取平台信息（登录页）
 
@@ -1009,8 +1014,8 @@ GET /api/settings
     },
     "auth": {
       "method": "cas",
-      "cas": { "serverUrl": "", "serviceUrl": "", "version": "3.0" },
-      "ldap": { "host": "", "port": 389, "baseDn": "", "bindDn": "", "bindPassword": "", "userFilter": "" },
+      "cas": { "serverUrl": "", "serviceUrl": "", "version": "3.0", "attrMapping": {} },
+      "ldap": { "host": "", "port": 389, "baseDn": "", "bindDn": "", "bindPassword": "", "userFilter": "", "attrMapping": {} },
       "oauth": { "authorizeUrl": "", "tokenUrl": "", "userinfoUrl": "", "clientId": "", "clientSecret": "", "redirectUrl": "", "scope": "" }
     },
     "user_ops": {

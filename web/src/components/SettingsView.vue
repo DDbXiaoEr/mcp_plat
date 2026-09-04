@@ -116,6 +116,9 @@ const casForm = ref({
   version: '3.0'
 })
 
+const savedCas = ref({})
+const casAttrMapping = ref([])
+
 const ldapForm = ref({
   host: '',
   port: 389,
@@ -128,6 +131,7 @@ const ldapForm = ref({
 const savedLdap = ref({})
 
 const PLATFORM_FIELDS = [
+  { key: 'uid', labelKey: 'settings.fields.uid' },
   { key: 'name', labelKey: 'settings.fields.name' },
   { key: 'email', labelKey: 'settings.fields.email' },
   { key: 'phone', labelKey: 'settings.fields.phone' },
@@ -136,19 +140,19 @@ const PLATFORM_FIELDS = [
 
 const ldapAttrMapping = ref([])
 
-function addAttrMappingRow() {
-  ldapAttrMapping.value.push({ field: '', ldapAttr: '' })
+function addAttrMappingRow(list) {
+  list.push({ field: '', attr: '' })
 }
 
-function removeAttrMappingRow(index) {
-  ldapAttrMapping.value.splice(index, 1)
+function removeAttrMappingRow(list, index) {
+  list.splice(index, 1)
 }
 
-function mappingToObject() {
+function mappingToObject(list) {
   const obj = {}
-  for (const item of ldapAttrMapping.value) {
-    if (item.field && item.ldapAttr) {
-      obj[item.field] = item.ldapAttr
+  for (const item of list) {
+    if (item.field && item.attr) {
+      obj[item.field] = item.attr
     }
   }
   return obj
@@ -156,12 +160,12 @@ function mappingToObject() {
 
 function objectToMapping(obj) {
   if (!obj) return []
-  return Object.entries(obj).map(([field, ldapAttr]) => ({ field, ldapAttr }))
+  return Object.entries(obj).map(([field, attr]) => ({ field, attr }))
 }
 
-function unusedFields(rowIndex) {
+function unusedFields(list, rowIndex) {
   const used = new Set(
-    ldapAttrMapping.value
+    list
       .filter((_, i) => i !== rowIndex)
       .map(item => item.field)
       .filter(Boolean)
@@ -189,7 +193,7 @@ async function runLdapTest() {
       ldap[key] = ldapForm.value[key] !== '' ? ldapForm.value[key] : (saved[key] || '')
     }
     ldap.port = ldapForm.value.port !== '' && ldapForm.value.port != null ? ldapForm.value.port : (saved.port ?? 389)
-    ldap.attrMapping = mappingToObject()
+    ldap.attrMapping = mappingToObject(ldapAttrMapping.value)
 
     const data = await testLdap({
       ldap,
@@ -320,10 +324,10 @@ function saveAuthSettings() {
     ldap[key] = ldapForm.value[key] !== '' ? ldapForm.value[key] : (saved[key] || '')
   }
   ldap.port = ldapForm.value.port !== '' && ldapForm.value.port != null ? ldapForm.value.port : (saved.port ?? 389)
-  ldap.attrMapping = mappingToObject()
+  ldap.attrMapping = mappingToObject(ldapAttrMapping.value)
   saveSection('auth', {
     method: authMethod.value,
-    cas: casForm.value,
+    cas: { ...casForm.value, attrMapping: mappingToObject(casAttrMapping.value) },
     ldap,
     oauth: oauthForm.value
   })
@@ -411,7 +415,13 @@ function applySettings(data) {
   }
   if (data.auth) {
     if (data.auth.method) authMethod.value = data.auth.method
-    if (data.auth.cas) Object.assign(casForm.value, data.auth.cas)
+    if (data.auth.cas) {
+      savedCas.value = { ...data.auth.cas }
+      casForm.value.serverUrl = data.auth.cas.serverUrl || ''
+      casForm.value.serviceUrl = data.auth.cas.serviceUrl || ''
+      casForm.value.version = data.auth.cas.version || '3.0'
+      casAttrMapping.value = objectToMapping(data.auth.cas.attrMapping)
+    }
     if (data.auth.ldap) {
       savedLdap.value = { ...data.auth.ldap }
       if (authMethod.value === 'ldap') {
@@ -1119,6 +1129,50 @@ onMounted(async () => {
                 <option value="3.0">3.0</option>
               </select>
             </label>
+
+            <p class="field__section-title">{{ t('settings.auth.cas.mappingTitle') }}</p>
+            <div
+              v-for="(item, i) in casAttrMapping"
+              :key="i"
+              class="mapping-row"
+            >
+              <select
+                v-model="item.field"
+                class="field__input mapping-row__select"
+              >
+                <option value="" disabled>{{ t('settings.auth.cas.selectPlatformField') }}</option>
+                <option
+                  v-for="f in unusedFields(casAttrMapping, i)"
+                  :key="f.key"
+                  :value="f.key"
+                >
+                  {{ t(f.labelKey) }}
+                </option>
+              </select>
+              <span class="mapping-row__arrow">→</span>
+              <input
+                v-model="item.attr"
+                class="field__input mapping-row__input"
+                type="text"
+                :placeholder="t('settings.auth.cas.attrPlaceholder')"
+              />
+              <button
+                class="mapping-row__remove"
+                type="button"
+                @click="removeAttrMappingRow(casAttrMapping, i)"
+                :title="t('settings.general.remove')"
+              >
+                ×
+              </button>
+            </div>
+            <button
+              v-if="casAttrMapping.length < PLATFORM_FIELDS.length"
+              class="mapping-row__add"
+              type="button"
+              @click="addAttrMappingRow(casAttrMapping)"
+            >
+              {{ t('settings.auth.cas.addMapping') }}
+            </button>
           </template>
 
           <template v-if="authMethod === 'ldap'">
@@ -1194,7 +1248,7 @@ onMounted(async () => {
               >
                 <option value="" disabled>{{ t('settings.auth.ldap.selectPlatformField') }}</option>
                 <option
-                  v-for="f in unusedFields(i)"
+                  v-for="f in unusedFields(ldapAttrMapping, i)"
                   :key="f.key"
                   :value="f.key"
                 >
@@ -1203,7 +1257,7 @@ onMounted(async () => {
               </select>
               <span class="mapping-row__arrow">→</span>
               <input
-                v-model="item.ldapAttr"
+                v-model="item.attr"
                 class="field__input mapping-row__input"
                 type="text"
                 :placeholder="t('settings.auth.ldap.ldapAttrPlaceholder')"
@@ -1211,7 +1265,7 @@ onMounted(async () => {
               <button
                 class="mapping-row__remove"
                 type="button"
-                @click="removeAttrMappingRow(i)"
+                @click="removeAttrMappingRow(ldapAttrMapping, i)"
                 :title="t('settings.general.remove')"
               >
                 ×
@@ -1221,7 +1275,7 @@ onMounted(async () => {
               v-if="ldapAttrMapping.length < PLATFORM_FIELDS.length"
               class="mapping-row__add"
               type="button"
-              @click="addAttrMappingRow"
+              @click="addAttrMappingRow(ldapAttrMapping)"
             >
               {{ t('settings.auth.ldap.addMapping') }}
             </button>

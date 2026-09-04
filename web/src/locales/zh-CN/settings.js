@@ -140,7 +140,11 @@ export default {
     cas: {
       serverUrlLabel: 'CAS 服务器地址',
       serviceUrlLabel: '服务回调地址',
-      versionLabel: '协议版本'
+      versionLabel: '协议版本',
+      mappingTitle: '属性映射（平台字段 → CAS 属性）',
+      selectPlatformField: '选择平台字段',
+      attrPlaceholder: 'CAS 属性名',
+      addMapping: '+ 添加映射'
     },
     ldap: {
       enabledNotice: 'LDAP 认证已启用。出于安全考虑，不显示当前已配置的值；输入框留空表示保持现有配置不变。',

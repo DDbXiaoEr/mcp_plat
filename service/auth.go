@@ -167,9 +167,9 @@ func Login(input LoginInput) (*LoginOutput, error) {
 				uid = input.Username
 			}
 			user = model.User{
-				UID:          input.Username,
-				Username:     input.Username,
-				Password:     string(hashedPassword),
+				UID:      input.Username,
+				Username: input.Username,
+				Password: string(hashedPassword),
 				RoleID: getAutoAssignRoleID(map[string]string{
 					"username":     input.Username,
 					"uid":          uid,
@@ -240,9 +240,16 @@ func CASLogin(input CASValidateInput) (*LoginOutput, error) {
 		return nil, errors.New("CAS 服务地址未配置")
 	}
 
-	username, err := casValidateTicket(authCfg.Cas.ServerUrl, input.ServiceUrl, input.Ticket)
+	username, casAttrs, err := casValidateTicket(authCfg.Cas.ServerUrl, input.ServiceUrl, input.Ticket)
 	if err != nil {
 		return nil, err
+	}
+
+	attrs := map[string]string{"username": username}
+	for platformField, casAttr := range authCfg.Cas.AttrMapping {
+		if v, ok := casAttrs[casAttr]; ok && v != "" {
+			attrs[platformField] = v
+		}
 	}
 
 	var user model.User
@@ -250,23 +257,58 @@ func CASLogin(input CASValidateInput) (*LoginOutput, error) {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("用户名或密码错误")
 		}
-		uid := generateUID()
+		uid := attrs["uid"]
+		if uid == "" {
+			uid = username
+		}
 		user = model.User{
 			UID:      uid,
 			Username: username,
 			Password: "",
 			RoleID: getAutoAssignRoleID(map[string]string{
-				"username": username,
-				"uid":      uid,
+				"username":     username,
+				"uid":          uid,
+				"name":         attrs["name"],
+				"email":        attrs["email"],
+				"phone":        attrs["phone"],
+				"organization": attrs["organization"],
 			}),
+			Name:         attrs["name"],
+			Email:        attrs["email"],
+			Phone:        attrs["phone"],
+			Organization: attrs["organization"],
 		}
 		if err := database.DB.Create(&user).Error; err != nil {
 			return nil, fmt.Errorf("创建用户失败: %v", err)
 		}
-	}
-
-	if user.Status == 0 {
-		return nil, errors.New("该用户已被禁用，请联系管理员")
+	} else {
+		if user.Status == 0 {
+			return nil, errors.New("该用户已被禁用，请联系管理员")
+		}
+		updates := map[string]interface{}{}
+		if v, ok := attrs["name"]; ok && v != "" {
+			updates["name"] = v
+			user.Name = v
+		}
+		if v, ok := attrs["uid"]; ok && v != "" {
+			updates["uid"] = v
+			user.UID = v
+		} else if user.UID != username {
+			updates["uid"] = username
+			user.UID = username
+		}
+		if v, ok := attrs["email"]; ok && v != "" {
+			updates["email"] = v
+		}
+		if v, ok := attrs["phone"]; ok && v != "" {
+			updates["phone"] = v
+		}
+		if v, ok := attrs["organization"]; ok && v != "" {
+			updates["organization"] = v
+		}
+		if len(updates) > 0 {
+			database.DB.Model(&user).Updates(updates)
+		}
 	}
 
 	token, err := generateToken(user)

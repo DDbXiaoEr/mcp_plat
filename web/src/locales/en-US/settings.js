@@ -140,7 +140,11 @@ export default {
     cas: {
       serverUrlLabel: 'CAS server URL',
       serviceUrlLabel: 'Service callback URL',
-      versionLabel: 'Protocol version'
+      versionLabel: 'Protocol version',
+      mappingTitle: 'Attribute mapping (platform field → CAS attribute)',
+      selectPlatformField: 'Select a platform field',
+      attrPlaceholder: 'CAS attribute name',
+      addMapping: '+ Add mapping'
     },
     ldap: {
       enabledNotice: 'LDAP authentication is enabled. For security reasons, the currently configured values are not shown; leaving a field blank keeps the existing configuration unchanged.',
