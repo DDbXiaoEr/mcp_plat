@@ -9,8 +9,10 @@ mcp_plat-console/
 ├── go.mod / go.sum
 ├── config.yaml.example      # 主程序配置示例（复制为 config.yaml 使用）
 ├── config-generator.html    # 独立配置生成页面（HTML+纯JS，直接浏览器打开）：生成主程序/认证/审计/APISIX 配置 + K8s 清单（Namespace/ConfigMap/外部服务 Endpoints），支持中英文切换
-├── AGENTS.md                # 项目整体规范
-├── PROJECT_STRUCTURE.md     # 本文件 —— 项目结构速查
+├── AGENTS.md                # 项目整体规范（中文）
+├── AGENTS_EN.md             # 项目整体规范（英文）
+├── PROJECT_STRUCTURE.md     # 本文件 —— 项目结构速查（中文）
+├── PROJECT_STRUCTURE_EN.md  # 项目结构速查（英文）
 ├── README.md
 │
 ├── cmd/
@@ -138,8 +140,10 @@ mcp_plat-console/
 │   └── test_accounts.json    # 测试账号
 │
 └── web/                      # Vue 3 前端（SPA）
-    ├── AGENTS.md             # 前端规范
-    ├── PROJECT_STRUCTURE.md  # 前端项目结构
+    ├── AGENTS.md             # 前端规范（中文）
+    ├── AGENTS_EN.md          # 前端规范（英文）
+    ├── PROJECT_STRUCTURE.md  # 前端项目结构（中文）
+    ├── PROJECT_STRUCTURE_EN.md # 前端项目结构（英文）
     ├── Makefile              # 前端构建脚本（install / build / dev / preview / clean）
     ├── index.html            # HTML 入口
     ├── package.json

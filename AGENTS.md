@@ -1,6 +1,6 @@
 # 项目规范
 
-> **项目结构速查见 `PROJECT_STRUCTURE.md`**，包含完整目录树、API 路由表、构建模式说明。每次会话开始时优先读取该文件了解项目全貌，无需重新探索整个代码库。
+> **项目结构速查见 `PROJECT_STRUCTURE.md`**（英文版 `PROJECT_STRUCTURE_EN.md`），包含完整目录树、API 路由表、构建模式说明。每次会话开始时优先读取该文件了解项目全貌，无需重新探索整个代码库。
 
 ## 技术栈
 
@@ -11,7 +11,7 @@
 
 - **`public/api_doc.md`** — 保存 API 的请求/响应字段说明，新增或修改接口时必须同步更新
 - **`public/api-devstatus.md`** — 保存 API 开发进度状态，实现或修改接口后必须及时更新
-- **`PROJECT_STRUCTURE.md`** — 有文件新增或删除时，必须同步更新目录树和路由表
+- **`PROJECT_STRUCTURE.md`（含英文版 `PROJECT_STRUCTURE_EN.md`）** — 有文件新增或删除时，必须同步更新目录树和路由表
 
 ## 后端开发规范
 
@@ -25,4 +25,4 @@
 
 ## 前端开发规范
 
-- 见 `web/AGENTS.md`
+- 见 `web/AGENTS.md`（英文版 `web/AGENTS_EN.md`）

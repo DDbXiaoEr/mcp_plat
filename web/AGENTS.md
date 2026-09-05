@@ -2,7 +2,7 @@
 
 某某大学 MCP 服务平台 · 管理控制台（mcp-plat-console）。
 
-> **项目结构速查见 `PROJECT_STRUCTURE.md`**，包含完整目录树、导航说明、常用命令。每次会话开始时优先读取该文件了解项目全貌，无需重新探索整个代码库。
+> **项目结构速查见 `PROJECT_STRUCTURE.md`**（英文版 `PROJECT_STRUCTURE_EN.md`），包含完整目录树、导航说明、常用命令。每次会话开始时优先读取该文件了解项目全貌，无需重新探索整个代码库。
 
 ## 技术栈
 
@@ -39,7 +39,7 @@ src/
 
 ## 约定
 
-- 有文件新增或删除时，必须同步更新仓库根目录的 `PROJECT_STRUCTURE.md`（及本目录的 `PROJECT_STRUCTURE.md`）。
+- 有文件新增或删除时，必须同步更新仓库根目录的 `PROJECT_STRUCTURE.md`（含英文版 `PROJECT_STRUCTURE_EN.md`）及本目录的 `PROJECT_STRUCTURE.md`（含英文版 `PROJECT_STRUCTURE_EN.md`）。
 - 组件用 `<script setup>` + 组合式 API；单文件组件命名 PascalCase，布局类组件以 `The` 前缀（如 `TheHeader`）。
 - 颜色、圆角、间距等统一用 `global.css` 里的 CSS 变量（`--xauat-blue`、`--radius`、`--header-height` 等），不要硬编码。
 - 未完成或待接后端的地方用 `// TODO:` 标注。

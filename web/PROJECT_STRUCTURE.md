@@ -2,9 +2,11 @@
 
 ```
 web/
-├── AGENTS.md              # 前端开发规范（每次会话开始时优先读取）
-├── PROJECT_STRUCTURE.md   # 本文件 —— 前端项目结构速查
-├── Makefile               # 前端构建脚本（install / build / dev / preview / clean）
+├── AGENTS.md                 # 前端开发规范（中文，每次会话开始时优先读取）
+├── AGENTS_EN.md              # 前端开发规范（英文，每次会话开始时优先读取）
+├── PROJECT_STRUCTURE.md      # 本文件 —— 前端项目结构速查（中文）
+├── PROJECT_STRUCTURE_EN.md   # 前端项目结构速查（英文）
+├── Makefile                  # 前端构建脚本（install / build / dev / preview / clean）
 ├── index.html             # HTML 入口
 ├── package.json           # 依赖与脚本
 ├── package-lock.json
