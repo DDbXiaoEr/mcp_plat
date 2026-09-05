@@ -234,6 +234,26 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
         <div class="frow">
           <div class="field fs"><label data-i18n="ns_lbl">命名空间</label><input type="text" id="k8s_ns" value="mcp-plat"></div>
         </div>
+        <div class="field"><label data-i18n="deploy_services_lbl">要部署的服务（勾选则生成对应 Service / Deployment / ConfigMap）</label></div>
+        <div class="frow" style="gap:14px;flex-wrap:wrap;margin-bottom:4px">
+          <label class="checkbox"><input type="checkbox" class="k8s-svc" id="k8s_svc_etcd" checked><span>etcd</span></label>
+          <label class="checkbox"><input type="checkbox" class="k8s-svc" id="k8s_svc_apisix" checked><span>apisix</span></label>
+          <label class="checkbox"><input type="checkbox" class="k8s-svc" id="k8s_svc_auth" checked><span>accesskey-auth-server</span></label>
+          <label class="checkbox"><input type="checkbox" class="k8s-svc" id="k8s_svc_audit" checked><span>audit-log-server</span></label>
+          <label class="checkbox"><input type="checkbox" class="k8s-svc" id="k8s_svc_embed" checked><span>mcp-plat-embed</span></label>
+        </div>
+        <div class="field"><label data-i18n="deploy_images_lbl">完整镜像名（registry/repo:tag）</label></div>
+        <div class="frow" style="flex-wrap:wrap;gap:8px">
+          <div class="field" style="flex:1 1 100%"><label>etcd</label><input type="text" id="img_etcd" value="etcd"></div>
+          <div class="field" style="flex:1 1 100%"><label>apisix</label><input type="text" id="img_apisix" value="apisix"></div>
+          <div class="field" style="flex:1 1 100%"><label>accesskey-auth-server</label><input type="text" id="img_auth" value="accesskey-auth-server"></div>
+          <div class="field" style="flex:1 1 100%"><label>audit-log-server</label><input type="text" id="img_audit" value="audit-log-server"></div>
+          <div class="field" style="flex:1 1 100%"><label>mcp-plat-embed</label><input type="text" id="img_embed" value="mcp-plat-embed"></div>
+        </div>
+        <div class="frow" style="gap:10px;flex-wrap:wrap;margin-top:6px">
+          <div class="field" style="flex:0 0 130px"><label>accesskey-auth-server nodePort</label><input type="text" id="np_auth" value="30090"></div>
+          <div class="field" style="flex:0 0 130px"><label>audit-log-server nodePort</label><input type="text" id="np_audit" value="30091"></div>
+        </div>
         <p class="hint" style="margin:6px 0 10px" data-i18n="k8s_hint">主/审计库若不在集群内运行，以下生成 01-external-services.yaml：以 ClusterIP Service + Endpoints 将内部 DNS 名映射到外部固定 IP。IP 支持多行或多 IP 逗号分隔。</p>
         <div id="extRows"></div>
         <button type="button" class="btn btn-sm" id="btn-add-ext" data-i18n="add_ext">+ 添加外部服务</button>
@@ -250,7 +270,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       <button type="button" class="btn btn-primary btn-lg" id="btn-generate" data-i18n="btn_generate">生成配置文件</button>
       <span class="status" id="gen-status"></span>
     </div>
-    <div class="note" id="note">所有内容随表单实时更新，也可点上方「生成配置文件」重新生成。生成物：主程序 <code>config.yaml</code>、<code>accesskey_auth_server.yml</code>、<code>audit_log_server.yml</code>、<code>apisix_config.yaml</code>，以及 K8s 清单 <code>00-namespace.yaml</code> / <code>01-external-services.yaml</code> / <code>10-configmaps.yaml</code>（内含前三个配置文件）。</div>
+    <div class="note" id="note">所有内容随表单实时更新，也可点上方「生成配置文件」重新生成。生成物：主程序 <code>config.yaml</code>、<code>accesskey_auth_server.yml</code>、<code>audit_log_server.yml</code>、<code>apisix_config.yaml</code>，以及 K8s 清单 <code>00-namespace.yaml</code> / <code>01-external-services.yaml</code> / <code>10-configmaps.yaml</code> / <code>20-services.yaml</code> / <code>30-deployments.yaml</code>。整套清单可直接 <code>kubectl apply -f</code> 部署。</div>
     <div id="warn"></div>
 
     <div class="codebar">
@@ -290,11 +310,13 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       auth_grpc_lbl:'accesskey gRPC 地址', audit_grpc_lbl:'audit gRPC 地址', wr_batch_lbl:'audit 写入 batch_size', wr_hint:'writer 仅在 audit_log_server.yml 中使用',
       ap_key_lbl:'admin key', ap_ui_txt:'启用 admin_ui（无需则取消勾选）', ap_allow_lbl:'allow_admin（每行一个 CIDR）',
       ap_etcd_lbl:'etcd host（每行一个）', ap_listen_lbl:'node_listen（每行一个）', ap_cmd_lbl:'ext-plugin 命令路径',
-      ns_lbl:'命名空间', k8s_hint:'主/审计库若不在集群内运行，以下生成 01-external-services.yaml：以 ClusterIP Service + Endpoints 将内部 DNS 名映射到外部固定 IP。IP 支持多行或多 IP 逗号分隔。',
+      ns_lbl:'命名空间',
+      deploy_services_lbl:'要部署的服务（勾选则生成对应 Service / Deployment / ConfigMap）', deploy_images_lbl:'完整镜像名（registry/repo:tag，留空则使用默认值）',
+      k8s_hint:'将生成可直接 kubectl apply 的完整清单：Namespace + 外部服务 Endpoints + ConfigMap + Service + Deployment（etcd / apisix / accesskey-auth-server / audit-log-server / mcp-plat-embed）。若主/审计库不在集群内运行，01-external-services.yaml 以 ClusterIP Service + Endpoints 将内部 DNS 名映射到外部固定 IP。',
       add_ext:'+ 添加外部服务', splitter_tip:'拖动调整左右宽度（双击恢复默认）',
       btn_generate:'生成配置文件',
       btn_copy:'复制当前', btn_download:'下载当前', btn_copyall:'复制全部', btn_downloadall:'下载全部',
-      grp_app:'应用配置', grp_k8s:'K8s 清单', tab_ext:'外部服务 Service+Endpoints', tab_cm:'ConfigMap（含上面前三份配置）',
+      grp_app:'应用配置', grp_k8s:'K8s 清单', tab_ext:'外部服务 Service+Endpoints', tab_cm:'ConfigMap（含四份配置）', tab_svc:'Service（etcd/apisix/各服务）', tab_deploy:'Deployment（etcd/apisix/各服务）',
       copied:'已复制',
       ext_enable:'启用', ext_del:'删除', ext_name_lbl:'Service 名（= 配置中的 host）', ext_ips_lbl:'外部固定 IP（多 IP 用逗号/换行分隔）',
       w_err_ak:'✘ access_key_secret 不足 32 字符，主程序 / 认证服务 / 审计服务将拒绝启动。',
@@ -306,10 +328,10 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       ph_admin:'管理员初始密码（admin.password）',
       ph_jwt:'jwt_secret', ph_ak:'access_key_secret', ph_ap:'APISIX admin key',
       ph_ip:'外部服务“{n}”仍使用示例 IP 192.168.31.233',
-      st_gen:'✔ 已生成 7 个文件（{t}）',
+      st_gen:'✔ 已生成 9 个文件（{t}）',
       st_ph_suffix:' · {n} 处仍为示例/占位值，见下方提示',
       st_ok_suffix:'，无示例/占位值遗留',
-      note:'所有内容随表单实时更新，也可点上方「生成配置文件」重新生成。生成物：主程序 <code>config.yaml</code>、<code>accesskey_auth_server.yml</code>、<code>audit_log_server.yml</code>、<code>apisix_config.yaml</code>，以及 K8s 清单 <code>00-namespace.yaml</code> / <code>01-external-services.yaml</code> / <code>10-configmaps.yaml</code>（内含前三个配置文件）。'
+      note:'所有内容随表单实时更新，也可点上方「生成配置文件」重新生成。生成物：主程序 <code>config.yaml</code>、<code>accesskey_auth_server.yml</code>、<code>audit_log_server.yml</code>、<code>apisix_config.yaml</code>，以及 K8s 清单 <code>00-namespace.yaml</code> / <code>01-external-services.yaml</code> / <code>10-configmaps.yaml</code> / <code>20-services.yaml</code> / <code>30-deployments.yaml</code>。整套清单可直接 <code>kubectl apply -f</code> 部署（需先将镜像导入各节点，或在左侧填写完整镜像名）。'
     },
     en:{
       t_title:'mcp_plat Deployment Config Generator',
@@ -325,11 +347,13 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       auth_grpc_lbl:'accesskey gRPC address', audit_grpc_lbl:'audit gRPC address', wr_batch_lbl:'audit writer batch_size', wr_hint:'writer is only used in audit_log_server.yml',
       ap_key_lbl:'Admin key', ap_ui_txt:'Enable admin_ui (uncheck if not needed)', ap_allow_lbl:'allow_admin (one CIDR per line)',
       ap_etcd_lbl:'etcd hosts (one per line)', ap_listen_lbl:'node_listen (one per line)', ap_cmd_lbl:'ext-plugin command path',
-      ns_lbl:'Namespace', k8s_hint:'If the main/audit databases run outside the cluster, this generates 01-external-services.yaml — mapping internal DNS names to external fixed IPs via a ClusterIP Service + manual Endpoints. IPs accept multiple lines or comma-separated values.',
+      ns_lbl:'Namespace',
+      deploy_services_lbl:'Services to deploy (checked ones generate their Service / Deployment / ConfigMap)', deploy_images_lbl:'Full image name (registry/repo:tag, empty = default)',
+      k8s_hint:'Generates a complete set of kubectl-appliable manifests: Namespace + external-service Endpoints + ConfigMap + Service + Deployment (etcd / apisix / accesskey-auth-server / audit-log-server / mcp-plat-embed). If the main/audit databases run outside the cluster, 01-external-services.yaml maps internal DNS names to external fixed IPs via ClusterIP Service + Endpoints.',
       add_ext:'+ Add external service', splitter_tip:'Drag to resize; double-click to reset',
       btn_generate:'Generate Config Files',
       btn_copy:'Copy current', btn_download:'Download current', btn_copyall:'Copy all', btn_downloadall:'Download all',
-      grp_app:'App configs', grp_k8s:'K8s manifests', tab_ext:'External services (Service+Endpoints)', tab_cm:'ConfigMap (embeds the three configs above)',
+      grp_app:'App configs', grp_k8s:'K8s manifests', tab_ext:'External services (Service+Endpoints)', tab_cm:'ConfigMap (embeds the four configs)', tab_svc:'Service (etcd/apisix/apps)', tab_deploy:'Deployment (etcd/apisix/apps)',
       copied:'Copied',
       ext_enable:'Enabled', ext_del:'Remove', ext_name_lbl:'Service name (= host in configs)', ext_ips_lbl:'External fixed IPs (comma/newline separated)',
       w_err_ak:'✘ access_key_secret is shorter than 32 chars — the main server, auth server and audit server will refuse to start.',
@@ -341,10 +365,10 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       ph_admin:'Admin initial password (admin.password)',
       ph_jwt:'jwt_secret', ph_ak:'access_key_secret', ph_ap:'APISIX admin key',
       ph_ip:'External service “{n}” still uses the example IP 192.168.31.233',
-      st_gen:'✔ Generated 7 files ({t})',
+      st_gen:'✔ Generated 9 files ({t})',
       st_ph_suffix:' · {n} still use example/placeholder values — see note below',
       st_ok_suffix:', no example/placeholder values left',
-      note:'Everything updates live as you type; click “Generate Config Files” above to regenerate. Outputs: main server <code>config.yaml</code>, <code>accesskey_auth_server.yml</code>, <code>audit_log_server.yml</code>, <code>apisix_config.yaml</code>, plus K8s manifests <code>00-namespace.yaml</code> / <code>01-external-services.yaml</code> / <code>10-configmaps.yaml</code> (each embeds one of the first three config files).'
+      note:'Everything updates live as you type; click “Generate Config Files” above to regenerate. Outputs: main server <code>config.yaml</code>, <code>accesskey_auth_server.yml</code>, <code>audit_log_server.yml</code>, <code>apisix_config.yaml</code>, plus K8s manifests <code>00-namespace.yaml</code> / <code>01-external-services.yaml</code> / <code>10-configmaps.yaml</code> / <code>20-services.yaml</code> / <code>30-deployments.yaml</code>. The whole set can be applied with <code>kubectl apply -f</code> (import images on each node first, or set full image names on the left).'
     }
   };
   function t(key){ var d=I18N[lang]||I18N.zh; return d[key]!=null?d[key]:key; }
@@ -381,7 +405,9 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     { key:'apisix',grp:'app', file:'apisix_config.yaml',           name:'apisix_config.yaml' },
     { key:'ns',    grp:'k8s', file:'00-namespace.yaml',            name:'Namespace' },
     { key:'ext',   grp:'k8s', file:'01-external-services.yaml',    name:'01-external-services.yaml' },
-    { key:'cm',    grp:'k8s', file:'10-configmaps.yaml',           name:'10-configmaps.yaml' }
+    { key:'cm',    grp:'k8s', file:'10-configmaps.yaml',           name:'10-configmaps.yaml' },
+    { key:'svc',   grp:'k8s', file:'20-services.yaml',             name:'Services' },
+    { key:'deploy',grp:'k8s', file:'30-deployments.yaml',          name:'Deployments' }
   ];
   var EXT_DEFAULTS = [
     { enabled:true,  name:'mainpostgres', port:'5432', ips:'192.168.31.233' },
@@ -489,6 +515,22 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     s.wrFlush = val('wr_flush') || '1000';
     s.auditRetention = val('audit_retention') || '90';
     s.ns = val('k8s_ns') || 'mcp-plat';
+    s.images = {
+      etcd: val('img_etcd') || 'etcd',
+      apisix: val('img_apisix') || 'apisix',
+      auth: val('img_auth') || 'accesskey-auth-server',
+      audit: val('img_audit') || 'audit-log-server',
+      embed: val('img_embed') || 'mcp-plat-embed'
+    };
+    s.deploy = {
+      etcd: chk('k8s_svc_etcd'),
+      apisix: chk('k8s_svc_apisix'),
+      auth: chk('k8s_svc_auth'),
+      audit: chk('k8s_svc_audit'),
+      embed: chk('k8s_svc_embed')
+    };
+    s.npAuth = val('np_auth') || '30090';
+    s.npAudit = val('np_audit') || '30091';
     return s;
   }
 
@@ -680,42 +722,264 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     var mainYml=outputs.main.content;
     var authYml=outputs.auth.content;
     var auditYml=outputs.audit.content;
+    var apisixYml=outputs.apisix.content;
     var L=[];
     L.push('# ============================================================');
     L.push('# ConfigMap 集合（由配置生成器生成）');
     L.push('# 对应 docker-compose / bind mount 中的配置文件；密钥口令请生产更换');
     L.push('# ============================================================');
     L.push('');
-    L.push('# --- accesskey-auth-server 配置 ---');
-    L.push('apiVersion: v1');
-    L.push('kind: ConfigMap');
-    L.push('metadata:');
-    L.push('  name: accesskey-auth-server-config');
-    L.push('  namespace: '+yamlScalar(s.ns));
-    L.push('data:');
-    L.push('  accesskey_auth_server.yml: |');
-    L.push(indent(authYml,4).replace(/\n+$/,''));
-    L.push('---');
-    L.push('# --- audit-log-server 配置 ---');
-    L.push('apiVersion: v1');
-    L.push('kind: ConfigMap');
-    L.push('metadata:');
-    L.push('  name: audit-log-server-config');
-    L.push('  namespace: '+yamlScalar(s.ns));
-    L.push('data:');
-    L.push('  audit_log_server.yml: |');
-    L.push(indent(auditYml,4).replace(/\n+$/,''));
-    L.push('---');
-    L.push('# --- mcp_plat_embed 主程序配置 ---');
-    L.push('apiVersion: v1');
-    L.push('kind: ConfigMap');
-    L.push('metadata:');
-    L.push('  name: mcp-plat-embed-config');
-    L.push('  namespace: '+yamlScalar(s.ns));
-    L.push('data:');
-    L.push('  config.yaml: |');
-    L.push(indent(mainYml,4).replace(/\n+$/,''));
-    return L.join('\n')+'\n';
+    function cmBlock(title, name, key, content){
+      var a=[];
+      a.push('# --- '+title+' ---');
+      a.push('apiVersion: v1');
+      a.push('kind: ConfigMap');
+      a.push('metadata:');
+      a.push('  name: '+yamlScalar(name));
+      a.push('  namespace: '+yamlScalar(s.ns));
+      a.push('data:');
+      a.push('  '+yamlScalar(key)+': |');
+      a.push(indent(content,4).replace(/\n+$/,''));
+      return a.join('\n');
+    }
+    var blocks=[];
+    if(s.deploy.auth)  blocks.push(cmBlock('accesskey-auth-server 配置','accesskey-auth-server-config','accesskey_auth_server.yml',authYml));
+    if(s.deploy.audit) blocks.push(cmBlock('audit-log-server 配置','audit-log-server-config','audit_log_server.yml',auditYml));
+    if(s.deploy.embed) blocks.push(cmBlock('mcp_plat_embed 主程序配置','mcp-plat-embed-config','config.yaml',mainYml));
+    if(s.deploy.apisix) blocks.push(cmBlock('apisix 配置','apisix-config','apisix_config.yaml',apisixYml));
+    if(!blocks.length) return L.join('\n')+'\n# （未勾选任何服务，无需创建 ConfigMap）\n';
+    return L.join('\n')+'\n'+blocks.join('\n---\n')+'\n';
+  }
+
+  function genServices(){
+    var s=state();
+    var L=[];
+    L.push('# ============================================================');
+    L.push('# Service 集合（由配置生成器生成）');
+    L.push('# etcd/apisix/accesskey-auth-server/audit-log-server/mcp-plat-embed');
+    L.push('# ============================================================');
+    L.push('');
+    function svc(name, type, ports){
+      var a=[];
+      a.push('apiVersion: v1');
+      a.push('kind: Service');
+      a.push('metadata:');
+      a.push('  name: '+yamlScalar(name));
+      a.push('  namespace: '+yamlScalar(s.ns));
+      a.push('  labels:');
+      a.push('    app: '+yamlScalar(name));
+      a.push('spec:');
+      a.push('  type: '+type);
+      a.push('  selector:');
+      a.push('    app: '+yamlScalar(name));
+      a.push('  ports:');
+      ports.forEach(function(p){
+        a.push('    - name: '+yamlScalar(p.name));
+        a.push('      port: '+yamlScalar(p.port));
+        a.push('      targetPort: '+yamlScalar(p.targetPort!=null?p.targetPort:p.port));
+        if(p.nodePort) a.push('      nodePort: '+yamlScalar(p.nodePort));
+      });
+      return a.join('\n');
+    }
+    var docs=[];
+    if(s.deploy.etcd) docs.push('# --- etcd（配置中心，集群内） ---\n'+svc('etcd','ClusterIP',[
+      {name:'client',port:'2379'},
+      {name:'peer',port:'2380'}
+    ]));
+    if(s.deploy.apisix) docs.push('# --- apisix（API 网关入口） ---\n'+svc('apisix','NodePort',[
+      {name:'http',port:'80',nodePort:'30080'},
+      {name:'https',port:'443',nodePort:'30443'},
+      {name:'control',port:'9180',nodePort:'30918'}
+    ]));
+    if(s.deploy.auth) docs.push('# --- accesskey-auth-server（gRPC 认证） ---\n'+svc('accesskey-auth-server','NodePort',[
+      {name:'grpc',port:'9090',nodePort:s.npAuth}
+    ]));
+    if(s.deploy.audit) docs.push('# --- audit-log-server（gRPC 审计） ---\n'+svc('audit-log-server','NodePort',[
+      {name:'grpc',port:'9091',nodePort:s.npAudit}
+    ]));
+    if(s.deploy.embed) docs.push('# --- mcp-plat-embed（主程序 / 管理界面） ---\n'+svc('mcp-plat-embed','NodePort',[
+      {name:'http',port:'8080',nodePort:'30088'}
+    ]));
+    if(!docs.length) return L.join('\n')+'\n# （未勾选任何服务，无需创建 Service）\n';
+    return L.join('\n')+'\n'+docs.join('\n---\n')+'\n';
+  }
+
+  function genDeployments(){
+    var s=state();
+    var L=[];
+    L.push('# ============================================================');
+    L.push('# Deployment 集合（由配置生成器生成）');
+    L.push('# ============================================================');
+    L.push('');
+    function q(v){ return JSON.stringify(String(v==null?'':v)); }
+    function head(name){
+      var a=[];
+      a.push('apiVersion: apps/v1');
+      a.push('kind: Deployment');
+      a.push('metadata:');
+      a.push('  name: '+yamlScalar(name));
+      a.push('  namespace: '+yamlScalar(s.ns));
+      a.push('  labels:');
+      a.push('    app: '+yamlScalar(name));
+      a.push('spec:');
+      a.push('  replicas: 1');
+      a.push('  selector:');
+      a.push('    matchLabels:');
+      a.push('      app: '+yamlScalar(name));
+      a.push('  template:');
+      a.push('    metadata:');
+      a.push('      labels:');
+      a.push('        app: '+yamlScalar(name));
+      a.push('    spec:');
+      a.push('      containers:');
+      a.push('        - name: '+yamlScalar(name));
+      return a;
+    }
+    function cPorts(name, image, ports, env){
+      var a=head(name);
+      a.push('          image: '+yamlScalar(image));
+      a.push('          imagePullPolicy: IfNotPresent');
+      if(ports){
+        a.push('          ports:');
+        ports.forEach(function(p){
+          a.push('            - name: '+yamlScalar(p.name));
+          a.push('              containerPort: '+yamlScalar(p.port));
+        });
+      }
+      if(env){
+        a.push('          env:');
+        env.forEach(function(e){
+          a.push('            - name: '+yamlScalar(e.name));
+          a.push('              value: '+q(e.value));
+        });
+      }
+      return a;
+    }
+
+    // --- etcd（单节点，配置中心） ---
+    var etcd=cPorts('etcd', s.images.etcd,
+      [{name:'client',port:'2379'},{name:'peer',port:'2380'}],
+      [
+        {name:'ALLOW_NONE_AUTHENTICATION', value:'yes'},
+        {name:'ETCD_NAME', value:'etcd'},
+        {name:'ETCD_ADVERTISE_CLIENT_URLS', value:'http://etcd:2379'},
+        {name:'ETCD_LISTEN_CLIENT_URLS', value:'http://0.0.0.0:2379'},
+        {name:'ETCD_INITIAL_ADVERTISE_PEER_URLS', value:'http://etcd:2380'},
+        {name:'ETCD_LISTEN_PEER_URLS', value:'http://0.0.0.0:2380'},
+        {name:'ETCD_INITIAL_CLUSTER', value:'etcd=http://etcd:2380'}
+      ]);
+    etcd.push('          readinessProbe:');
+    etcd.push('            exec:');
+    etcd.push('              command: ["/bin/sh","-c","etcdctl endpoint health"]');
+    etcd.push('            initialDelaySeconds: 5');
+    etcd.push('            periodSeconds: 10');
+    etcd.push('          livenessProbe:');
+    etcd.push('            exec:');
+    etcd.push('              command: ["/bin/sh","-c","etcdctl endpoint health"]');
+    etcd.push('            initialDelaySeconds: 10');
+    etcd.push('            periodSeconds: 20');
+
+    // --- apisix ---
+    var apisix=cPorts('apisix', s.images.apisix,
+      [{name:'http',port:'80'},{name:'https',port:'443'},{name:'control',port:'9180'}],
+      [{name:'ETCD_HOST', value:'etcd'}]);
+    apisix.push('          volumeMounts:');
+    apisix.push('            - name: config');
+    apisix.push('              mountPath: /usr/local/apisix/conf/config.yaml');
+    apisix.push('              subPath: apisix_config.yaml');
+    apisix.push('              readOnly: true');
+    apisix.push('          readinessProbe:');
+    apisix.push('            tcpSocket:');
+    apisix.push('              port: 9180');
+    apisix.push('            initialDelaySeconds: 10');
+    apisix.push('            periodSeconds: 10');
+    apisix.push('          livenessProbe:');
+    apisix.push('            tcpSocket:');
+    apisix.push('              port: 9180');
+    apisix.push('            initialDelaySeconds: 15');
+    apisix.push('            periodSeconds: 20');
+    apisix.push('      volumes:');
+    apisix.push('        - name: config');
+    apisix.push('          configMap:');
+    apisix.push('            name: apisix-config');
+
+    // --- accesskey-auth-server ---
+    var auth=cPorts('accesskey-auth-server', s.images.auth,
+      [{name:'grpc',port:'9090'}]);
+    auth.push('          volumeMounts:');
+    auth.push('            - name: config');
+    auth.push('              mountPath: /opt/mcp_plat/accesskey_auth_server.yml');
+    auth.push('              subPath: accesskey_auth_server.yml');
+    auth.push('              readOnly: true');
+    auth.push('            - name: tzdata');
+    auth.push('              mountPath: /usr/share/zoneinfo');
+    auth.push('              readOnly: true');
+    auth.push('      volumes:');
+    auth.push('        - name: config');
+    auth.push('          configMap:');
+    auth.push('            name: accesskey-auth-server-config');
+    auth.push('        - name: tzdata');
+    auth.push('          hostPath:');
+    auth.push('            path: /usr/share/zoneinfo');
+
+    // --- audit-log-server ---
+    var audit=cPorts('audit-log-server', s.images.audit,
+      [{name:'grpc',port:'9091'}]);
+    audit.push('          volumeMounts:');
+    audit.push('            - name: config');
+    audit.push('              mountPath: /opt/mcp_plat/audit_log_server.yml');
+    audit.push('              subPath: audit_log_server.yml');
+    audit.push('              readOnly: true');
+    audit.push('            - name: tzdata');
+    audit.push('              mountPath: /usr/share/zoneinfo');
+    audit.push('              readOnly: true');
+    audit.push('      volumes:');
+    audit.push('        - name: config');
+    audit.push('          configMap:');
+    audit.push('            name: audit-log-server-config');
+    audit.push('        - name: tzdata');
+    audit.push('          hostPath:');
+    audit.push('            path: /usr/share/zoneinfo');
+
+    // --- mcp-plat-embed ---
+    var embed=cPorts('mcp-plat-embed', s.images.embed,
+      [{name:'http',port:'8080'}]);
+    embed.push('          volumeMounts:');
+    embed.push('            - name: config');
+    embed.push('              mountPath: /opt/mcp_plat/config.yaml');
+    embed.push('              subPath: config.yaml');
+    embed.push('              readOnly: true');
+    embed.push('            - name: tzdata');
+    embed.push('              mountPath: /usr/share/zoneinfo');
+    embed.push('              readOnly: true');
+    embed.push('          readinessProbe:');
+    embed.push('            httpGet:');
+    embed.push('              path: /healthz');
+    embed.push('              port: 8080');
+    embed.push('            initialDelaySeconds: 10');
+    embed.push('            periodSeconds: 10');
+    embed.push('          livenessProbe:');
+    embed.push('            httpGet:');
+    embed.push('              path: /healthz');
+    embed.push('              port: 8080');
+    embed.push('            initialDelaySeconds: 15');
+    embed.push('            periodSeconds: 20');
+    embed.push('      volumes:');
+    embed.push('        - name: config');
+    embed.push('          configMap:');
+    embed.push('            name: mcp-plat-embed-config');
+    embed.push('        - name: tzdata');
+    embed.push('          hostPath:');
+    embed.push('            path: /usr/share/zoneinfo');
+
+    var docs=[];
+    if(s.deploy.etcd)  docs.push(etcd);
+    if(s.deploy.apisix) docs.push(apisix);
+    if(s.deploy.auth)  docs.push(auth);
+    if(s.deploy.audit) docs.push(audit);
+    if(s.deploy.embed) docs.push(embed);
+    if(!docs.length) return L.join('\n')+'\n# （未勾选任何服务，无需创建 Deployment）\n';
+    return L.join('\n')+'\n'+docs.map(function(d){return d.join('\n');}).join('\n---\n')+'\n';
   }
 
   // ==================== 渲染 ====================
@@ -729,6 +993,8 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     outputs.ns    = { content: genNamespace(s) };
     outputs.ext   = { content: genExternalServices() };
     outputs.cm    = { content: genConfigMaps() };
+    outputs.svc   = { content: genServices() };
+    outputs.deploy= { content: genDeployments() };
   }
 
   function renderView(){
@@ -743,6 +1009,8 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
   function tabLabel(f){
     if(f.key==='ext') return t('tab_ext');
     if(f.key==='cm') return t('tab_cm');
+    if(f.key==='svc') return t('tab_svc');
+    if(f.key==='deploy') return t('tab_deploy');
     return f.name;
   }
 
