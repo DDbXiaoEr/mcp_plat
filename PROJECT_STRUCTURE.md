@@ -113,7 +113,9 @@ mcp_plat-console/
 │
 ├── public/
 │   ├── api_doc.md            # API 接口文档（强制维护）
-│   └── api-devstatus.md      # API 开发进度状态（强制维护）
+│   ├── api_doc_EN.md         # API 接口文档（英文，强制维护）
+│   ├── api-devstatus.md      # API 开发进度状态（强制维护）
+│   └── api-devstatus_EN.md   # API 开发进度状态（英文，强制维护）
 │
 ├── kubernetes/               # Kubernetes 部署清单（namespace / configmap / 各服务）
 │   ├── 00-namespace.yaml

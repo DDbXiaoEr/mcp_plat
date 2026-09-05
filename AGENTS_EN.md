@@ -9,8 +9,8 @@
 
 ## Shared File Rules (mandatory)
 
-- **`public/api_doc.md`** — request/response field documentation for the API; keep in sync whenever an endpoint is added or modified
-- **`public/api-devstatus.md`** — API development status; update promptly after implementing or changing an endpoint
+- **`public/api_doc.md` / `public/api_doc_EN.md`** — request/response field documentation for the API; keep both in sync whenever an endpoint is added or modified
+- **`public/api-devstatus.md` / `public/api-devstatus_EN.md`** — API development status (both versions); update promptly after implementing or changing an endpoint
 - **`PROJECT_STRUCTURE.md` / `PROJECT_STRUCTURE_EN.md`** — keep the directory tree and route table in sync (both the Chinese and English versions) whenever files are added or removed
 
 ## Backend Conventions

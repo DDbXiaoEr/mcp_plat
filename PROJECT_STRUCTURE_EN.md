@@ -112,8 +112,10 @@ mcp_plat-console/
 │   └── router.go             # Gin route registration (used by main.go only; main_embed.go registers its own)
 │
 ├── public/
-│   ├── api_doc.md            # API endpoint documentation (mandatory to maintain)
-│   └── api-devstatus.md      # API development status (mandatory to maintain)
+│   ├── api_doc.md            # API endpoint documentation (Chinese; mandatory to maintain)
+│   ├── api_doc_EN.md         # API endpoint documentation (English; mandatory to maintain)
+│   ├── api-devstatus.md      # API development status (Chinese; mandatory to maintain)
+│   └── api-devstatus_EN.md   # API development status (English; mandatory to maintain)
 │
 ├── kubernetes/               # Kubernetes deployment manifests (namespace / configmap / services)
 │   ├── 00-namespace.yaml
