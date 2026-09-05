@@ -46,3 +46,6 @@ build/*
 web/dist.zip
 
 build/
+
+# playwright-mcp 测试产物
+.playwright-mcp/

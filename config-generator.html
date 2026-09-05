@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mcp_plat 部署配置生成器</title>
+<style>
+:root{
+  --blue:#0a3d7a;
+  --blue-light:#2b6cb0;
+  --bg:#f2f5f9;
+  --surface:#ffffff;
+  --border:#d7dee7;
+  --text:#1c2733;
+  --muted:#64748b;
+  --ok:#15803d;
+  --warn:#92400e;
+  --warn-bg:#fff7e0;
+  --warn-border:#eab308;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+a{color:var(--blue)}
+
+header{background:var(--blue);color:#fff;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+header h1{margin:0;font-size:20px}
+header p{margin:6px 0 0;font-size:13px;opacity:.85;max-width:900px}
+.langswitch{display:flex;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:3px;flex:0 0 auto}
+.langswitch button{border:none;background:transparent;color:#fff;font-size:12px;font-weight:600;padding:5px 14px;border-radius:999px;cursor:pointer;font-family:inherit}
+.langswitch button.active{background:#fff;color:var(--blue)}
+.langswitch button:not(.active):hover{background:rgba(255,255,255,.18)}
+
+.wrap{display:flex;gap:14px;padding:18px;align-items:stretch}
+
+/* left form */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:10px}
+.sidebar{width:400px;flex:0 0 auto;position:sticky;top:18px;max-height:calc(100vh - 36px);overflow:auto}
+.splitter{flex:0 0 8px;cursor:col-resize;display:flex;align-items:center;justify-content:center;border-radius:4px}
+.splitter::after{content:"";width:3px;height:64px;border-radius:3px;background:var(--border);transition:background .15s}
+.splitter:hover::after,.splitter.dragging::after{background:var(--blue-light)}
+body.split-dragging,.body.split-dragging{cursor:col-resize;-webkit-user-select:none;user-select:none}
+body.split-dragging .sidebar,body.split-dragging .main{pointer-events:none}
+.group{padding:14px 16px;border-bottom:1px solid var(--border)}
+.group:last-child{border-bottom:none}
+.group h2{margin:0 0 12px;font-size:13px;font-weight:700;color:var(--blue);letter-spacing:.02em}
+.frow{display:flex;gap:10px;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field label{font-size:12px;color:var(--muted);font-weight:600}
+.field input[type=text],.field input[type=password],.field input[type=number],.field select,.field textarea{
+  padding:7px 9px;font-size:13px;border:1px solid var(--border);border-radius:6px;outline:none;background:#fff;color:var(--text);font-family:inherit;width:100%
+}
+.field textarea{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:12px;line-height:1.5;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue-light);box-shadow:0 0 0 2px rgba(43,108,176,.12)}
+.field .hint{font-size:11px;color:var(--muted)}
+.fs{flex:1;min-width:150px}
+.checkbox{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px}
+.checkbox input{width:15px;height:15px;accent-color:var(--blue)}
+.secret-row{display:flex;gap:8px;align-items:flex-end}
+.secret-row .field{flex:1}
+.btn{border:1px solid var(--border);background:#fff;color:var(--blue);padding:6px 12px;font-size:12px;font-weight:600;border-radius:6px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--blue-light);background:#eef4fb}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue-light)}
+.btn-sm{padding:4px 9px;font-size:12px}
+.extrow{background:#f7fafc;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+.extrow .ext-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.extrow .ext-head .checkbox{margin:0}
+.extrow .frow .field{margin-bottom:0}
+.ext-head .spacer{flex:1}
+
+/* right output */
+.main{flex:1;min-width:0}
+.toolbar{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.toolbar .status{font-size:12px;color:var(--muted)}
+.btn-lg{padding:9px 20px;font-size:13px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.tabs button{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;font-size:12px;border:1px solid var(--border);background:#fff;color:var(--muted);border-radius:999px;cursor:pointer;font-family:inherit}
+.tabs button:hover{color:var(--blue)}
+.tabs button.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.codebar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.codebar .fname{font-weight:700;font-size:14px;color:var(--text);font-family:"SF Mono",Menlo,Consolas,monospace}
+.codebar .fname .grp{color:var(--muted);font-weight:600;margin-right:8px}
+.codebar .acts{display:flex;gap:8px;align-items:center}
+textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--border);border-radius:10px;background:#0e1524;color:#dbe5f3;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:12px;line-height:1.55;white-space:pre;resize:vertical;outline:none}
+#warn{display:none;margin-bottom:10px;padding:10px 14px;background:var(--warn-bg);border:1px solid var(--warn-border);color:var(--warn);font-size:13px;border-radius:8px;white-space:pre-line}
+.note{background:#eef4fb;border:1px solid #c8dcf3;color:#23456b;padding:9px 13px;font-size:12px;border-radius:8px;margin-bottom:10px}
+.hide{display:none!important}
+@media (max-width:1100px){.wrap{flex-direction:column}.sidebar{flex:auto;max-height:none;position:static;width:100%!important}.splitter{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1 data-i18n="t_title">mcp_plat 部署配置生成器</h1>
+    <p data-i18n="t_sub">一次填写，生成主程序 / accesskey-auth-server / audit-log-server / APISIX 配置，以及对应的 Kubernetes 清单（Namespace + ConfigMap + 外部服务 Endpoints）。纯前端，数据不出浏览器。</p>
+  </div>
+  <div class="langswitch" aria-label="语言 / Language">
+    <button type="button" id="lang-zh" class="active">中文</button>
+    <button type="button" id="lang-en">EN</button>
+  </div>
+</header>
+
+<div class="wrap" id="wrap">
+  <!-- ==================== 左侧表单 ==================== -->
+  <aside class="panel sidebar" id="sidebar">
+    <div id="formRoot">
+
+      <section class="group">
+        <h2 data-i18n="g_db">① 主程序数据库</h2>
+        <div class="frow">
+          <div class="field fs">
+            <label data-i18n="db_type">数据库类型</label>
+            <select id="db_type">
+              <option value="postgres" selected>postgres</option>
+              <option value="mysql">mysql</option>
+            </select>
+          </div>
+          <div class="field fs"><label data-i18n="host_svc">主机 / Service</label><input type="text" id="db_host" value="mainpostgres"></div>
+        </div>
+        <div class="frow">
+          <div class="field"><label data-i18n="port">端口</label><input type="text" id="db_port" value="5432"></div>
+          <div class="field fs"><label data-i18n="user">用户</label><input type="text" id="db_user" value="root"></div>
+        </div>
+        <div class="frow">
+          <div class="field fs"><label data-i18n="pass">密码</label><input type="password" id="db_password" value="changeme"></div>
+          <div class="field fs"><label data-i18n="dbname">库名</label><input type="text" id="db_name" value="mcp_plat_db"></div>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2 data-i18n="g_audit">② 审计日志存储</h2>
+        <div class="frow">
+          <div class="field fs">
+            <label data-i18n="audit_type">存储类型</label>
+            <select id="audit_type">
+              <option value="clickhouse" selected>clickhouse</option>
+              <option value="postgres">postgres</option>
+              <option value="mysql">mysql</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="audit_ck_box">
+          <div class="frow">
+            <div class="field fs"><label data-i18n="ck_addr">地址 addr</label><input type="text" id="ck_addr" value="clickhouse:9000"></div>
+            <div class="field"><label data-i18n="user">用户</label><input type="text" id="ck_user" value="default"></div>
+          </div>
+          <div class="frow">
+            <div class="field fs"><label data-i18n="pass">密码</label><input type="password" id="ck_password" value=""></div>
+            <div class="field fs"><label data-i18n="ck_db">库 db</label><input type="text" id="ck_db" value="audit_logs"></div>
+          </div>
+          <div class="frow">
+            <div class="field fs"><label data-i18n="ck_table">表 table</label><input type="text" id="ck_table" value="audit_logs"></div>
+            <div class="field fs">
+              <label data-i18n="ck_engine">引擎 engine</label>
+              <select id="ck_engine">
+                <option value="merge_tree" selected data-i18n="eng_merge">merge_tree（单机）</option>
+                <option value="replicated_merge_tree" data-i18n="eng_repl">replicated_merge_tree（集群）</option>
+              </select>
+            </div>
+          </div>
+          <div class="frow">
+            <div class="field fs" id="ck_cluster_box"><label data-i18n="ck_cluster">集群名 cluster（replicated 必填）</label><input type="text" id="ck_cluster" value=""></div>
+            <div class="field"><label data-i18n="ck_ttl">TTL 保留天数</label><input type="text" id="ck_ttl" value="90"></div>
+          </div>
+        </div>
+
+        <div id="audit_rel_box" class="hide">
+          <div class="frow">
+            <div class="field fs"><label data-i18n="host_svc">主机 / Service</label><input type="text" id="audit_host" value="auditpostgres"></div>
+            <div class="field"><label data-i18n="port">端口</label><input type="text" id="audit_port" value="5432"></div>
+          </div>
+          <div class="frow">
+            <div class="field fs"><label data-i18n="user">用户</label><input type="text" id="audit_user" value="root"></div>
+            <div class="field fs"><label data-i18n="pass">密码</label><input type="password" id="audit_password" value="changeme"></div>
+          </div>
+          <div class="frow">
+            <div class="field fs"><label data-i18n="dbname">库名</label><input type="text" id="audit_db" value="mcp_history_db"></div>
+            <div class="field fs"><label data-i18n="audit_ret">关系库保留天数（0=不清理）</label><input type="text" id="audit_retention" value="90"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2 data-i18n="g_secret">③ 密钥与管理员</h2>
+        <div class="secret-row">
+          <div class="field"><label data-i18n="jwt_lbl">jwt_secret（≥32 字符）</label><input type="text" id="jwt_secret"></div>
+          <button type="button" class="btn" id="btn-jwt" data-i18n="random">随机</button>
+        </div>
+        <div class="secret-row">
+          <div class="field"><label data-i18n="ak_lbl">access_key_secret（≥32 字符，三服务须一致）</label><input type="text" id="access_key_secret"></div>
+          <button type="button" class="btn" id="btn-ak" data-i18n="random">随机</button>
+        </div>
+        <label class="checkbox"><input type="checkbox" id="sync_secrets" checked><span data-i18n="sync_txt">access_key_secret 与 jwt_secret 使用同一密钥</span></label>
+        <div class="frow">
+          <div class="field fs"><label data-i18n="adm_user">管理员账号</label><input type="text" id="admin_username" value="admin"></div>
+          <div class="field fs"><label data-i18n="adm_pass">管理员密码</label><input type="password" id="admin_password" value="admin123"></div>
+        </div>
+        <div class="frow">
+          <div class="field fs"><label data-i18n="server_port_lbl">HTTP 监听端口 server_port</label><input type="text" id="server_port" value="8080"></div>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2 data-i18n="g_addr">④ 服务监听地址</h2>
+        <div class="frow">
+          <div class="field fs"><label data-i18n="auth_grpc_lbl">accesskey gRPC 地址</label><input type="text" id="auth_grpc" value=":9090"></div>
+          <div class="field fs"><label data-i18n="audit_grpc_lbl">audit gRPC 地址</label><input type="text" id="audit_grpc" value="0.0.0.0:9091"></div>
+        </div>
+        <div class="frow">
+          <div class="field"><label data-i18n="wr_batch_lbl">audit 写入 batch_size</label><input type="text" id="wr_batch" value="200"></div>
+          <div class="field"><label>flush_interval_ms</label><input type="text" id="wr_flush" value="1000"></div>
+          <div class="field fs"><span class="hint" data-i18n="wr_hint">writer 仅在 audit_log_server.yml 中使用</span></div>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2 data-i18n="g_apisix">⑤ APISIX</h2>
+        <div class="secret-row">
+          <div class="field"><label data-i18n="ap_key_lbl">admin key</label><input type="text" id="ap_admin_key"></div>
+          <button type="button" class="btn" id="btn-ap" data-i18n="random">随机</button>
+        </div>
+        <label class="checkbox"><input type="checkbox" id="ap_admin_ui" checked><span data-i18n="ap_ui_txt">启用 admin_ui（无需则取消勾选）</span></label>
+        <div class="field"><label data-i18n="ap_allow_lbl">allow_admin（每行一个 CIDR）</label><textarea id="ap_allow_admin" rows="1">0.0.0.0/0</textarea></div>
+        <div class="field"><label data-i18n="ap_etcd_lbl">etcd host（每行一个）</label><textarea id="ap_etcd" rows="2">http://${{ETCD_HOST:=etcd}}:2379</textarea></div>
+        <div class="field"><label data-i18n="ap_listen_lbl">node_listen（每行一个）</label><textarea id="ap_listen" rows="2">80
+443:ssl</textarea></div>
+        <div class="field"><label data-i18n="ap_cmd_lbl">ext-plugin 命令路径</label><input type="text" id="ap_cmd" value="/opt/mcp_plat/bin/apisix-go-runner"></div>
+      </section>
+
+      <section class="group">
+        <h2 data-i18n="g_k8s">⑥ Kubernetes</h2>
+        <div class="frow">
+          <div class="field fs"><label data-i18n="ns_lbl">命名空间</label><input type="text" id="k8s_ns" value="mcp-plat"></div>
+        </div>
+        <p class="hint" style="margin:6px 0 10px" data-i18n="k8s_hint">主/审计库若不在集群内运行，以下生成 01-external-services.yaml：以 ClusterIP Service + Endpoints 将内部 DNS 名映射到外部固定 IP。IP 支持多行或多 IP 逗号分隔。</p>
+        <div id="extRows"></div>
+        <button type="button" class="btn btn-sm" id="btn-add-ext" data-i18n="add_ext">+ 添加外部服务</button>
+      </section>
+
+    </div>
+  </aside>
+
+  <div class="splitter" id="splitter" data-i18n-tip="splitter_tip" title="拖动调整左右宽度（双击恢复默认）"></div>
+
+  <!-- ==================== 右侧输出 ==================== -->
+  <main class="main">
+    <div class="toolbar">
+      <button type="button" class="btn btn-primary btn-lg" id="btn-generate" data-i18n="btn_generate">生成配置文件</button>
+      <span class="status" id="gen-status"></span>
+    </div>
+    <div class="note" id="note">所有内容随表单实时更新，也可点上方「生成配置文件」重新生成。生成物：主程序 <code>config.yaml</code>、<code>accesskey_auth_server.yml</code>、<code>audit_log_server.yml</code>、<code>apisix_config.yaml</code>，以及 K8s 清单 <code>00-namespace.yaml</code> / <code>01-external-services.yaml</code> / <code>10-configmaps.yaml</code>（内含前三个配置文件）。</div>
+    <div id="warn"></div>
+
+    <div class="codebar">
+      <div class="fname"><span class="grp" id="fgrp"></span><span id="fname"></span></div>
+      <div class="acts">
+        <button type="button" class="btn btn-sm" id="btn-copy" data-i18n="btn_copy">复制当前</button>
+        <button type="button" class="btn btn-sm" id="btn-download" data-i18n="btn_download">下载当前</button>
+        <button type="button" class="btn btn-sm" id="btn-copyall" data-i18n="btn_copyall">复制全部</button>
+        <button type="button" class="btn btn-sm" id="btn-downloadall" data-i18n="btn_downloadall">下载全部</button>
+      </div>
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+    <textarea class="view" id="file-view" readonly spellcheck="false" wrap="off"></textarea>
+  </main>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  // ==================== i18n ====================
+  var LANG_KEY='mcp-plat-cg:lang';
+  var lang='zh';
+  var I18N={
+    zh:{
+      t_title:'mcp_plat 部署配置生成器',
+      t_sub:'一次填写，生成主程序 / accesskey-auth-server / audit-log-server / APISIX 配置，以及对应的 Kubernetes 清单（Namespace + ConfigMap + 外部服务 Endpoints）。纯前端，数据不出浏览器。',
+      g_db:'① 主程序数据库', g_audit:'② 审计日志存储', g_secret:'③ 密钥与管理员', g_addr:'④ 服务监听地址', g_apisix:'⑤ APISIX', g_k8s:'⑥ Kubernetes',
+      db_type:'数据库类型', host_svc:'主机 / Service', port:'端口', user:'用户', pass:'密码', dbname:'库名',
+      audit_type:'存储类型', ck_addr:'地址 addr', ck_db:'库 db', ck_table:'表 table', ck_engine:'引擎 engine',
+      eng_merge:'merge_tree（单机）', eng_repl:'replicated_merge_tree（集群）',
+      ck_cluster:'集群名 cluster（replicated 必填）', ck_ttl:'TTL 保留天数', audit_ret:'关系库保留天数（0=不清理）',
+      jwt_lbl:'jwt_secret（≥32 字符）', ak_lbl:'access_key_secret（≥32 字符，三服务须一致）',
+      random:'随机', sync_txt:'access_key_secret 与 jwt_secret 使用同一密钥',
+      adm_user:'管理员账号', adm_pass:'管理员密码', server_port_lbl:'HTTP 监听端口 server_port',
+      auth_grpc_lbl:'accesskey gRPC 地址', audit_grpc_lbl:'audit gRPC 地址', wr_batch_lbl:'audit 写入 batch_size', wr_hint:'writer 仅在 audit_log_server.yml 中使用',
+      ap_key_lbl:'admin key', ap_ui_txt:'启用 admin_ui（无需则取消勾选）', ap_allow_lbl:'allow_admin（每行一个 CIDR）',
+      ap_etcd_lbl:'etcd host（每行一个）', ap_listen_lbl:'node_listen（每行一个）', ap_cmd_lbl:'ext-plugin 命令路径',
+      ns_lbl:'命名空间', k8s_hint:'主/审计库若不在集群内运行，以下生成 01-external-services.yaml：以 ClusterIP Service + Endpoints 将内部 DNS 名映射到外部固定 IP。IP 支持多行或多 IP 逗号分隔。',
+      add_ext:'+ 添加外部服务', splitter_tip:'拖动调整左右宽度（双击恢复默认）',
+      btn_generate:'生成配置文件',
+      btn_copy:'复制当前', btn_download:'下载当前', btn_copyall:'复制全部', btn_downloadall:'下载全部',
+      grp_app:'应用配置', grp_k8s:'K8s 清单', tab_ext:'外部服务 Service+Endpoints', tab_cm:'ConfigMap（含上面前三份配置）',
+      copied:'已复制',
+      ext_enable:'启用', ext_del:'删除', ext_name_lbl:'Service 名（= 配置中的 host）', ext_ips_lbl:'外部固定 IP（多 IP 用逗号/换行分隔）',
+      w_err_ak:'✘ access_key_secret 不足 32 字符，主程序 / 认证服务 / 审计服务将拒绝启动。',
+      w_err_jwt:'✘ jwt_secret 不足 32 字符，主程序将拒绝启动。',
+      w_err_admin:'✘ 管理员账号或密码为空，主程序将拒绝启动。',
+      w_ph_head:'—— 以下仍为示例/占位值，请在左侧对应输入框修改（口令可用旁边的“随机”） ——',
+      ph_db:'主程序数据库密码（database.password）',
+      ph_audit_db:'审计库密码（audit database.password）',
+      ph_admin:'管理员初始密码（admin.password）',
+      ph_jwt:'jwt_secret', ph_ak:'access_key_secret', ph_ap:'APISIX admin key',
+      ph_ip:'外部服务“{n}”仍使用示例 IP 192.168.31.233',
+      st_gen:'✔ 已生成 7 个文件（{t}）',
+      st_ph_suffix:' · {n} 处仍为示例/占位值，见下方提示',
+      st_ok_suffix:'，无示例/占位值遗留',
+      note:'所有内容随表单实时更新，也可点上方「生成配置文件」重新生成。生成物：主程序 <code>config.yaml</code>、<code>accesskey_auth_server.yml</code>、<code>audit_log_server.yml</code>、<code>apisix_config.yaml</code>，以及 K8s 清单 <code>00-namespace.yaml</code> / <code>01-external-services.yaml</code> / <code>10-configmaps.yaml</code>（内含前三个配置文件）。'
+    },
+    en:{
+      t_title:'mcp_plat Deployment Config Generator',
+      t_sub:'Fill in once to generate configs for the main server, accesskey-auth-server, audit-log-server and APISIX, plus the matching Kubernetes manifests (Namespace + ConfigMap + external-service Endpoints). Pure frontend — nothing leaves your browser.',
+      g_db:'① Main Database', g_audit:'② Audit Log Storage', g_secret:'③ Secrets & Admin', g_addr:'④ Service Listen Addresses', g_apisix:'⑤ APISIX', g_k8s:'⑥ Kubernetes',
+      db_type:'Database type', host_svc:'Host / Service', port:'Port', user:'User', pass:'Password', dbname:'Database name',
+      audit_type:'Storage type', ck_addr:'Address (addr)', ck_db:'Database (db)', ck_table:'Table (table)', ck_engine:'Engine (engine)',
+      eng_merge:'merge_tree (standalone)', eng_repl:'replicated_merge_tree (cluster)',
+      ck_cluster:'Cluster name (required for replicated)', ck_ttl:'TTL retention (days)', audit_ret:'Retention (days, 0 = keep all)',
+      jwt_lbl:'jwt_secret (≥32 chars)', ak_lbl:'access_key_secret (≥32 chars, must match across services)',
+      random:'Random', sync_txt:'Use the same key for access_key_secret and jwt_secret',
+      adm_user:'Admin username', adm_pass:'Admin password', server_port_lbl:'HTTP listen port (server_port)',
+      auth_grpc_lbl:'accesskey gRPC address', audit_grpc_lbl:'audit gRPC address', wr_batch_lbl:'audit writer batch_size', wr_hint:'writer is only used in audit_log_server.yml',
+      ap_key_lbl:'Admin key', ap_ui_txt:'Enable admin_ui (uncheck if not needed)', ap_allow_lbl:'allow_admin (one CIDR per line)',
+      ap_etcd_lbl:'etcd hosts (one per line)', ap_listen_lbl:'node_listen (one per line)', ap_cmd_lbl:'ext-plugin command path',
+      ns_lbl:'Namespace', k8s_hint:'If the main/audit databases run outside the cluster, this generates 01-external-services.yaml — mapping internal DNS names to external fixed IPs via a ClusterIP Service + manual Endpoints. IPs accept multiple lines or comma-separated values.',
+      add_ext:'+ Add external service', splitter_tip:'Drag to resize; double-click to reset',
+      btn_generate:'Generate Config Files',
+      btn_copy:'Copy current', btn_download:'Download current', btn_copyall:'Copy all', btn_downloadall:'Download all',
+      grp_app:'App configs', grp_k8s:'K8s manifests', tab_ext:'External services (Service+Endpoints)', tab_cm:'ConfigMap (embeds the three configs above)',
+      copied:'Copied',
+      ext_enable:'Enabled', ext_del:'Remove', ext_name_lbl:'Service name (= host in configs)', ext_ips_lbl:'External fixed IPs (comma/newline separated)',
+      w_err_ak:'✘ access_key_secret is shorter than 32 chars — the main server, auth server and audit server will refuse to start.',
+      w_err_jwt:'✘ jwt_secret is shorter than 32 chars — the main server will refuse to start.',
+      w_err_admin:'✘ Admin username or password is empty — the main server will refuse to start.',
+      w_ph_head:'—— The following still use example/placeholder values; edit the matching field on the left (use “Random” for secrets) ——',
+      ph_db:'Main DB password (database.password)',
+      ph_audit_db:'Audit DB password (audit database.password)',
+      ph_admin:'Admin initial password (admin.password)',
+      ph_jwt:'jwt_secret', ph_ak:'access_key_secret', ph_ap:'APISIX admin key',
+      ph_ip:'External service “{n}” still uses the example IP 192.168.31.233',
+      st_gen:'✔ Generated 7 files ({t})',
+      st_ph_suffix:' · {n} still use example/placeholder values — see note below',
+      st_ok_suffix:', no example/placeholder values left',
+      note:'Everything updates live as you type; click “Generate Config Files” above to regenerate. Outputs: main server <code>config.yaml</code>, <code>accesskey_auth_server.yml</code>, <code>audit_log_server.yml</code>, <code>apisix_config.yaml</code>, plus K8s manifests <code>00-namespace.yaml</code> / <code>01-external-services.yaml</code> / <code>10-configmaps.yaml</code> (each embeds one of the first three config files).'
+    }
+  };
+  function t(key){ var d=I18N[lang]||I18N.zh; return d[key]!=null?d[key]:key; }
+  function tpl(key, params){
+    var s=t(key);
+    for(var k in params){ s=s.split('{'+k+'}').join(String(params[k])); }
+    return s;
+  }
+  function loadLang(){ try{ var v=localStorage.getItem(LANG_KEY); if(v==='en'||v==='zh') lang=v; }catch(e){} }
+  function saveLang(){ try{ localStorage.setItem(LANG_KEY,lang); }catch(e){} }
+  function applyStatic(){
+    document.querySelectorAll('[data-i18n]').forEach(function(el){ el.textContent=t(el.getAttribute('data-i18n')); });
+    document.querySelectorAll('[data-i18n-tip]').forEach(function(el){ el.title=t(el.getAttribute('data-i18n-tip')); });
+    var note=$('note'); if(note) note.innerHTML=t('note');
+    document.title=t('t_title');
+    document.documentElement.lang=(lang==='en')?'en':'zh-CN';
+    var zhBtn=$('lang-zh'), enBtn=$('lang-en');
+    if(zhBtn) zhBtn.classList.toggle('active', lang!=='en');
+    if(enBtn) enBtn.classList.toggle('active', lang==='en');
+  }
+  function setLang(l){
+    lang=(l==='en')?'en':'zh';
+    saveLang();
+    applyStatic();
+    renderExtRows();
+    refresh();
+    if(lastGen) renderStatus();
+  }
+
+  var FILES = [
+    { key:'main',  grp:'app', file:'config.yaml',                  name:'config.yaml' },
+    { key:'auth',  grp:'app', file:'accesskey_auth_server.yml',    name:'accesskey_auth_server.yml' },
+    { key:'audit', grp:'app', file:'audit_log_server.yml',         name:'audit_log_server.yml' },
+    { key:'apisix',grp:'app', file:'apisix_config.yaml',           name:'apisix_config.yaml' },
+    { key:'ns',    grp:'k8s', file:'00-namespace.yaml',            name:'Namespace' },
+    { key:'ext',   grp:'k8s', file:'01-external-services.yaml',    name:'01-external-services.yaml' },
+    { key:'cm',    grp:'k8s', file:'10-configmaps.yaml',           name:'10-configmaps.yaml' }
+  ];
+  var EXT_DEFAULTS = [
+    { enabled:true,  name:'mainpostgres', port:'5432', ips:'192.168.31.233' },
+    { enabled:true,  name:'clickhouse',   port:'9000', ips:'192.168.31.233' }
+  ];
+
+  var active = 'main';
+  var outputs = {};
+
+  function $(id){ return document.getElementById(id); }
+  function val(id){ var el=$(id); return el ? el.value.trim() : ''; }
+  function chk(id){ var el=$(id); return el ? el.checked : false; }
+  function textLines(id){
+    return val(id).split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  }
+
+  // ---------- 通用工具 ----------
+  function yamlScalar(v){
+    var s=String(v==null?'':v);
+    if(s==='') return '""';
+    if(/^-?\d+(\.\d+)?$/.test(s)) return s;
+    if(/^[A-Za-z0-9_.:/@$\[\]{}()\-+%=,#]+$/.test(s)) return s;
+    return JSON.stringify(s);
+  }
+  function indent(s, n){
+    var pad=new Array(n+1).join(' ');
+    return s.replace(/\s+$/,'').split('\n').map(function(l){ return pad+l; }).join('\n')+'\n';
+  }
+  function randHex(len){
+    var arr=new Uint8Array(Math.ceil(len/2));
+    crypto.getRandomValues(arr);
+    var s='';
+    for(var i=0;i<arr.length;i++) s+=('0'+arr[i].toString(16)).slice(-2);
+    return s.slice(0,len);
+  }
+  function download(name, content){
+    var blob=new Blob([content],{type:'text/plain;charset=utf-8'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },200);
+  }
+  function copyText(txt){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      return navigator.clipboard.writeText(txt);
+    }
+    return new Promise(function(resolve){
+      var ta=document.createElement('textarea');
+      ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try{document.execCommand('copy');}catch(e){}
+      ta.remove(); resolve();
+    });
+  }
+
+  // ---------- 关系库 / ClickHouse 块 ----------
+  function relBlock(type, cfg, pad){
+    var p=new Array(pad+1).join(' ');
+    var L=[];
+    L.push(p+type+':');
+    L.push(p+'  host: '+yamlScalar(cfg.host));
+    L.push(p+'  port: '+yamlScalar(cfg.port));
+    L.push(p+'  user: '+yamlScalar(cfg.user));
+    L.push(p+'  password: '+yamlScalar(cfg.password));
+    L.push(p+'  dbname: '+yamlScalar(cfg.dbname));
+    return L.join('\n');
+  }
+  function ckBlock(cfg, pad){
+    var p=new Array(pad+1).join(' ');
+    var L=[];
+    L.push(p+'clickhouse:');
+    L.push(p+'  addr: '+yamlScalar(cfg.addr));
+    L.push(p+'  user: '+yamlScalar(cfg.user));
+    L.push(p+'  password: '+yamlScalar(cfg.password));
+    L.push(p+'  db: '+yamlScalar(cfg.db));
+    L.push(p+'  table: '+yamlScalar(cfg.table));
+    L.push(p+'  engine: '+yamlScalar(cfg.engine)+'            # merge_tree=单机; replicated_merge_tree=集群');
+    L.push(p+'  cluster: '+yamlScalar(cfg.cluster)+'           # replicated_merge_tree 时必填');
+    L.push(p+'  ttl_days: '+yamlScalar(cfg.ttl)+'              # 数据保留天数（原生 TTL 自动清理）');
+    return L.join('\n');
+  }
+  function secretsBlock(){
+    var jwt = chk('sync_secrets') ? val('access_key_secret') : val('jwt_secret');
+    return 'jwt_secret: '+yamlScalar(jwt)+'\n'+
+           'access_key_secret: '+yamlScalar(val('access_key_secret'));
+  }
+
+  function state(){
+    var s={};
+    s.dbType = val('db_type') || 'postgres';
+    s.db = { host:val('db_host'), port:val('db_port'), user:val('db_user'), password:val('db_password'), dbname:val('db_name') };
+    s.auditType = val('audit_type') || 'clickhouse';
+    s.ck = { addr:val('ck_addr'), user:val('ck_user'), password:val('ck_password'), db:val('ck_db'),
+             table:val('ck_table'), engine:val('ck_engine')||'merge_tree', cluster:val('ck_cluster'), ttl:val('ck_ttl')||'90' };
+    s.auditDb = { host:val('audit_host'), port:val('audit_port'), user:val('audit_user'), password:val('audit_password'), dbname:val('audit_db') };
+    s.akSecret = val('access_key_secret');
+    s.adminUser = val('admin_username');
+    s.adminPass = val('admin_password');
+    s.serverPort = val('server_port') || '8080';
+    s.authGrpc = val('auth_grpc') || ':9090';
+    s.auditGrpc = val('audit_grpc') || '0.0.0.0:9091';
+    s.wrBatch = val('wr_batch') || '200';
+    s.wrFlush = val('wr_flush') || '1000';
+    s.auditRetention = val('audit_retention') || '90';
+    s.ns = val('k8s_ns') || 'mcp-plat';
+    return s;
+  }
+
+  function auditStoreSection(s, keyName){
+    if(s.auditType === 'clickhouse'){
+      return keyName+':\n  type: clickhouse\n' + ckBlock(s.ck, 2);
+    }
+    return keyName+':\n  type: '+s.auditType+'\n' + relBlock(s.auditType, s.auditDb, 2);
+  }
+
+  // ==================== 生成器 ====================
+  function genMainConfig(s){
+    var L=[];
+    L.push('# ============================================================');
+    L.push('# mcp_plat-console 主程序配置文件（由配置生成器生成）');
+    L.push('# ============================================================');
+    L.push('');
+    L.push('# 主程序数据库（用户、角色、AccessKey、服务器、系统设置等）');
+    L.push('database:');
+    L.push('  type: '+s.dbType);
+    L.push(relBlock(s.dbType, s.db, 2));
+    L.push('');
+    L.push('# ============================================================');
+    L.push('# 审计日志存储（须与 audit_log_server.yml 保持一致，否则查不到数据）');
+    L.push('# ============================================================');
+    L.push(auditStoreSection(s,'audit_log_db'));
+    L.push('');
+    L.push('# 密钥需至少 32 字符随机值，生产环境建议通过环境变量注入');
+    L.push(secretsBlock());
+    L.push('');
+    L.push('# HTTP 监听端口（可被 -port 命令行参数覆盖）');
+    L.push('server_port: '+yamlScalar(s.serverPort));
+    L.push('');
+    L.push('# 默认管理员账号（首次启动时初始化使用）');
+    L.push('admin:');
+    L.push('  username: '+yamlScalar(s.adminUser));
+    L.push('  password: '+yamlScalar(s.adminPass));
+    return L.join('\n')+'\n';
+  }
+
+  function genAuthConfig(s){
+    var L=[];
+    L.push('# ============================================================');
+    L.push('# accesskey-auth-server 配置文件（由配置生成器生成）');
+    L.push('# 密钥需至少 32 字符随机值，需与主程序 config.yaml 保持一致');
+    L.push('# ============================================================');
+    L.push('access_key_secret: '+yamlScalar(s.akSecret));
+    L.push('grpc_addr: '+yamlScalar(s.authGrpc));
+    L.push('');
+    L.push('# 数据库配置独立指定，需连到与主程序相同的数据库');
+    L.push('database:');
+    L.push('  type: '+s.dbType);
+    L.push(relBlock(s.dbType, s.db, 2));
+    return L.join('\n')+'\n';
+  }
+
+  function genAuditConfig(s){
+    var L=[];
+    L.push('# ============================================================');
+    L.push('# audit-log-server 配置文件（由配置生成器生成）');
+    L.push('# 密钥需至少 32 字符随机值，需与主程序 config.yaml 中 access_key_secret 保持一致');
+    L.push('# ============================================================');
+    L.push('access_key_secret: '+yamlScalar(s.akSecret));
+    L.push('');
+    L.push('# gRPC 监听地址');
+    L.push('grpc_addr: '+yamlScalar(s.auditGrpc));
+    L.push('');
+    L.push('# 审计日志存储（与主程序 config.yaml 中 audit_log_db 保持一致）');
+    L.push(auditStoreSection(s,'database'));
+    L.push('');
+    L.push('# 写入缓冲（gRPC 收到单条日志后，缓冲满或到间隔再批量落库）');
+    L.push('writer:');
+    L.push('  batch_size: '+yamlScalar(s.wrBatch)+'          # 单批最大条数');
+    L.push('  flush_interval_ms: '+yamlScalar(s.wrFlush)+'   # 批量刷新间隔（毫秒）');
+    L.push('');
+    if(s.auditType==='clickhouse'){
+      L.push('# ClickHouse 由表 TTL 负责清理，无需关系库清理任务');
+      L.push('retention_days: 0');
+    }else{
+      L.push('# 关系库旧数据保留天数；超过则自动清理。设为 0 表示不清理。');
+      L.push('retention_days: '+yamlScalar(s.auditRetention));
+    }
+    return L.join('\n')+'\n';
+  }
+
+  function genApisixConfig(){
+    var L=[];
+    var adminUI=chk('ap_admin_ui');
+    L.push('# ============================================================');
+    L.push('# APISIX 配置（部署 apisix-go-runner 插件，由配置生成器生成）');
+    L.push('# admin key 由生成器生成，生产环境请妥善保管并限制 allow_admin');
+    L.push('# ============================================================');
+    L.push('deployment:');
+    L.push('  role: traditional');
+    L.push('  role_traditional:');
+    L.push('    config_provider: etcd');
+    L.push('  admin:');
+    L.push('    enable_admin_ui: '+(adminUI?'true':'false'));
+    L.push('    allow_admin:');
+    textLines('ap_allow_admin').forEach(function(c){ L.push('      - '+yamlScalar(c)); });
+    L.push('    admin_key:');
+    L.push('      - name: admin');
+    L.push('        key: '+yamlScalar(val('ap_admin_key')));
+    L.push('        role: admin');
+    L.push('  etcd:');
+    L.push('    host:');
+    textLines('ap_etcd').forEach(function(h){ L.push('      - '+yamlScalar(h)); });
+    L.push('');
+    L.push('apisix:');
+    L.push('  node_listen:');
+    textLines('ap_listen').forEach(function(n){ L.push('    - '+yamlScalar(n)); });
+    L.push('');
+    L.push('# APISIX 以子进程方式启动 go plugin runner，并自动管理其生命周期');
+    L.push('# 注意：路径须与 apisix 镜像内部 go-runner 实际安装路径一致');
+    L.push('ext-plugin:');
+    L.push('  cmd: ["'+String(val('ap_cmd')||'/opt/mcp_plat/bin/apisix-go-runner')+'"]');
+    return L.join('\n')+'\n';
+  }
+
+  function genNamespace(s){
+    return 'apiVersion: v1\nkind: Namespace\nmetadata:\n  name: '+yamlScalar(s.ns)+'\n';
+  }
+
+  function extRows(){
+    var box=$('extRows');
+    return Array.prototype.map.call(box.querySelectorAll('.extrow'), function(row){
+      return {
+        enabled: row.querySelector('.ext-enable').checked,
+        name: row.querySelector('.ext-name').value.trim(),
+        port: row.querySelector('.ext-port').value.trim(),
+        ips: row.querySelector('.ext-ips').value
+      };
+    });
+  }
+
+  function genExternalServices(){
+    var s=state();
+    var rows=extRows().filter(function(r){ return r.enabled && r.name; });
+    var L=[];
+    L.push('# ============================================================');
+    L.push('# 外部服务（PostgreSQL / ClickHouse 等）');
+    L.push('#');
+    L.push('# 服务不在集群内运行时，通过 ClusterIP Service + 手动 Endpoints');
+    L.push('# 将内部 DNS 名称映射到外部固定 IP（由配置生成器生成）');
+    L.push('# ============================================================');
+    L.push('');
+    if(!rows.length){
+      L.push('# （未勾选任何外部服务，无需创建 Service/Endpoints）');
+      return L.join('\n')+'\n';
+    }
+    var docs=[];
+    rows.forEach(function(r){
+      var ips=r.ips.split(/[\s,]+/).filter(Boolean);
+      var head='# --- '+r.name+' ('+ips.join(', ')+':'+r.port+') ---';
+      var svc=[
+        head,
+        'apiVersion: v1',
+        'kind: Service',
+        'metadata:',
+        '  name: '+yamlScalar(r.name),
+        '  namespace: '+yamlScalar(s.ns),
+        'spec:',
+        '  type: ClusterIP',
+        '  ports:',
+        '    - name: '+yamlScalar(r.name),
+        '      port: '+yamlScalar(r.port),
+        '      targetPort: '+yamlScalar(r.port)
+      ];
+      var ep=[
+        'apiVersion: v1',
+        'kind: Endpoints',
+        'metadata:',
+        '  name: '+yamlScalar(r.name),
+        '  namespace: '+yamlScalar(s.ns),
+        'subsets:',
+        '  - addresses:'
+      ];
+      ips.forEach(function(ip){ ep.push('      - ip: '+yamlScalar(ip)); });
+      ep.push('    ports:');
+      ep.push('      - name: '+yamlScalar(r.name));
+      ep.push('        port: '+yamlScalar(r.port));
+      docs.push(svc.join('\n'), ep.join('\n'));
+    });
+    return L.join('\n')+'\n'+docs.join('\n---\n')+'\n';
+  }
+
+  function genConfigMaps(){
+    var s=state();
+    var mainYml=outputs.main.content;
+    var authYml=outputs.auth.content;
+    var auditYml=outputs.audit.content;
+    var L=[];
+    L.push('# ============================================================');
+    L.push('# ConfigMap 集合（由配置生成器生成）');
+    L.push('# 对应 docker-compose / bind mount 中的配置文件；密钥口令请生产更换');
+    L.push('# ============================================================');
+    L.push('');
+    L.push('# --- accesskey-auth-server 配置 ---');
+    L.push('apiVersion: v1');
+    L.push('kind: ConfigMap');
+    L.push('metadata:');
+    L.push('  name: accesskey-auth-server-config');
+    L.push('  namespace: '+yamlScalar(s.ns));
+    L.push('data:');
+    L.push('  accesskey_auth_server.yml: |');
+    L.push(indent(authYml,4).replace(/\n+$/,''));
+    L.push('---');
+    L.push('# --- audit-log-server 配置 ---');
+    L.push('apiVersion: v1');
+    L.push('kind: ConfigMap');
+    L.push('metadata:');
+    L.push('  name: audit-log-server-config');
+    L.push('  namespace: '+yamlScalar(s.ns));
+    L.push('data:');
+    L.push('  audit_log_server.yml: |');
+    L.push(indent(auditYml,4).replace(/\n+$/,''));
+    L.push('---');
+    L.push('# --- mcp_plat_embed 主程序配置 ---');
+    L.push('apiVersion: v1');
+    L.push('kind: ConfigMap');
+    L.push('metadata:');
+    L.push('  name: mcp-plat-embed-config');
+    L.push('  namespace: '+yamlScalar(s.ns));
+    L.push('data:');
+    L.push('  config.yaml: |');
+    L.push(indent(mainYml,4).replace(/\n+$/,''));
+    return L.join('\n')+'\n';
+  }
+
+  // ==================== 渲染 ====================
+  function genAll(){
+    var s=state();
+    outputs={};
+    outputs.main  = { content: genMainConfig(s) };
+    outputs.auth  = { content: genAuthConfig(s) };
+    outputs.audit = { content: genAuditConfig(s) };
+    outputs.apisix= { content: genApisixConfig() };
+    outputs.ns    = { content: genNamespace(s) };
+    outputs.ext   = { content: genExternalServices() };
+    outputs.cm    = { content: genConfigMaps() };
+  }
+
+  function renderView(){
+    var file=outputs[active];
+    var meta=FILES.filter(function(f){return f.key===active;})[0];
+    $('fgrp').textContent=tabGroup(meta)+' / ';
+    $('fname').textContent=meta.file;
+    $('file-view').value=file?file.content:'';
+  }
+
+  function tabGroup(f){ return (f.grp==='k8s')?t('grp_k8s'):t('grp_app'); }
+  function tabLabel(f){
+    if(f.key==='ext') return t('tab_ext');
+    if(f.key==='cm') return t('tab_cm');
+    return f.name;
+  }
+
+  function listPlaceholders(){
+    // 仍以“示例/占位值”出现的字段清单（lang 无关，渲染时再翻译）
+    var ph=[];
+    var map={ db_password:'ph_db', audit_password:'ph_audit_db', admin_password:'ph_admin',
+              jwt_secret:'ph_jwt', access_key_secret:'ph_ak', ap_admin_key:'ph_ap' };
+    function add(id){
+      var v=String(val(id)||'').toLowerCase();
+      var isWeak=(v===''||v==='changeme'||v==='admin123'||/^changeme[- ]?/.test(v));
+      if(isWeak) ph.push({k:map[id]});
+    }
+    add('db_password');
+    if(val('audit_type')!=='clickhouse') add('audit_password');
+    add('admin_password');
+    add('jwt_secret');
+    add('access_key_secret');
+    add('ap_admin_key');
+    extRows().forEach(function(r){
+      if(r.enabled && r.name && /192\.168\.31\.233/.test(r.ips||'')){
+        ph.push({k:'ph_ip', params:{n:r.name}});
+      }
+    });
+    return ph;
+  }
+
+  function renderWarn(){
+    var warn=$('warn');
+    var msgs=[];
+    var ak=val('access_key_secret');
+    if(ak.length<32) msgs.push(t('w_err_ak'));
+    var jw=chk('sync_secrets')?ak:val('jwt_secret');
+    if(jw.length<32) msgs.push(t('w_err_jwt'));
+    if(!val('admin_username')||!val('admin_password')) msgs.push(t('w_err_admin'));
+    var ph=listPlaceholders();
+    if(ph.length){
+      msgs.push(t('w_ph_head'));
+      ph.forEach(function(p){ msgs.push('· '+tpl(p.k, p.params)); });
+    }
+    if(msgs.length){ warn.style.display='block'; warn.textContent=msgs.join('\n'); }
+    else warn.style.display='none';
+  }
+
+  function refresh(){
+    genAll();
+    renderTabs();
+    renderView();
+    renderWarn();
+  }
+
+  function renderTabs(){
+    var box=$('tabs');
+    box.innerHTML='';
+    FILES.forEach(function(f){
+      var b=document.createElement('button');
+      b.type='button';
+      b.dataset.key=f.key;
+      b.textContent=tabLabel(f);
+      if(f.key===active) b.className='active';
+      b.addEventListener('click', function(){ active=f.key; renderTabs(); renderView(); });
+      box.appendChild(b);
+    });
+  }
+
+  // ---------- 表单联动 ----------
+  function syncVisibility(){
+    var at=val('audit_type');
+    $('audit_ck_box').classList.toggle('hide', at!=='clickhouse');
+    $('audit_rel_box').classList.toggle('hide', at==='clickhouse');
+    var rep=$('ck_engine').value==='replicated_merge_tree';
+    $('ck_cluster_box').classList.toggle('hide', !rep);
+  }
+
+  // ---------- 外部服务动态行 ----------
+  function renderExtRows(){
+    var rows=extRows();
+    if(!rows.length) rows=EXT_DEFAULTS.map(function(d){return Object.assign({},d);});
+    var box=$('extRows');
+    box.innerHTML='';
+    rows.forEach(function(r,idx){ addExtRowDOM(r,idx); });
+  }
+  function addExtRowDOM(r, idx){
+    var box=$('extRows');
+    var row=document.createElement('div');
+    row.className='extrow';
+    row.innerHTML=
+      '<div class="ext-head">'+
+        '<label class="checkbox"><input type="checkbox" class="ext-enable"'+(r.enabled?' checked':'')+'><span>'+t('ext_enable')+'</span></label>'+
+        '<span class="spacer"></span>'+
+        '<button type="button" class="btn btn-sm ext-del">'+t('ext_del')+'</button>'+
+      '</div>'+
+      '<div class="frow">'+
+        '<div class="field" style="flex:1.2;min-width:130px"><label>'+t('ext_name_lbl')+'</label><input type="text" class="ext-name" value="'+escAttr(r.name)+'"></div>'+
+        '<div class="field" style="flex:0 0 110px"><label>'+t('port')+'</label><input type="text" class="ext-port" value="'+escAttr(r.port)+'"></div>'+
+      '</div>'+
+      '<div class="frow">'+
+        '<div class="field" style="flex:1;min-width:200px"><label>'+t('ext_ips_lbl')+'</label><input type="text" class="ext-ips" value="'+escAttr(r.ips)+'"></div>'+
+      '</div>';
+    row.querySelector('.ext-del').addEventListener('click', function(){
+      row.remove(); refresh();
+    });
+    box.appendChild(row);
+  }
+  function escAttr(s){
+    return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  }
+
+  function initExtRows(){
+    renderExtRows();
+  }
+
+  // ---------- 左右分屏拖拽 ----------
+  var SIDEBAR_KEY='mcp-plat-cg:sidebar-w';
+  var SIDEBAR_DEF=400;
+  function storeSidebar(w){
+    try{ localStorage.setItem(SIDEBAR_KEY,String(Math.round(w))); }catch(e){}
+  }
+  function restoreSidebar(){
+    var w=null;
+    try{ w=parseInt(localStorage.getItem(SIDEBAR_KEY),10); }catch(e){}
+    if(w && w>0){ setSidebar(w,false); }
+  }
+  function clampSidebar(w){
+    var wrap=$('wrap');
+    if(!wrap) return SIDEBAR_DEF;
+    var maxW=wrap.clientWidth-380;   // 至少给预览区留 ~380px
+    if(maxW<260) return SIDEBAR_DEF;
+    return Math.max(260, Math.min(w, maxW, 760));
+  }
+  function setSidebar(w, persist){
+    var w2=clampSidebar(w);
+    $('sidebar').style.width=w2+'px';
+    if(persist) storeSidebar(w2);
+    return w2;
+  }
+  function initSplitter(){
+    var splitter=$('splitter');
+    var startX=0, startW=0, dragging=false;
+
+    splitter.addEventListener('mousedown', function(e){
+      if(splitter.offsetParent===null) return;      // 折叠布局（手机）下不启用
+      dragging=true;
+      startX=e.clientX;
+      startW=$('sidebar').offsetWidth;
+      splitter.classList.add('dragging');
+      document.body.classList.add('split-dragging');
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function(e){
+      if(!dragging) return;
+      var delta=e.clientX-startX;
+      setSidebar(startW+delta, false);
+    });
+    document.addEventListener('mouseup', function(){
+      if(!dragging) return;
+      dragging=false;
+      splitter.classList.remove('dragging');
+      document.body.classList.remove('split-dragging');
+      setSidebar($('sidebar').offsetWidth, true);
+    });
+    splitter.addEventListener('dblclick', function(){
+      setSidebar(SIDEBAR_DEF, true);
+    });
+    window.addEventListener('resize', function(){
+      if(window.innerWidth<=1100) return;
+      setSidebar($('sidebar').offsetWidth, false);
+    });
+  }
+
+  function bindCommon(){
+    $('formRoot').addEventListener('input', function(){ refresh(); });
+    $('formRoot').addEventListener('change', function(){
+      syncVisibility();
+      refresh();
+    });
+    $('btn-add-ext').addEventListener('click', function(){
+      addExtRowDOM({enabled:true,name:'',port:'',ips:''});
+      refresh();
+    });
+    $('btn-jwt').addEventListener('click', function(){
+      $('jwt_secret').value=randHex(64);
+      if(chk('sync_secrets')) $('access_key_secret').value=randHex(64);
+      refresh();
+    });
+    $('btn-ak').addEventListener('click', function(){
+      $('access_key_secret').value=randHex(64);
+      if(chk('sync_secrets')) $('jwt_secret').value=$('access_key_secret').value;
+      refresh();
+    });
+    $('btn-ap').addEventListener('click', function(){ $('ap_admin_key').value=randHex(48); refresh(); });
+    $('sync_secrets').addEventListener('change', function(){
+      if(this.checked) $('jwt_secret').value=$('access_key_secret').value;
+      syncVisibility(); refresh();
+    });
+    $('btn-generate').addEventListener('click', function(){
+      syncVisibility();
+      refresh();
+      var ph=listPlaceholders();
+      if(genTimer) clearTimeout(genTimer);
+      lastGen={ d:new Date(), ph:ph.length };
+      renderStatus();
+      genTimer=setTimeout(clearStatus,8000);
+    });
+    $('btn-copy').addEventListener('click', function(){
+      copyText($('file-view').value).then(function(){ flash($('btn-copy'),t('copied')); });
+    });
+    $('btn-download').addEventListener('click', function(){
+      var f=FILES.filter(function(x){return x.key===active;})[0];
+      download(f.file, $('file-view').value);
+    });
+    $('btn-copyall').addEventListener('click', function(){
+      var parts=[];
+      FILES.forEach(function(f){ parts.push('===== '+f.file+' =====\n'+(outputs[f.key]?outputs[f.key].content:'')); });
+      copyText(parts.join('\n')).then(function(){ flash($('btn-copyall'),t('copied')); });
+    });
+    $('btn-downloadall').addEventListener('click', function(){
+      FILES.forEach(function(f){ download(f.file, outputs[f.key]?outputs[f.key].content:''); });
+    });
+    $('lang-zh').addEventListener('click', function(){ setLang('zh'); });
+    $('lang-en').addEventListener('click', function(){ setLang('en'); });
+  }
+  function flash(btn, text){
+    var old=btn.textContent;
+    btn.textContent=text;
+    setTimeout(function(){ btn.textContent=old; },1200);
+  }
+
+  // ---------- 生成状态（随语言重绘） ----------
+  var lastGen=null, genTimer=null;
+  function timeStr(d){
+    return d.toLocaleTimeString(lang==='en'?'en-US':'zh-CN',{hour12:false});
+  }
+  function renderStatus(){
+    var st=$('gen-status');
+    if(!lastGen){ st.textContent=''; return; }
+    var base=tpl('st_gen',{t:timeStr(lastGen.d)});
+    if(lastGen.ph>0) st.textContent=base+tpl('st_ph_suffix',{n:lastGen.ph});
+    else st.textContent=base+t('st_ok_suffix');
+  }
+  function clearStatus(){
+    lastGen=null;
+    var st=$('gen-status');
+    if(st) st.textContent='';
+  }
+
+  // ---------- 初始化 ----------
+  function seed(){
+    if(!val('access_key_secret')) $('access_key_secret').value=randHex(64);
+    if(!val('jwt_secret')){
+      if(chk('sync_secrets')) $('jwt_secret').value=val('access_key_secret');
+      else $('jwt_secret').value=randHex(64);
+    }
+    if(!val('ap_admin_key')) $('ap_admin_key').value=randHex(48);
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    loadLang();
+    seed();
+    initExtRows();
+    initSplitter();
+    restoreSidebar();
+    bindCommon();
+    syncVisibility();
+    setLang(lang);
+    renderView();
+  });
+})();
+</script>
+</body>
+</html>
