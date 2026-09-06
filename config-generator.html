@@ -335,7 +335,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       btn_generate:'生成配置文件',
       btn_copy:'复制当前', btn_download:'下载当前', btn_copyall:'复制全部', btn_downloadall:'下载全部',
       grp_app:'应用配置', grp_k8s:'K8s 清单', tab_ext:'外部服务 Service+Endpoints', tab_cm:'ConfigMap（含四份配置）', tab_svc:'Service（etcd/apisix/各服务）', tab_deploy:'Deployment（etcd/apisix/各服务）',
-      copied:'已复制',
+      copied:'已复制', dl_fail_head:'以下文件写入失败：',
       ext_enable:'启用', ext_del:'删除', ext_name_lbl:'Service 名（= 配置中的 host）', ext_ips_lbl:'外部固定 IP（多 IP 用逗号/换行分隔）',
       w_err_ak:'✘ access_key_secret 不足 32 字符，主程序 / 认证服务 / 审计服务将拒绝启动。',
       w_err_jwt:'✘ jwt_secret 不足 32 字符，主程序将拒绝启动。',
@@ -373,7 +373,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       btn_generate:'Generate Config Files',
       btn_copy:'Copy current', btn_download:'Download current', btn_copyall:'Copy all', btn_downloadall:'Download all',
       grp_app:'App configs', grp_k8s:'K8s manifests', tab_ext:'External services (Service+Endpoints)', tab_cm:'ConfigMap (embeds the four configs)', tab_svc:'Service (etcd/apisix/apps)', tab_deploy:'Deployment (etcd/apisix/apps)',
-      copied:'Copied',
+      copied:'Copied', dl_fail_head:'Failed to write the following files: ',
       ext_enable:'Enabled', ext_del:'Remove', ext_name_lbl:'Service name (= host in configs)', ext_ips_lbl:'External fixed IPs (comma/newline separated)',
       w_err_ak:'✘ access_key_secret is shorter than 32 chars — the main server, auth server and audit server will refuse to start.',
       w_err_jwt:'✘ jwt_secret is shorter than 32 chars — the main server will refuse to start.',
@@ -471,6 +471,26 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     document.body.appendChild(a);
     a.click();
     setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },200);
+  }
+  function writeToHandle(handle, content){
+    return handle.createWritable().then(function(w){
+      return w.write(content).then(function(){ return w.close(); });
+    });
+  }
+  function saveViaSaveFilePicker(name, content){
+    var dot=name.lastIndexOf('.');
+    var ext=dot>=0?name.slice(dot+1):'txt';
+    return window.showSaveFilePicker({
+      suggestedName:name,
+      types:[{ description:name, accept:{ 'text/plain':['.'+ext] } }]
+    }).then(function(handle){ return writeToHandle(handle, content); });
+  }
+  function saveAllToDir(dirHandle, files){
+    return Promise.all(files.map(function(f){
+      return dirHandle.getFileHandle(f.file, { create:true }).then(function(fh){
+        return writeToHandle(fh, f.content);
+      }).then(function(){ return null; }, function(){ return f.file; });
+    })).then(function(res){ return res.filter(function(x){ return x!==null; }); });
   }
   function copyText(txt){
     if(navigator.clipboard && navigator.clipboard.writeText){
@@ -1248,15 +1268,38 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     });
     $('btn-download').addEventListener('click', function(){
       var f=FILES.filter(function(x){return x.key===active;})[0];
-      download(f.file, $('file-view').value);
+      if(window.showSaveFilePicker){
+        saveViaSaveFilePicker(f.file, $('file-view').value).catch(function(err){
+          if(err && err.name==='AbortError') return;
+          download(f.file, $('file-view').value);
+        });
+      }else{
+        download(f.file, $('file-view').value);
+      }
     });
     $('btn-copyall').addEventListener('click', function(){
       var parts=[];
       FILES.forEach(function(f){ parts.push('===== '+f.file+' =====\n'+(outputs[f.key]?outputs[f.key].content:'')); });
       copyText(parts.join('\n')).then(function(){ flash($('btn-copyall'),t('copied')); });
     });
-    $('btn-downloadall').addEventListener('click', function(){
+    function downloadAllToDefault(){
       FILES.forEach(function(f){ download(f.file, outputs[f.key]?outputs[f.key].content:''); });
+    }
+    $('btn-downloadall').addEventListener('click', function(){
+      if(window.showDirectoryPicker){
+        window.showDirectoryPicker({ mode:'readwrite' }).then(function(dirHandle){
+          var files=[];
+          FILES.forEach(function(f){ files.push({ file:f.file, content:outputs[f.key]?outputs[f.key].content:'' }); });
+          return saveAllToDir(dirHandle, files);
+        }).then(function(failed){
+          if(failed.length) alert(t('dl_fail_head')+' '+failed.join(', '));
+        }).catch(function(err){
+          if(err && err.name==='AbortError') return;
+          downloadAllToDefault();
+        });
+      }else{
+        downloadAllToDefault();
+      }
     });
     $('lang-zh').addEventListener('click', function(){ setLang('zh'); });
     $('lang-en').addEventListener('click', function(){ setLang('en'); });
