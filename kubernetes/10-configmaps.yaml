@@ -69,11 +69,11 @@ data:
     retention_days: 0
 
 ---
-# --- mcp_plat_embed 主程序配置 ---
+# --- mcp_plat_server 主程序配置 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: mcp-plat-embed-config
+  name: mcp-plat-server-config
   namespace: mcp-plat
 data:
   config.yaml: |
