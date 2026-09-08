@@ -45,7 +45,7 @@ export default {
     uriPathLabel: 'MCP服务器URI路径',
     uriPathHelp: '填写 MCP 提供服务的 URI，例如 {addr} 的话就填写 {path}。',
     uriPathPlaceholder: '{path}（仅路径，不含域名）',
-    serviceAddressHelp: '填写 MCP 服务的实际 IP:端口，例如 {addr}，支持多个地址（每行一个）。',
+    serviceAddressHelp: '填写 MCP 服务的实际 IP:端口，例如 {addr}，支持多个地址（用逗号或换行分隔）。',
     departmentPlaceholder: '请输入负责部门',
     descriptionPlaceholder: '请输入服务器描述信息',
     selectAddress: '选择地址',

@@ -191,7 +191,16 @@ func parseServiceAddresses(raw string) []string {
 			return arr
 		}
 	}
-	return []string{raw}
+	var out []string
+	for _, part := range strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == '，' || r == '\n' || r == '\r'
+	}) {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }
 
 type CreateServerInput struct {

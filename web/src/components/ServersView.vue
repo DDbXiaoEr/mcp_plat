@@ -79,6 +79,13 @@ function normalizeTool(t) {
   return typeof t === 'string' ? { name: t, description: '' } : t
 }
 
+function splitAddresses(text) {
+  return (text || '')
+    .split(/[,，\n]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
 function formatServiceAddresses(raw) {
   if (!raw) return ''
   if (raw.startsWith('[')) {
@@ -87,12 +94,11 @@ function formatServiceAddresses(raw) {
       if (Array.isArray(arr)) return arr.join('\n')
     } catch { /**/ }
   }
-  return raw
+  return splitAddresses(raw).join('\n')
 }
 
 function packServiceAddresses(text) {
-  const lines = text.split('\n').map(s => s.trim()).filter(Boolean)
-  return JSON.stringify(lines)
+  return JSON.stringify(splitAddresses(text))
 }
 
 const PROTOCOLS = ['SSE', 'Streamable HTTP']
@@ -160,9 +166,7 @@ const fetchingTools = ref(false)
 const fetchToolsError = ref('')
 const useHttps = ref(false)
 
-const serviceAddressList = computed(() =>
-  createForm.value.service_address.split('\n').map(s => s.trim()).filter(Boolean)
-)
+const serviceAddressList = computed(() => splitAddresses(createForm.value.service_address))
 
 const fetchAddressValue = ref('')
 const customAddressInput = ref('')

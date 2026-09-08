@@ -45,7 +45,7 @@ export default {
     uriPathLabel: 'MCP server URI path',
     uriPathHelp: 'Enter the URI where the MCP service is served. For example, if it is available at {addr}, fill in {path}.',
     uriPathPlaceholder: '{path} (path only, no domain)',
-    serviceAddressHelp: 'Enter the actual IP:port of the MCP service, e.g. {addr}. Multiple addresses are supported (one per line).',
+    serviceAddressHelp: 'Enter the actual IP:port of the MCP service, e.g. {addr}. Multiple addresses are supported (separate with commas or line breaks).',
     departmentPlaceholder: 'Please enter the responsible department',
     descriptionPlaceholder: 'Please enter the server description',
     selectAddress: 'Select address',
