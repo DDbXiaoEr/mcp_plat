@@ -656,6 +656,7 @@ func PublishServers(input PublishInput) error {
 		}
 
 		var extPlugins []map[string]interface{}
+		var respPlugins []map[string]interface{}
 
 		if input.EnableAuth {
 			authAddrs := gw.AuthGrpcAddrs
@@ -693,10 +694,13 @@ func PublishServers(input PublishInput) error {
 					addrsJSON, _ := json.Marshal(auditAddrs)
 					auditValue := fmt.Sprintf(`{"header_name":"%s","grpc_addrs":%s,"server_id":"%s","access_key_secret":"%s"}`,
 						headerName, string(addrsJSON), srv.ID, config.AppConfig.AccessKeySecret)
-					extPlugins = append(extPlugins, map[string]interface{}{
+					auditEntry := map[string]interface{}{
 						"name":  "audit_log",
 						"value": auditValue,
-					})
+					}
+					// 请求阶段捕获元数据，响应阶段上报真实成功/失败
+					extPlugins = append(extPlugins, auditEntry)
+					respPlugins = append(respPlugins, auditEntry)
 				}
 			}
 		}
@@ -704,6 +708,11 @@ func PublishServers(input PublishInput) error {
 		if len(extPlugins) > 0 {
 			plugins["ext-plugin-pre-req"] = map[string]interface{}{
 				"conf": extPlugins,
+			}
+		}
+		if len(respPlugins) > 0 {
+			plugins["ext-plugin-post-resp"] = map[string]interface{}{
+				"conf": respPlugins,
 			}
 		}
 		if len(plugins) > 0 {
