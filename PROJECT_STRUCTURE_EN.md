@@ -8,7 +8,7 @@ mcp_plat-console/
 ├── Makefile                 # build scripts (build / build-server / build-embed / build-web / dev / clean)
 ├── go.mod / go.sum
 ├── config.yaml.example      # main server config sample (copy to config.yaml to use)
-├── config-generator.html    # standalone config generator page (HTML+pure JS, open directly in a browser): generates main/auth/audit/APISIX configs + K8s manifests (Namespace/ConfigMap/external-service Endpoints), with CN/EN toggle
+├── config-generator.html    # standalone config generator page (HTML+pure JS, open directly in a browser): wizard-driven — first pick the deployment platform (Kubernetes incl. manifests / host or docker-compose, app configs only) × frontend mode (embedded / Nginx hosting), then configure storage/secrets/APISIX/frontend/K8s step by step; output adapts live (config.yaml, accesskey/audit/apisix YAML, optional nginx.conf) plus step_N K8s manifests (Namespace / external services / ConfigMap / Service / Deployment; Nginx mode adds mcp-plat-web and mcp-plat-server becomes ClusterIP), with CN/EN toggle
 ├── AGENTS.md                # project conventions (Chinese)
 ├── AGENTS_EN.md             # project conventions (English)
 ├── PROJECT_STRUCTURE.md     # this file (Chinese) — project structure quick reference

@@ -63,6 +63,9 @@ body.split-dragging .sidebar,body.split-dragging .main{pointer-events:none}
 .btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn-primary:hover{background:var(--blue-light)}
 .btn-sm{padding:4px 9px;font-size:12px}
+.viewwrap{position:relative}
+.btn-float{position:absolute;top:10px;right:16px;z-index:6;background:rgba(255,255,255,.94);box-shadow:0 1px 4px rgba(10,20,40,.25)}
+.btn-float:hover{background:#fff}
 .extrow{background:#f7fafc;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px}
 .extrow .ext-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .extrow .ext-head .checkbox{margin:0}
@@ -88,6 +91,13 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
 .note ul,.note ol{margin:4px 0 6px 18px;padding:0}
 .note li{margin:1px 0}
 .note .nf-group{font-weight:700;color:var(--blue)}
+.steps{display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px 4px}
+.steps button{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;font-size:12px;border:1px solid var(--border);background:#fff;color:var(--muted);border-radius:999px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.steps button:hover{color:var(--blue);border-color:var(--blue-light)}
+.steps button.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.steps button .no{opacity:.75;font-weight:700;margin-right:1px}
+.step-desc{margin:0 14px 8px;font-size:12px;color:var(--muted);border-left:3px solid var(--blue-light);padding:2px 10px;background:#eef4fb;border-radius:4px}
+.formnav{display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--border);background:#fafcff;border-radius:0 0 10px 10px}
 .hide{display:none!important}
 @media (max-width:1100px){.wrap{flex-direction:column}.sidebar{flex:auto;max-height:none;position:static;width:100%!important}.splitter{display:none}}
 </style>
@@ -96,7 +106,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
 <header>
   <div>
     <h1 data-i18n="t_title">mcp_plat 部署配置生成器</h1>
-    <p data-i18n="t_sub">一次填写，生成主程序 / accesskey-auth-server / audit-log-server / APISIX 配置，以及对应的 Kubernetes 清单（Namespace + ConfigMap + 外部服务 Endpoints）。纯前端，数据不出浏览器。</p>
+    <p data-i18n="t_sub">一次填写，生成主程序 / accesskey-auth-server / audit-log-server / APISIX 配置，以及对应的 Kubernetes 清单（Namespace + ConfigMap + 外部服务 Endpoints）；不使用内嵌前端时还可生成 Nginx 前端托管配置。纯前端，数据不出浏览器。</p>
   </div>
   <div class="langswitch" aria-label="语言 / Language">
     <button type="button" id="lang-zh" class="active">中文</button>
@@ -105,12 +115,36 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
 </header>
 
 <div class="wrap" id="wrap">
-  <!-- ==================== 左侧表单 ==================== -->
+  <!-- ==================== 左侧向导 ==================== -->
   <aside class="panel sidebar" id="sidebar">
-    <div id="formRoot">
+    <div class="steps" id="steps" aria-label="向导步骤"></div>
+    <div class="step-desc" id="step-desc"></div>
+    <div id="formRoot" data-active="deploy">
 
-      <section class="group">
-        <h2 data-i18n="g_db">① 主程序数据库</h2>
+      <section class="group" data-step="deploy">
+        <h2 data-i18n="s_deploy_title">部署形态（全局）</h2>
+        <div class="frow">
+          <div class="field fs">
+            <label data-i18n="pl_lbl">部署平台</label>
+            <select id="platform">
+              <option value="k8s" selected data-i18n="pl_k8s">Kubernetes（含 K8s 清单）</option>
+              <option value="plain" data-i18n="pl_plain">主机 / docker-compose（仅应用配置）</option>
+            </select>
+          </div>
+          <div class="field fs">
+            <label data-i18n="fe_mode_lbl">前端部署方式</label>
+            <select id="fe_mode">
+              <option value="embed" selected data-i18n="fe_embed">内嵌前端（单二进制）</option>
+              <option value="nginx" data-i18n="fe_nginx">Nginx 独立托管（纯后端 + 前端分离）</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><span class="hint" data-i18n="deploy_hint">…</span></div>
+        <p class="hint" style="margin:0" data-i18n="deploy_hint2">…</p>
+      </section>
+
+      <section class="group" data-step="storage">
+        <h2 data-i18n="g_db">主程序数据库</h2>
         <div class="frow">
           <div class="field fs">
             <label data-i18n="db_type">数据库类型</label>
@@ -131,8 +165,8 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
         </div>
       </section>
 
-      <section class="group">
-        <h2 data-i18n="g_audit">② 审计日志存储</h2>
+      <section class="group" data-step="storage">
+        <h2 data-i18n="g_audit">审计日志存储</h2>
         <div class="frow">
           <div class="field fs">
             <label data-i18n="audit_type">存储类型</label>
@@ -185,8 +219,8 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
         </div>
       </section>
 
-      <section class="group">
-        <h2 data-i18n="g_secret">③ 密钥与管理员</h2>
+      <section class="group" data-step="secrets">
+        <h2 data-i18n="g_secret">密钥与管理员</h2>
         <div class="secret-row">
           <div class="field"><label data-i18n="jwt_lbl">jwt_secret（≥32 字符）</label><input type="text" id="jwt_secret"></div>
           <button type="button" class="btn" id="btn-jwt" data-i18n="random">随机</button>
@@ -205,8 +239,8 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
         </div>
       </section>
 
-      <section class="group">
-        <h2 data-i18n="g_addr">④ 服务监听地址</h2>
+      <section class="group" data-step="secrets">
+        <h2 data-i18n="g_addr">服务监听地址</h2>
         <div class="frow">
           <div class="field fs"><label data-i18n="auth_grpc_lbl">accesskey gRPC 地址</label><input type="text" id="auth_grpc" value=":9090"></div>
           <div class="field fs"><label data-i18n="audit_grpc_lbl">audit gRPC 地址</label><input type="text" id="audit_grpc" value="0.0.0.0:9091"></div>
@@ -218,8 +252,8 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
         </div>
       </section>
 
-      <section class="group">
-        <h2 data-i18n="g_apisix">⑤ APISIX</h2>
+      <section class="group" data-step="apisix">
+        <h2 data-i18n="g_apisix">APISIX 网关配置</h2>
         <div class="secret-row">
           <div class="field"><label data-i18n="ap_key_lbl">admin key</label><input type="text" id="ap_admin_key"></div>
           <button type="button" class="btn" id="btn-ap" data-i18n="random">随机</button>
@@ -232,8 +266,8 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
         <div class="field"><label data-i18n="ap_cmd_lbl">ext-plugin 命令路径</label><input type="text" id="ap_cmd" value="/opt/mcp_plat/bin/apisix-go-runner"></div>
       </section>
 
-      <section class="group">
-        <h2 data-i18n="g_k8s">⑥ Kubernetes</h2>
+      <section class="group" data-step="k8s">
+        <h2 data-i18n="g_k8s">Kubernetes 部署</h2>
         <div class="frow">
           <div class="field fs"><label data-i18n="ns_lbl">命名空间</label><input type="text" id="k8s_ns" value="mcp-plat"></div>
         </div>
@@ -277,6 +311,36 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
         <button type="button" class="btn btn-sm" id="btn-add-ext" data-i18n="add_ext">+ 添加外部服务</button>
       </section>
 
+      <section class="group" data-step="nginx">
+        <h2 data-i18n="g_nginx">Nginx 前端托管</h2>
+        <div class="frow">
+          <div class="field"><label data-i18n="ng_listen_lbl">监听端口</label><input type="text" id="ng_listen" value="80"></div>
+          <div class="field fs"><label data-i18n="ng_server_lbl">server_name / 域名</label><input type="text" id="ng_server_name" value="_"></div>
+        </div>
+        <div class="frow">
+          <div class="field fs"><label data-i18n="ng_root_lbl">前端静态目录 root</label><input type="text" id="ng_root" value="/usr/share/nginx/html"></div>
+          <div class="field fs"><label data-i18n="ng_upstream_lbl">后端 API 上游</label><input type="text" id="ng_upstream" placeholder=""></div>
+        </div>
+        <div class="field"><span class="hint" data-i18n="ng_upstream_hint">…</span></div>
+        <div id="ng_web_box" class="hide">
+          <div class="field"><span class="hint" data-i18n="ng_k8s_hint">…</span></div>
+          <div class="frow">
+            <div class="field" style="flex:1;min-width:0"><label data-i18n="ng_img_lbl">前端镜像</label><input type="text" id="img_web" value="mcp-plat-web"></div>
+            <div class="field" style="flex:0 0 84px"><label data-i18n="replicas_lbl">副本数</label><input type="number" id="rep_web" value="1" min="1"></div>
+          </div>
+          <div class="frow">
+            <div class="field" style="flex:0 0 220px"><label data-i18n="ng_np_lbl">mcp-plat-web nodePort</label><input type="text" id="np_web" value="30088"></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="formnav">
+        <button type="button" class="btn" id="btn-prev" data-i18n="nav_prev">‹ 上一步</button>
+        <span class="spacer"></span>
+        <span class="status" id="step-status"></span>
+        <button type="button" class="btn btn-primary" id="btn-next" data-i18n="nav_next">下一步 ›</button>
+      </div>
+
     </div>
   </aside>
 
@@ -294,7 +358,6 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     <div class="codebar">
       <div class="fname"><span class="grp" id="fgrp"></span><span id="fname"></span></div>
       <div class="acts">
-        <button type="button" class="btn btn-sm" id="btn-copy" data-i18n="btn_copy">复制当前</button>
         <button type="button" class="btn btn-sm" id="btn-download" data-i18n="btn_download">下载当前</button>
         <button type="button" class="btn btn-sm" id="btn-copyall" data-i18n="btn_copyall">复制全部</button>
         <button type="button" class="btn btn-sm" id="btn-downloadall" data-i18n="btn_downloadall">下载全部</button>
@@ -302,7 +365,10 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     </div>
 
     <div class="tabs" id="tabs"></div>
-    <textarea class="view" id="file-view" readonly spellcheck="false" wrap="off"></textarea>
+    <div class="viewwrap">
+      <textarea class="view" id="file-view" readonly spellcheck="false" wrap="off"></textarea>
+      <button type="button" class="btn btn-sm btn-float" id="btn-copyfloat" data-i18n="quick_copy">复制</button>
+    </div>
   </main>
 </div>
 
@@ -316,8 +382,28 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
   var I18N={
     zh:{
       t_title:'mcp_plat 部署配置生成器',
-      t_sub:'一次填写，生成主程序 / accesskey-auth-server / audit-log-server / APISIX 配置，以及对应的 Kubernetes 清单（Namespace + ConfigMap + 外部服务 Endpoints）。纯前端，数据不出浏览器。',
-      g_db:'① 主程序数据库', g_audit:'② 审计日志存储', g_secret:'③ 密钥与管理员', g_addr:'④ 服务监听地址', g_apisix:'⑤ APISIX', g_k8s:'⑥ Kubernetes',
+      t_sub:'一次填写，生成主程序 / accesskey-auth-server / audit-log-server / APISIX 配置，以及对应的 Kubernetes 清单（Namespace + ConfigMap + 外部服务 Endpoints）；不使用内嵌前端时还可生成 Nginx 前端托管配置。纯前端，数据不出浏览器。',
+      g_db:'主程序数据库', g_audit:'审计日志存储', g_secret:'密钥与管理员', g_addr:'服务监听地址', g_apisix:'APISIX 网关配置', g_k8s:'Kubernetes 部署', g_nginx:'Nginx 前端托管',
+      pl_lbl:'部署平台', pl_k8s:'Kubernetes（含 K8s 清单）', pl_plain:'主机 / docker-compose（仅应用配置）',
+      s_deploy_title:'部署形态（全局）', s_deploy:'部署形态', s_storage:'存储与审计', s_secrets:'密钥与端口', s_apisix:'APISIX', s_nginx:'Nginx 前端', s_k8s:'Kubernetes',
+      deploy_hint:'两个全局开关决定后续步骤与最终输出：选 Kubernetes 才出现「Kubernetes」步骤并生成 step_N 清单；前端方式选 Nginx 才出现「Nginx 前端」步骤并额外生成 nginx.conf。',
+      deploy_hint2:'主机 / docker-compose 平台只产出应用配置（必要时含 nginx.conf），由你按需编排容器或 systemd，不再出现任何 K8s 字段。',
+      step_of:'第 {a} / {b} 步', step_end:'已到最后一步',
+      nav_prev:'‹ 上一步', nav_next:'下一步 ›',
+      note_head:'当前形态共生成 {n} 个文件，逐个步骤（左侧）配置后实时产出：',
+      map_app:'应用配置', map_k8s:'K8s 清单',
+      f_main:'主程序 config.yaml：主库 / 审计存储 / 密钥 / 管理员。',
+      f_auth:'accesskey-auth-server 配置：密钥 + 主库。',
+      f_audit:'audit-log-server 配置：密钥 + 审计存储 + 写缓冲。',
+      f_apisix:'APISIX 网关配置（含 go-plugin runner）。',
+      f_nginx:'Nginx 前端托管：托管 web/dist 并反代 /api 到主程序。',
+      f_ns:'Namespace：先建命名空间。',
+      f_ext:'外部服务 Service+Endpoints：把集群外库映射为集群内 DNS。',
+      f_cm:'ConfigMap：写入上方应用配置，供 Deployment 挂载。',
+      f_svc:'Service：暴露 etcd / APISIX / 各服务端口。',
+      f_deploy:'Deployment：创建各应用副本。',
+      run_k8s:'执行：按 step_N 前缀顺序 kubectl apply（一键：kubectl apply -f ./生成目录）。先把镜像导入各节点或填完整镜像名。',
+      run_plain:'执行：把各 yml 放到对应服务所在目录（config.yaml 放主程序旁），用 systemd 或 docker 运行各二进制；Nginx 模式再把 web/dist 放进 root 并把 nginx.conf 作为 nginx 配置。',
       db_type:'数据库类型', host_svc:'主机 / Service', port:'端口', user:'用户', pass:'密码', dbname:'库名',
       audit_type:'存储类型', ck_addr:'地址 addr', ck_db:'库 db', ck_table:'表 table', ck_engine:'引擎 engine',
       eng_merge:'merge_tree（单机）', eng_repl:'replicated_merge_tree（集群）',
@@ -329,11 +415,19 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       ap_key_lbl:'admin key', ap_ui_txt:'启用 admin_ui（无需则取消勾选）', ap_allow_lbl:'allow_admin（每行一个 CIDR）',
       ap_etcd_lbl:'etcd host（每行一个）', ap_listen_lbl:'node_listen（每行一个）', ap_cmd_lbl:'ext-plugin 命令路径',
       ns_lbl:'命名空间',
+      fe_mode_lbl:'前端部署方式', fe_embed:'内嵌前端（单二进制）', fe_nginx:'Nginx 独立托管（纯后端 + 前端分离）',
+      ng_listen_lbl:'监听端口', ng_server_lbl:'server_name / 域名',
+      ng_root_lbl:'前端静态目录 root（web/dist 放置目录）',
+      ng_upstream_lbl:'后端 API 上游（host:port）',
+      ng_upstream_hint:'Nginx 仅代理前端静态资源与 /api。K8s 中上游填 mcp-plat-server 服务名:端口；主机 / docker-compose 部署可填 127.0.0.1:8080。',
+      ng_k8s_hint:'选择「Nginx 独立托管」后：额外生成第 5 份应用配置 nginx.conf；K8s 清单在 step_3 / step_4 / step_5 中分别加入 mcp-plat-web 的 ConfigMap（写入 nginx.conf）/ Service（NodePort，对外访问入口）/ Deployment（Nginx 前端），同时 mcp-plat-server 自动改为 ClusterIP（集群内 API）。前端镜像需内含 web/dist 静态文件与 nginx，静态文件根目录见上方 root。',
+      ng_img_lbl:'前端镜像（内含 web/dist + nginx）',
+      ng_np_lbl:'mcp-plat-web nodePort（对外访问）',
       deploy_services_lbl:'要部署的服务（勾选则生成对应 Service / Deployment / ConfigMap）', deploy_images_lbl:'完整镜像名与副本数（镜像留空则使用默认值）', replicas_lbl:'副本数',
       k8s_hint:'将生成可直接 kubectl apply 的完整清单：Namespace + 外部服务 Endpoints + ConfigMap + Service + Deployment（etcd / apisix / accesskey-auth-server / audit-log-server / mcp-plat-server）。若主/审计库不在集群内运行，step_2-external-services.yaml 以 ClusterIP Service + Endpoints 将内部 DNS 名映射到外部固定 IP。',
       add_ext:'+ 添加外部服务', splitter_tip:'拖动调整左右宽度（双击恢复默认）',
       btn_generate:'生成配置文件',
-      btn_copy:'复制当前', btn_download:'下载当前', btn_copyall:'复制全部', btn_downloadall:'下载全部',
+      btn_download:'下载当前', btn_copyall:'复制全部', btn_downloadall:'下载全部', quick_copy:'复制',
       grp_app:'应用配置', grp_k8s:'K8s 清单', tab_ext:'外部服务 Service+Endpoints', tab_cm:'ConfigMap（含四份配置）', tab_svc:'Service（etcd/apisix/各服务）', tab_deploy:'Deployment（etcd/apisix/各服务）',
       copied:'已复制', dl_fail_head:'以下文件写入失败：',
       ext_enable:'启用', ext_del:'删除', ext_name_lbl:'Service 名（= 配置中的 host）', ext_ips_lbl:'外部固定 IP（多 IP 用逗号/换行分隔）',
@@ -347,15 +441,34 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       ph_admin:'管理员初始密码（admin.password）',
       ph_jwt:'jwt_secret', ph_ak:'access_key_secret', ph_ap:'APISIX admin key',
       ph_ip:'外部服务“{n}”仍使用示例 IP 192.168.31.233',
-      st_gen:'✔ 已生成 9 个文件（{t}）',
+      st_gen:'✔ 已生成 {n} 个文件（{t}）',
       st_ph_suffix:' · {n} 处仍为示例/占位值，见下方提示',
       st_ok_suffix:'，无示例/占位值遗留',
-      note:'所有内容随表单实时更新，也可点上方「生成配置文件」重新生成。共生成 <b>9 个文件</b>，分两类：<br><br><span class="nf-group">A · 应用配置（4 份，供各服务读取，不参与 apply）</span><ul><li><code>config.yaml</code> — 主程序（mcp-plat-server）配置：主库 / 审计存储 / 密钥 / 管理员。</li><li><code>accesskey_auth_server.yml</code> — AccessKey 认证服务配置。</li><li><code>audit_log_server.yml</code> — 审计日志服务配置。</li><li><code>apisix_config.yaml</code> — APISIX 网关配置（含 go-plugin runner）。</li></ul><span class="nf-group">B · Kubernetes 清单（5 份，文件名 step_N 前缀即执行顺序，按下面顺序执行 kubectl apply）</span><ol><li><code>step_1-namespace.yaml</code> — ① 先建 Namespace，后续资源都放入其中。</li><li><code>step_2-external-services.yaml</code> — ② 主/审计库在集群外时，用 Service + Endpoints 把内部 DNS 名映射到外部 IP；无需外部服务可跳过。</li><li><code>step_3-configmaps.yaml</code> — ③ ConfigMap：把上面 4 份配置写进集群，供 Deployment 挂载。</li><li><code>step_4-services.yaml</code> — ④ Service：暴露 etcd / APISIX / 各服务的集群内端口。</li><li><code>step_5-deployments.yaml</code> — ⑤ Deployment：最后创建应用副本，此时 ConfigMap / Service 已就绪（副本数见左侧 ⑥）。</li></ol><span class="nf-group">执行方式</span>：整体一键 <code>kubectl apply -f step_1-namespace.yaml -f step_2-external-services.yaml -f step_3-configmaps.yaml -f step_4-services.yaml -f step_5-deployments.yaml</code>（或 <code>kubectl apply -f ./目录</code>，文件名 step_N 前缀保证顺序）；也可逐文件执行。需先将镜像导入各节点，或在左侧填写完整镜像名。'
     },
     en:{
       t_title:'mcp_plat Deployment Config Generator',
-      t_sub:'Fill in once to generate configs for the main server, accesskey-auth-server, audit-log-server and APISIX, plus the matching Kubernetes manifests (Namespace + ConfigMap + external-service Endpoints). Pure frontend — nothing leaves your browser.',
-      g_db:'① Main Database', g_audit:'② Audit Log Storage', g_secret:'③ Secrets & Admin', g_addr:'④ Service Listen Addresses', g_apisix:'⑤ APISIX', g_k8s:'⑥ Kubernetes',
+      t_sub:'Fill in once to generate configs for the main server, accesskey-auth-server, audit-log-server and APISIX, plus the matching Kubernetes manifests (Namespace + ConfigMap + external-service Endpoints); when not using the embedded frontend it can also produce an Nginx frontend-hosting config. Pure frontend — nothing leaves your browser.',
+      g_db:'Main Database', g_audit:'Audit Log Storage', g_secret:'Secrets & Admin', g_addr:'Service Listen Addresses', g_apisix:'APISIX Gateway Config', g_k8s:'Kubernetes Deployment', g_nginx:'Nginx Frontend Hosting',
+      pl_lbl:'Deployment platform', pl_k8s:'Kubernetes (with K8s manifests)', pl_plain:'Host / docker-compose (app configs only)',
+      s_deploy_title:'Deployment mode (global)', s_deploy:'Deployment mode', s_storage:'Storage & audit', s_secrets:'Secrets & ports', s_apisix:'APISIX', s_nginx:'Nginx frontend', s_k8s:'Kubernetes',
+      deploy_hint:'These two global switches decide which steps appear and what gets generated: choose Kubernetes to see the “Kubernetes” step and step_N manifests; choose Nginx hosting to see the “Nginx frontend” step and an extra nginx.conf.',
+      deploy_hint2:'Host / docker-compose only produces the app configs (plus nginx.conf when needed) for you to orchestrate with containers or systemd; no K8s fields are shown.',
+      step_of:'Step {a} / {b}', step_end:'Last step',
+      nav_prev:'‹ Back', nav_next:'Next ›',
+      note_head:'{n} files are generated for the current mode and update live as you configure each step (on the left):',
+      map_app:'App configs', map_k8s:'K8s manifests',
+      f_main:'Main config.yaml: main DB / audit storage / secrets / admin.',
+      f_auth:'accesskey-auth-server config: secret + main DB.',
+      f_audit:'audit-log-server config: secret + audit storage + write buffer.',
+      f_apisix:'APISIX gateway config (incl. go-plugin runner).',
+      f_nginx:'Nginx frontend hosting: serves web/dist and proxies /api to the main server.',
+      f_ns:'Namespace: created first.',
+      f_ext:'External services Service+Endpoints: maps out-of-cluster DBs to in-cluster DNS.',
+      f_cm:'ConfigMap: embeds the app configs above for Deployments to mount.',
+      f_svc:'Service: exposes etcd / APISIX / each app.',
+      f_deploy:'Deployment: creates the app replicas.',
+      run_k8s:'Apply in step_N filename order (all at once: kubectl apply -f ./output-dir). Import images on each node first, or set full image names.',
+      run_plain:'Run each yml beside the matching service (put config.yaml next to the main server) and start the binaries via systemd or docker; in Nginx mode put web/dist into the root and use nginx.conf as the nginx config.',
       db_type:'Database type', host_svc:'Host / Service', port:'Port', user:'User', pass:'Password', dbname:'Database name',
       audit_type:'Storage type', ck_addr:'Address (addr)', ck_db:'Database (db)', ck_table:'Table (table)', ck_engine:'Engine (engine)',
       eng_merge:'merge_tree (standalone)', eng_repl:'replicated_merge_tree (cluster)',
@@ -367,11 +480,19 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       ap_key_lbl:'Admin key', ap_ui_txt:'Enable admin_ui (uncheck if not needed)', ap_allow_lbl:'allow_admin (one CIDR per line)',
       ap_etcd_lbl:'etcd hosts (one per line)', ap_listen_lbl:'node_listen (one per line)', ap_cmd_lbl:'ext-plugin command path',
       ns_lbl:'Namespace',
+      fe_mode_lbl:'Frontend deployment mode', fe_embed:'Embedded frontend (single binary)', fe_nginx:'Nginx hosting (pure backend + separate frontend)',
+      ng_listen_lbl:'Listen port', ng_server_lbl:'server_name / domain',
+      ng_root_lbl:'Frontend static root (where web/dist is placed)',
+      ng_upstream_lbl:'Backend API upstream (host:port)',
+      ng_upstream_hint:'Nginx only hosts the frontend static files and proxies /api. In K8s use the mcp-plat-server service name:port; for host / docker-compose use e.g. 127.0.0.1:8080.',
+      ng_k8s_hint:'With “Nginx hosting” selected: a 5th app config nginx.conf is generated; the K8s manifests add mcp-plat-web to step_3 / step_4 / step_5 — a ConfigMap (embedding nginx.conf), a Service (NodePort, the external entry) and a Deployment (Nginx frontend) — and mcp-plat-server automatically becomes ClusterIP (in-cluster API). The frontend image must bundle the web/dist static files together with nginx; static root is set above.',
+      ng_img_lbl:'Frontend image (contains web/dist + nginx)',
+      ng_np_lbl:'mcp-plat-web nodePort (external entry)',
       deploy_services_lbl:'Services to deploy (checked ones generate their Service / Deployment / ConfigMap)', deploy_images_lbl:'Full image name & replicas (leave image empty = default)', replicas_lbl:'replicas',
       k8s_hint:'Generates a complete set of kubectl-appliable manifests: Namespace + external-service Endpoints + ConfigMap + Service + Deployment (etcd / apisix / accesskey-auth-server / audit-log-server / mcp-plat-server). If the main/audit databases run outside the cluster, step_2-external-services.yaml maps internal DNS names to external fixed IPs via ClusterIP Service + Endpoints.',
       add_ext:'+ Add external service', splitter_tip:'Drag to resize; double-click to reset',
       btn_generate:'Generate Config Files',
-      btn_copy:'Copy current', btn_download:'Download current', btn_copyall:'Copy all', btn_downloadall:'Download all',
+      btn_download:'Download current', btn_copyall:'Copy all', btn_downloadall:'Download all', quick_copy:'Copy',
       grp_app:'App configs', grp_k8s:'K8s manifests', tab_ext:'External services (Service+Endpoints)', tab_cm:'ConfigMap (embeds the four configs)', tab_svc:'Service (etcd/apisix/apps)', tab_deploy:'Deployment (etcd/apisix/apps)',
       copied:'Copied', dl_fail_head:'Failed to write the following files: ',
       ext_enable:'Enabled', ext_del:'Remove', ext_name_lbl:'Service name (= host in configs)', ext_ips_lbl:'External fixed IPs (comma/newline separated)',
@@ -385,10 +506,9 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       ph_admin:'Admin initial password (admin.password)',
       ph_jwt:'jwt_secret', ph_ak:'access_key_secret', ph_ap:'APISIX admin key',
       ph_ip:'External service “{n}” still uses the example IP 192.168.31.233',
-      st_gen:'✔ Generated 9 files ({t})',
+      st_gen:'✔ Generated {n} files ({t})',
       st_ph_suffix:' · {n} still use example/placeholder values — see note below',
       st_ok_suffix:', no example/placeholder values left',
-      note:'Everything updates live as you type; click “Generate Config Files” above to regenerate. In total <b>9 files</b> in two groups:<br><br><span class="nf-group">A · Application configs (4 — read by each service, not applied)</span><ul><li><code>config.yaml</code> — main server (mcp-plat-server): main DB / audit storage / secrets / admin.</li><li><code>accesskey_auth_server.yml</code> — AccessKey auth server config.</li><li><code>audit_log_server.yml</code> — audit log server config.</li><li><code>apisix_config.yaml</code> — APISIX gateway config (incl. go-plugin runner).</li></ul><span class="nf-group">B · Kubernetes manifests (5 — the step_N prefix in each filename IS the apply order; run kubectl apply in this order)</span><ol><li><code>step_1-namespace.yaml</code> — ① create the Namespace first; everything else goes into it.</li><li><code>step_2-external-services.yaml</code> — ② map external DB IPs to in-cluster DNS names via Service + Endpoints when the main/audit DBs run outside the cluster; skip if not needed.</li><li><code>step_3-configmaps.yaml</code> — ③ write the 4 configs above into ConfigMaps the Deployments mount.</li><li><code>step_4-services.yaml</code> — ④ expose etcd / APISIX / each app through in-cluster Services.</li><li><code>step_5-deployments.yaml</code> — ⑤ create app replicas last, once ConfigMaps/Services are ready (replicas set in section ⑥ on the left).</li></ol><span class="nf-group">How to apply</span>: all at once with <code>kubectl apply -f step_1-namespace.yaml -f step_2-external-services.yaml -f step_3-configmaps.yaml -f step_4-services.yaml -f step_5-deployments.yaml</code> (or <code>kubectl apply -f ./dir</code> — the step_N prefixes keep the order); or run file by file. Import images on each node first, or set full image names on the left.'
     }
   };
   function t(key){ var d=I18N[lang]||I18N.zh; return d[key]!=null?d[key]:key; }
@@ -402,7 +522,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
   function applyStatic(){
     document.querySelectorAll('[data-i18n]').forEach(function(el){ el.textContent=t(el.getAttribute('data-i18n')); });
     document.querySelectorAll('[data-i18n-tip]').forEach(function(el){ el.title=t(el.getAttribute('data-i18n-tip')); });
-    var note=$('note'); if(note) note.innerHTML=t('note');
+    renderNote();
     document.title=t('t_title');
     document.documentElement.lang=(lang==='en')?'en':'zh-CN';
     var zhBtn=$('lang-zh'), enBtn=$('lang-en');
@@ -415,20 +535,32 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     applyStatic();
     renderExtRows();
     refresh();
+    applyStep();
     if(lastGen) renderStatus();
   }
 
-  var FILES = [
+  // ---------- 输出文件清单（随部署形态 / 前端方式动态生成） ----------
+  var FILE_APP = [
     { key:'main',  grp:'app', file:'config.yaml',                  name:'config.yaml' },
     { key:'auth',  grp:'app', file:'accesskey_auth_server.yml',    name:'accesskey_auth_server.yml' },
     { key:'audit', grp:'app', file:'audit_log_server.yml',         name:'audit_log_server.yml' },
-    { key:'apisix',grp:'app', file:'apisix_config.yaml',           name:'apisix_config.yaml' },
+    { key:'apisix',grp:'app', file:'apisix_config.yaml',           name:'apisix_config.yaml' }
+  ];
+  var FILE_NGINX = { key:'nginx', grp:'app', file:'nginx.conf', name:'nginx.conf' };
+  var FILE_K8S = [
     { key:'ns',    grp:'k8s', file:'step_1-namespace.yaml',         name:'Namespace' },
     { key:'ext',   grp:'k8s', file:'step_2-external-services.yaml', name:'step_2-external-services.yaml' },
     { key:'cm',    grp:'k8s', file:'step_3-configmaps.yaml',        name:'step_3-configmaps.yaml' },
     { key:'svc',   grp:'k8s', file:'step_4-services.yaml',          name:'Services' },
     { key:'deploy',grp:'k8s', file:'step_5-deployments.yaml',       name:'Deployments' }
   ];
+  var FILES = [];
+  function updateFileList(){
+    FILES = FILE_APP.slice();
+    if(feMode()==='nginx') FILES.push(FILE_NGINX);
+    if(platform()==='k8s') FILES = FILES.concat(FILE_K8S);
+    if(!FILES.some(function(f){ return f.key===active; })) active='main';
+  }
   var EXT_DEFAULTS = [
     { enabled:true,  name:'mainpostgres', port:'5432', ips:'192.168.31.233' },
     { enabled:true,  name:'clickhouse',   port:'9000', ips:'192.168.31.233' }
@@ -440,8 +572,77 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
   function $(id){ return document.getElementById(id); }
   function val(id){ var el=$(id); return el ? el.value.trim() : ''; }
   function chk(id){ var el=$(id); return el ? el.checked : false; }
+  function feMode(){ var el=$('fe_mode'); return el ? el.value : 'embed'; }
+  function platform(){ var el=$('platform'); return el ? el.value : 'k8s'; }
   function textLines(id){
     return val(id).split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  }
+  function escHtml(s){
+    return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ---------- 向导步骤 ----------
+  var activeStep = 'deploy';
+  function stepList(){
+    var ids=['deploy','storage','secrets','apisix'];
+    if(feMode()==='nginx') ids.push('nginx');
+    if(platform()==='k8s') ids.push('k8s');
+    return ids;
+  }
+  function setStep(id){
+    if(stepList().indexOf(id)>=0){ activeStep=id; applyStep(); }
+  }
+  function stepDir(dir){
+    var list=stepList(), i=list.indexOf(activeStep), ni=i+dir;
+    if(ni>=0 && ni<list.length){ activeStep=list[ni]; applyStep(); }
+  }
+  function renderSteps(){
+    var box=$('steps'); if(!box) return;
+    box.innerHTML='';
+    stepList().forEach(function(id){
+      var b=document.createElement('button');
+      b.type='button';
+      b.innerHTML='<span class="no">'+(stepList().indexOf(id)+1)+'.</span>'+escHtml(t('s_'+id));
+      if(id===activeStep) b.className='active';
+      b.addEventListener('click', function(){ setStep(id); });
+      box.appendChild(b);
+    });
+  }
+  function applyStep(){
+    var list=stepList();
+    if(list.indexOf(activeStep)<0) activeStep=list[0];
+    var root=$('formRoot');
+    if(root){
+      root.setAttribute('data-active', activeStep);
+      var secs=root.querySelectorAll('section.group');
+      for(var i=0;i<secs.length;i++){
+        secs[i].style.display = (secs[i].getAttribute('data-step')===activeStep) ? '' : 'none';
+      }
+    }
+    var desc=$('step-desc');
+    if(desc) desc.textContent = (list.indexOf(activeStep)+1)+' / '+list.length+' · '+t('s_'+activeStep);
+    renderSteps();
+    var prev=$('btn-prev'), nxt=$('btn-next'), st=$('step-status'), i0=list.indexOf(activeStep);
+    if(prev) prev.disabled = (i0<=0);
+    if(nxt) nxt.disabled = (i0>=list.length-1);
+    if(st) st.textContent = (i0>=list.length-1) ? t('step_end') : tpl('step_of',{a:i0+1,b:list.length});
+    if(root) root.scrollTop=0;
+  }
+
+  // ---------- 右侧说明（文件↔输入映射 + 执行提示） ----------
+  function renderNote(){
+    var note=$('note'); if(!note) return;
+    var parts=['<div class="note-head">'+tpl('note_head',{n:FILES.length})+'</div>'];
+    function group(label, list){
+      if(!list.length) return;
+      parts.push('<div class="nf-group" style="margin-top:8px">'+label+'</div><ul>');
+      list.forEach(function(f){ parts.push('<li><code>'+escHtml(f.file)+'</code> — '+t('f_'+f.key)+'</li>'); });
+      parts.push('</ul>');
+    }
+    group(t('map_app'), FILES.filter(function(f){return f.grp==='app';}));
+    group(t('map_k8s'), FILES.filter(function(f){return f.grp==='k8s';}));
+    parts.push('<div class="note-run" style="margin-top:6px">'+(platform()==='k8s'?t('run_k8s'):t('run_plain'))+'</div>');
+    note.innerHTML=parts.join('');
   }
 
   // ---------- 通用工具 ----------
@@ -578,7 +779,22 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     };
     s.npAuth = val('np_auth') || '30090';
     s.npAudit = val('np_audit') || '30091';
+    s.feMode = feMode();
+    s.platform = platform();
+    s.ng = {
+      listen: val('ng_listen') || '80',
+      serverName: val('ng_server_name') || '_',
+      root: val('ng_root') || '/usr/share/nginx/html',
+      upstream: val('ng_upstream') || defaultUpstream(s)
+    };
+    s.imgWeb = val('img_web') || 'mcp-plat-web';
+    s.repWeb = val('rep_web') || '1';
+    s.npWeb = val('np_web') || '30088';
     return s;
+  }
+  function defaultUpstream(s){
+    var p = s && s.serverPort ? s.serverPort : (val('server_port') || '8080');
+    return (s && s.platform === 'plain') ? ('127.0.0.1:'+p) : ('mcp-plat-server:'+p);
   }
 
   function auditStoreSection(s, keyName){
@@ -697,6 +913,80 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     return L.join('\n')+'\n';
   }
 
+  function upstreamTarget(u){
+    u=String(u==null?'':u).trim();
+    if(!u) return 'http://127.0.0.1:8080';
+    if(/^https?:\/\//i.test(u)) return u;
+    return 'http://'+u;
+  }
+  function genNginxConfig(s){
+    var L=[];
+    L.push('# ============================================================');
+    L.push('# mcp_plat 管理控制台 前端 Nginx 配置（由配置生成器生成）');
+    L.push('#');
+    L.push('# 用途：不使用内嵌前端（纯后端 mcp-plat-server）部署时，由本 Nginx');
+    L.push('#       托管前端构建产物（web/dist 内容）并将 /api 反向代理到主程序。');
+    L.push('# 使用：把 web/dist 下的文件放到下方 root 目录；容器方式可将本文件');
+    L.push('#       覆盖到 /etc/nginx/nginx.conf（官方 nginx 镜像）。');
+    L.push('# ============================================================');
+    L.push('user nginx;                         # 某些发行版/镜像需改为 www-data');
+    L.push('worker_processes auto;');
+    L.push('');
+    L.push('events {');
+    L.push('    worker_connections 1024;');
+    L.push('}');
+    L.push('');
+    L.push('http {');
+    L.push('    include /etc/nginx/mime.types;');
+    L.push('    default_type application/octet-stream;');
+    L.push('    sendfile on;');
+    L.push('    keepalive_timeout 65;');
+    L.push('    gzip on;');
+    L.push('    gzip_types text/plain text/css application/javascript application/json image/svg+xml;');
+    L.push('    gzip_min_length 1024;');
+    L.push('');
+    L.push('    server {');
+    L.push('        listen '+String(s.ng.listen).trim().replace(/\n/g,' ')+';');
+    L.push('        server_name '+String(s.ng.serverName).trim()+';');
+    L.push('');
+    L.push('        root '+String(s.ng.root).trim()+';');
+    L.push('        index index.html;');
+    L.push('');
+    L.push('        # 健康检查（供 Kubernetes mcp-plat-web Deployment 探针使用）');
+    L.push('        location = /healthz {');
+    L.push('            access_log off;');
+    L.push('            default_type text/plain;');
+    L.push('            return 200 "ok\\n";');
+    L.push('        }');
+    L.push('');
+    L.push('        # vite 产物 assets/ 文件名含内容 hash，可放心长缓存');
+    L.push('        location /assets/ {');
+    L.push('            try_files $uri =404;');
+    L.push('            expires 30d;');
+    L.push('            add_header Cache-Control "public, immutable";');
+    L.push('        }');
+    L.push('        location = /favicon.svg { expires 7d; }');
+    L.push('');
+    L.push('        # SPA 回退：未知路径回退到 index.html（与内嵌版 NoRoute 行为一致）');
+    L.push('        location / {');
+    L.push('            try_files $uri $uri/ /index.html;');
+    L.push('        }');
+    L.push('');
+    L.push('        # 后端 API 反向代理');
+    L.push('        location /api/ {');
+    L.push('            proxy_pass '+upstreamTarget(s.ng.upstream)+';');
+    L.push('            proxy_http_version 1.1;');
+    L.push('            proxy_set_header Host $host;');
+    L.push('            proxy_set_header X-Real-IP $remote_addr;');
+    L.push('            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;');
+    L.push('            proxy_set_header X-Forwarded-Proto $scheme;');
+    L.push('            proxy_read_timeout 60s;');
+    L.push('        }');
+    L.push('    }');
+    L.push('}');
+    return L.join('\n')+'\n';
+  }
+
   function genNamespace(s){
     return 'apiVersion: v1\nkind: Namespace\nmetadata:\n  name: '+yamlScalar(s.ns)+'\n';
   }
@@ -770,6 +1060,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     var authYml=outputs.auth.content;
     var auditYml=outputs.audit.content;
     var apisixYml=outputs.apisix.content;
+    var nginxYml=outputs.nginx?outputs.nginx.content:'';
     var L=[];
     L.push('# ============================================================');
     L.push('# ConfigMap 集合（由配置生成器生成）');
@@ -794,6 +1085,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     if(s.deploy.audit) blocks.push(cmBlock('audit-log-server 配置','audit-log-server-config','audit_log_server.yml',auditYml));
     if(s.deploy.embed) blocks.push(cmBlock('mcp_plat_server 主程序配置','mcp-plat-server-config','config.yaml',mainYml));
     if(s.deploy.apisix) blocks.push(cmBlock('apisix 配置','apisix-config','apisix_config.yaml',apisixYml));
+    if(s.feMode==='nginx' && nginxYml) blocks.push(cmBlock('mcp-plat-web Nginx 前端托管配置','mcp-plat-web-config','nginx.conf',nginxYml));
     if(!blocks.length) return L.join('\n')+'\n# （未勾选任何服务，无需创建 ConfigMap）\n';
     return L.join('\n')+'\n'+blocks.join('\n---\n')+'\n';
   }
@@ -844,8 +1136,17 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     if(s.deploy.audit) docs.push('# --- audit-log-server（gRPC 审计） ---\n'+svc('audit-log-server','NodePort',[
       {name:'grpc',port:'9091',nodePort:s.npAudit}
     ]));
-    if(s.deploy.embed) docs.push('# --- mcp-plat-server（主程序 / 管理界面） ---\n'+svc('mcp-plat-server','NodePort',[
-      {name:'http',port:'8080',nodePort:'30088'}
+    if(s.deploy.embed){
+      var embedSvcType = (s.feMode==='nginx') ? 'ClusterIP' : 'NodePort';
+      var embedSvcName = (s.feMode==='nginx') ? 'mcp-plat-server（主程序 API，集群内，供 nginx 反代）'
+                                              : 'mcp-plat-server（主程序 / 管理界面）';
+      var embedSvcPorts = (s.feMode==='nginx')
+        ? [{name:'http',port:'8080'}]
+        : [{name:'http',port:'8080',nodePort:'30088'}];
+      docs.push('# --- '+embedSvcName+' ---\n'+svc('mcp-plat-server',embedSvcType,embedSvcPorts));
+    }
+    if(s.feMode==='nginx') docs.push('# --- mcp-plat-web（Nginx 前端 / 管理控制台对外入口） ---\n'+svc('mcp-plat-web','NodePort',[
+      {name:'http',port:'80',nodePort:s.npWeb}
     ]));
     if(!docs.length) return L.join('\n')+'\n# （未勾选任何服务，无需创建 Service）\n';
     return L.join('\n')+'\n'+docs.join('\n---\n')+'\n';
@@ -1019,12 +1320,41 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     embed.push('          hostPath:');
     embed.push('            path: /usr/share/zoneinfo');
 
+    // --- mcp-plat-web（Nginx 前端托管，非内嵌时生成） ---
+    var web=null;
+    if(s.feMode==='nginx'){
+      web=cPorts('mcp-plat-web', s.imgWeb,
+        [{name:'http',port:'80'}], null, s.repWeb);
+      web.push('          volumeMounts:');
+      web.push('            - name: config');
+      web.push('              mountPath: /etc/nginx/nginx.conf');
+      web.push('              subPath: nginx.conf');
+      web.push('              readOnly: true');
+      web.push('          readinessProbe:');
+      web.push('            httpGet:');
+      web.push('              path: /healthz');
+      web.push('              port: 80');
+      web.push('            initialDelaySeconds: 5');
+      web.push('            periodSeconds: 10');
+      web.push('          livenessProbe:');
+      web.push('            httpGet:');
+      web.push('              path: /healthz');
+      web.push('              port: 80');
+      web.push('            initialDelaySeconds: 10');
+      web.push('            periodSeconds: 20');
+      web.push('      volumes:');
+      web.push('        - name: config');
+      web.push('          configMap:');
+      web.push('            name: mcp-plat-web-config');
+    }
+
     var docs=[];
     if(s.deploy.etcd)  docs.push(etcd);
     if(s.deploy.apisix) docs.push(apisix);
     if(s.deploy.auth)  docs.push(auth);
     if(s.deploy.audit) docs.push(audit);
     if(s.deploy.embed) docs.push(embed);
+    if(web) docs.push(web);
     if(!docs.length) return L.join('\n')+'\n# （未勾选任何服务，无需创建 Deployment）\n';
     return L.join('\n')+'\n'+docs.map(function(d){return d.join('\n');}).join('\n---\n')+'\n';
   }
@@ -1032,16 +1362,20 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
   // ==================== 渲染 ====================
   function genAll(){
     var s=state();
+    updateFileList();
     outputs={};
     outputs.main  = { content: genMainConfig(s) };
     outputs.auth  = { content: genAuthConfig(s) };
     outputs.audit = { content: genAuditConfig(s) };
     outputs.apisix= { content: genApisixConfig() };
-    outputs.ns    = { content: genNamespace(s) };
-    outputs.ext   = { content: genExternalServices() };
-    outputs.cm    = { content: genConfigMaps() };
-    outputs.svc   = { content: genServices() };
-    outputs.deploy= { content: genDeployments() };
+    if(s.feMode==='nginx') outputs.nginx = { content: genNginxConfig(s) };
+    if(s.platform==='k8s'){
+      outputs.ns    = { content: genNamespace(s) };
+      outputs.ext   = { content: genExternalServices() };
+      outputs.cm    = { content: genConfigMaps() };
+      outputs.svc   = { content: genServices() };
+      outputs.deploy= { content: genDeployments() };
+    }
   }
 
   function renderView(){
@@ -1077,11 +1411,13 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     add('jwt_secret');
     add('access_key_secret');
     add('ap_admin_key');
-    extRows().forEach(function(r){
-      if(r.enabled && r.name && /192\.168\.31\.233/.test(r.ips||'')){
-        ph.push({k:'ph_ip', params:{n:r.name}});
-      }
-    });
+    if(platform()==='k8s'){
+      extRows().forEach(function(r){
+        if(r.enabled && r.name && /192\.168\.31\.233/.test(r.ips||'')){
+          ph.push({k:'ph_ip', params:{n:r.name}});
+        }
+      });
+    }
     return ph;
   }
 
@@ -1093,7 +1429,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     var jw=chk('sync_secrets')?ak:val('jwt_secret');
     if(jw.length<32) msgs.push(t('w_err_jwt'));
     if(!val('admin_username')||!val('admin_password')) msgs.push(t('w_err_admin'));
-    if(chk('k8s_svc_etcd') && (parseInt(val('rep_etcd'),10)||0)!==1) msgs.push(t('w_err_etcd'));
+    if(platform()==='k8s' && chk('k8s_svc_etcd') && (parseInt(val('rep_etcd'),10)||0)!==1) msgs.push(t('w_err_etcd'));
     var ph=listPlaceholders();
     if(ph.length){
       msgs.push(t('w_ph_head'));
@@ -1105,6 +1441,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
 
   function refresh(){
     genAll();
+    renderNote();
     renderTabs();
     renderView();
     renderWarn();
@@ -1131,6 +1468,12 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     $('audit_rel_box').classList.toggle('hide', at==='clickhouse');
     var rep=$('ck_engine').value==='replicated_merge_tree';
     $('ck_cluster_box').classList.toggle('hide', !rep);
+    var ngBox=$('ng_web_box');
+    if(ngBox) ngBox.classList.toggle('hide', platform()!=='k8s');
+    var up=$('ng_upstream');
+    if(up) up.placeholder = (platform()==='k8s')
+      ? 'mcp-plat-server:'+(val('server_port')||'8080')
+      : '127.0.0.1:'+(val('server_port')||'8080');
   }
 
   // ---------- 外部服务动态行 ----------
@@ -1231,10 +1574,13 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
 
   function bindCommon(){
     $('formRoot').addEventListener('input', function(){ refresh(); });
-    $('formRoot').addEventListener('change', function(){
+    $('formRoot').addEventListener('change', function(e){
       syncVisibility();
       refresh();
+      if(e.target && (e.target.id==='platform' || e.target.id==='fe_mode')) applyStep();
     });
+    $('btn-prev').addEventListener('click', function(){ stepDir(-1); });
+    $('btn-next').addEventListener('click', function(){ stepDir(1); });
     $('btn-add-ext').addEventListener('click', function(){
       addExtRowDOM({enabled:true,name:'',port:'',ips:''});
       refresh();
@@ -1263,8 +1609,8 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       renderStatus();
       genTimer=setTimeout(clearStatus,8000);
     });
-    $('btn-copy').addEventListener('click', function(){
-      copyText($('file-view').value).then(function(){ flash($('btn-copy'),t('copied')); });
+    $('btn-copyfloat').addEventListener('click', function(){
+      copyText($('file-view').value).then(function(){ flash($('btn-copyfloat'),t('copied')); });
     });
     $('btn-download').addEventListener('click', function(){
       var f=FILES.filter(function(x){return x.key===active;})[0];
@@ -1318,7 +1664,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
   function renderStatus(){
     var st=$('gen-status');
     if(!lastGen){ st.textContent=''; return; }
-    var base=tpl('st_gen',{t:timeStr(lastGen.d)});
+    var base=tpl('st_gen',{n:FILES.length, t:timeStr(lastGen.d)});
     if(lastGen.ph>0) st.textContent=base+tpl('st_ph_suffix',{n:lastGen.ph});
     else st.textContent=base+t('st_ok_suffix');
   }
@@ -1347,6 +1693,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     bindCommon();
     syncVisibility();
     setLang(lang);
+    applyStep();
     renderView();
   });
 })();
