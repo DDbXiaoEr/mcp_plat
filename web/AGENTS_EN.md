@@ -29,7 +29,7 @@ src/
   main.js                 # entry
   App.vue                 # root component, conditionally rendered by login state
   styles/global.css       # global styles and CSS variables (design tokens)
-  stores/auth.js          # auth state (temp accounts, login/logout, role)
+  stores/auth.js          # auth state (cookie session, login/logout, role)
   components/
     LoginView.vue         # login page
     TheHeader.vue         # top bar
@@ -50,6 +50,6 @@ src/
 
 - No backend or router yet. Auth is a temporary implementation, see `TEMP_ACCOUNTS` in `src/stores/auth.js`.
 - Temporary accounts: `admin / admin123` (admin), `user / user123` (user).
-- Login state is persisted in `localStorage` (key `mcp-console-auth`).
+- Login state is kept by a server-side HttpOnly cookie session; the frontend restores it via `/api/auth/profile` on startup.
 - After login, content is shown by role; currently only shows "Welcome, logged in as {role}".
 - The sibling project `../mcp_plat_portal` is the public portal site; this project follows its code style and design tokens.

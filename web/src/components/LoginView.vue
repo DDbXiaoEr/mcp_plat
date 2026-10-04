@@ -81,43 +81,46 @@ async function onSubmit() {
       <option value="zh-CN">中文</option>
       <option value="en-US">English</option>
     </select>
-    <form class="login__card" @submit.prevent="onSubmit">
-      <div class="login__brand">
-        <span class="brand__mark" aria-hidden="true">MCP</span>
-        <div class="brand__text">
-          <strong>{{ t('login.brand') }}</strong>
-          <em>{{ t('login.tagline') }}</em>
+    <div class="login__stage">
+      <aside class="login__intro">
+        <span class="login__mark" aria-hidden="true">MCP</span>
+        <h1>{{ t('login.brand') }}</h1>
+        <p>{{ t('login.stageLead') }}</p>
+      </aside>
+      <form class="login__card" @submit.prevent="onSubmit">
+        <div class="login__brand">
+          <strong>{{ t('login.tagline') }}</strong>
         </div>
-      </div>
 
-      <label class="field">
-        <span>{{ t('login.username') }}</span>
-        <input
-          v-model="username"
-          name="username"
-          type="text"
-          autocomplete="username"
-          :placeholder="t('login.usernamePlaceholder')"
-        />
-      </label>
+        <label class="field">
+          <span>{{ t('login.username') }}</span>
+          <input
+            v-model="username"
+            name="username"
+            type="text"
+            autocomplete="username"
+            :placeholder="t('login.usernamePlaceholder')"
+          />
+        </label>
 
-      <label class="field">
-        <span>{{ t('login.password') }}</span>
-        <input
-          v-model="password"
-          name="password"
-          type="password"
-          autocomplete="current-password"
-          :placeholder="t('login.passwordPlaceholder')"
-        />
-      </label>
+        <label class="field">
+          <span>{{ t('login.password') }}</span>
+          <input
+            v-model="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            :placeholder="t('login.passwordPlaceholder')"
+          />
+        </label>
 
-      <p v-if="error" class="login__error">{{ error }}</p>
+        <p v-if="error" class="login__error">{{ error }}</p>
 
-      <button type="submit" class="login__submit" :disabled="loading">
-        {{ loading ? t('login.submitting') : t('login.submit') }}
-      </button>
-    </form>
+        <button type="submit" class="login__submit" :disabled="loading">
+          {{ loading ? t('login.submitting') : t('login.submit') }}
+        </button>
+      </form>
+    </div>
   </div>
 </template>
 
@@ -128,7 +131,7 @@ async function onSubmit() {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: linear-gradient(135deg, #eef3fb, #f6f8fb);
+  background-color: transparent;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -143,60 +146,68 @@ async function onSubmit() {
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   outline: none;
   cursor: pointer;
 }
 
-.login__card {
+.login__stage {
   width: 100%;
-  max-width: 380px;
+  max-width: 760px;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.login__intro {
+  padding: 40px 36px;
+  background: var(--xauat-navy);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 12px;
+  min-height: 360px;
+}
+
+.login__mark {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  margin-bottom: auto;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: var(--xauat-accent);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.login__intro h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.3;
+}
+
+.login__intro p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.login__card {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 36px 32px;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius);
-  box-shadow: 0 8px 30px rgba(10, 61, 122, 0.15);
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  padding: 40px 32px;
+  border-left: 3px solid var(--xauat-accent);
 }
 
-.login__brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-
-.brand__mark {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--xauat-blue), var(--xauat-cyan));
-  color: #fff;
-  font-weight: 800;
-  font-size: 14px;
-}
-
-.brand__text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.25;
-}
-
-.brand__text strong {
+.login__brand strong {
   font-size: 16px;
   color: var(--xauat-blue);
-}
-
-.brand__text em {
-  font-style: normal;
-  font-size: 13px;
-  color: var(--text-muted);
 }
 
 .field {
@@ -208,45 +219,68 @@ async function onSubmit() {
 }
 
 .field input {
-  padding: 11px 14px;
+  padding: 11px 12px;
   font-size: 15px;
   color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  background: var(--surface);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.15s;
 }
 
 .field input:focus {
-  border-color: var(--xauat-blue-light);
-  box-shadow: 0 0 0 3px rgba(30, 95, 176, 0.12);
+  border-bottom-color: var(--xauat-blue);
 }
 
 .login__error {
   margin: -4px 0 0;
   font-size: 13px;
-  color: #d64545;
+  color: var(--danger);
 }
 
 .login__submit {
+  margin-top: 4px;
   padding: 12px;
   font-size: 15px;
   font-weight: 600;
   color: #fff;
   background: var(--xauat-blue);
   border: none;
-  border-radius: 10px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
+  transition: background 0.15s;
 }
 
 .login__submit:hover:not(:disabled) {
   background: var(--xauat-blue-light);
-  transform: translateY(-1px);
 }
 
 .login__submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .login__stage {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+  }
+
+  .login__intro {
+    min-height: 0;
+    padding: 28px 28px 24px;
+  }
+
+  .login__mark {
+    margin-bottom: 12px;
+  }
+
+  .login__card {
+    border-left: none;
+    border-top: 3px solid var(--xauat-accent);
+    padding: 28px 24px 32px;
+  }
 }
 </style>

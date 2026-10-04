@@ -426,7 +426,6 @@ function goHistory() {
   padding: 24px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
   display: flex;
   align-items: flex-end;
   gap: 16px;
@@ -490,7 +489,6 @@ function goHistory() {
   border-collapse: collapse;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
   overflow: hidden;
 }
 

@@ -38,7 +38,7 @@ web/
     │   └── global.css     # 全局 CSS 变量（设计令牌）
     │
     ├── stores/
-    │   ├── auth.js        # 鉴权状态（登录/登出/角色 code，不再存中文角色名）
+    │   ├── auth.js        # 鉴权状态（Cookie Session，登录/登出/角色 code）
     │   ├── locale.js      # 语言状态（localStorage mcp-console-locale 持久化）
     │   ├── nav.js         # 侧边栏导航状态（无 Vue Router，菜单存 labelKey）
     │   ├── settings.js    # 平台设置共享状态（名称/logo/跳转链接）

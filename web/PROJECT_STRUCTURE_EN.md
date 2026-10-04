@@ -38,7 +38,7 @@ web/
     │   └── global.css        # global CSS variables (design tokens)
     │
     ├── stores/
-    │   ├── auth.js           # auth state (login/logout/role code, no longer stores Chinese role names)
+    │   ├── auth.js           # auth state (cookie session, login/logout/role code)
     │   ├── locale.js         # language state (persisted in localStorage mcp-console-locale)
     │   ├── nav.js            # sidebar nav state (no Vue Router; menu stores labelKey)
     │   ├── settings.js       # platform settings shared state (name/logo/jump links)

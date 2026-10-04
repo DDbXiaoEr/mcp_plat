@@ -18,54 +18,43 @@ package middleware
 // Author: deepseek-v4-pro / opencode
 
 import (
+	"errors"
 	"net/http"
-	"strings"
 
-	"mcp_plat-console/config"
 	"mcp_plat-console/resp"
+	"mcp_plat-console/session"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 )
-
-type Claims struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
-	jwt.RegisteredClaims
-}
 
 func AuthRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			resp.Fail(c, http.StatusUnauthorized, "未提供认证令牌")
+		sid := session.IDFromRequest(c)
+		if sid == "" {
+			resp.Fail(c, http.StatusUnauthorized, "未登录")
 			c.Abort()
 			return
 		}
 
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			resp.Fail(c, http.StatusUnauthorized, "认证格式错误")
+		data, err := session.Get(sid)
+		if err != nil {
+			if errors.Is(err, session.ErrNotFound) {
+				session.ClearCookie(c)
+				resp.Fail(c, http.StatusUnauthorized, "会话无效或已过期")
+			} else {
+				resp.Fail(c, http.StatusInternalServerError, "会话存储不可用")
+			}
 			c.Abort()
 			return
 		}
 
-		tokenStr := parts[1]
-		claims := &Claims{}
-		token, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (interface{}, error) {
-			return []byte(config.AppConfig.JWTSecret), nil
-		})
+		_ = session.Touch(sid)
+		session.SetCookie(c, sid)
 
-		if err != nil || !token.Valid {
-			resp.Fail(c, http.StatusUnauthorized, "令牌无效或已过期")
-			c.Abort()
-			return
-		}
-
-		c.Set("user_id", claims.UserID)
-		c.Set("username", claims.Username)
-		c.Set("role", claims.Role)
+		c.Set("user_id", data.UserID)
+		c.Set("username", data.Username)
+		c.Set("role", data.Role)
+		c.Set("session_id", sid)
 		c.Next()
 	}
 }

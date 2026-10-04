@@ -4,7 +4,7 @@
 
 ## Tech Stack
 
-- **Backend**: Go + Gin + GORM + PostgreSQL + JWT
+- **Backend**: Go + Gin + GORM + PostgreSQL + Redis Cookie Session
 - **Frontend**: Vue 3 + Vite (`web/` directory)
 
 ## Shared File Rules (mandatory)
@@ -20,7 +20,7 @@
 - Every HTTP endpoint returns JSON in the unified shape `{"code": 200, "message": "success", "data": {}}`; **must be emitted through the `resp` helpers (`resp.OK` / `resp.Fail`)**, never raw `c.JSON(gin.H{...})`, so that `message` is translated by `Accept-Language`
 - The Chinese string in `message` is the translation-table key; when adding a new user-facing Chinese message, also add the corresponding English entry (a whole sentence or short phrase) to `i18n/zh_en.go` — English is an approximate translation
 - Database access uses GORM; all models are defined under `model/`
-- Auth uses JWT; middleware lives under `middleware/`
+- Auth uses Cookie Session (stored in Redis); middleware lives under `middleware/`
 - Environment-variable template is `.env.example`
 
 ## Frontend Conventions

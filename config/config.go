@@ -27,10 +27,24 @@ import (
 type Config struct {
 	Database        DatabaseConfig `yaml:"database"`
 	AuditLogDB      DatabaseConfig `yaml:"audit_log_db"`
-	JWTSecret       string         `yaml:"jwt_secret"`
+	Redis           RedisConfig    `yaml:"redis"`
+	Session         SessionConfig  `yaml:"session"`
 	AccessKeySecret string         `yaml:"access_key_secret"`
 	ServerPort      string         `yaml:"server_port"`
 	Admin           AdminConfig    `yaml:"admin"`
+}
+
+type RedisConfig struct {
+	Addr     string `yaml:"addr"`
+	Password string `yaml:"password"`
+	DB       int    `yaml:"db"`
+}
+
+type SessionConfig struct {
+	CookieName string `yaml:"cookie_name"`
+	MaxAge     int    `yaml:"max_age"`
+	Secure     bool   `yaml:"secure"`
+	SameSite   string `yaml:"same_site"`
 }
 
 type DatabaseConfig struct {
@@ -121,15 +135,21 @@ func applySoftDefaults() {
 	if AppConfig.ServerPort == "" {
 		AppConfig.ServerPort = "8080"
 	}
+	if AppConfig.Redis.Addr == "" {
+		AppConfig.Redis.Addr = "127.0.0.1:6379"
+	}
+	if AppConfig.Session.CookieName == "" {
+		AppConfig.Session.CookieName = "mcp_session"
+	}
+	if AppConfig.Session.MaxAge <= 0 {
+		AppConfig.Session.MaxAge = 86400
+	}
+	if AppConfig.Session.SameSite == "" {
+		AppConfig.Session.SameSite = "lax"
+	}
 }
 
 func validateRequired() {
-	if AppConfig.JWTSecret == "" {
-		log.Fatal("config: jwt_secret is required in config.yaml")
-	}
-	if len(AppConfig.JWTSecret) < 32 {
-		log.Fatal("config: jwt_secret must be at least 32 characters")
-	}
 	if AppConfig.AccessKeySecret == "" {
 		log.Fatal("config: access_key_secret is required in config.yaml")
 	}

@@ -161,7 +161,7 @@ async function saveEmail() {
   max-width: 560px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-left: 3px solid var(--xauat-accent);
   overflow: hidden;
 }
 
@@ -211,6 +211,7 @@ async function saveEmail() {
   border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .profile__btn:hover:not(:disabled) {

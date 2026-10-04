@@ -19,7 +19,7 @@
 
 // Author: deepseek-v4-pro / opencode
 import { computed, watch, onMounted, ref } from 'vue'
-import { auth, casLogin } from './stores/auth.js'
+import { auth, casLogin, restoreSession } from './stores/auth.js'
 import { nav, resetNav } from './stores/nav.js'
 import LoginView from './components/LoginView.vue'
 import TheHeader from './components/TheHeader.vue'
@@ -54,23 +54,26 @@ const casError = ref('')
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
   const ticket = params.get('ticket')
-  if (ticket && !auth.user) {
+  if (ticket) {
     const serviceUrl = window.location.origin + window.location.pathname
     const result = await casLogin(ticket, serviceUrl)
     if (!result.ok) {
       casError.value = result.message
+      await restoreSession()
     } else {
       const url = new URL(window.location.href)
       url.searchParams.delete('ticket')
       window.history.replaceState({}, '', url.toString())
     }
+  } else {
+    await restoreSession()
   }
 })
 </script>
 
 <template>
-  <LoginView v-if="!auth.user" />
-  <template v-else>
+  <LoginView v-if="auth.ready && !auth.user" />
+  <template v-else-if="auth.user">
     <TheHeader />
     <TheSidebar />
     <main class="content">
@@ -84,6 +87,6 @@ onMounted(async () => {
   margin-top: var(--header-height);
   margin-left: var(--sidebar-width);
   min-height: calc(100vh - var(--header-height));
-  padding: 24px;
+  padding: 28px 32px 40px;
 }
 </style>

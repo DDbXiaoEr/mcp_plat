@@ -24,6 +24,7 @@ import (
 
 	"mcp_plat-console/resp"
 	"mcp_plat-console/service"
+	"mcp_plat-console/session"
 
 	"github.com/gin-gonic/gin"
 )
@@ -114,6 +115,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	session.SetCookie(c, output.SessionID)
 	resp.OK(c, "登录成功", output)
 }
 
@@ -130,7 +132,17 @@ func (h *AuthHandler) CASValidate(c *gin.Context) {
 		return
 	}
 
+	session.SetCookie(c, output.SessionID)
 	resp.OK(c, "登录成功", output)
+}
+
+func (h *AuthHandler) Logout(c *gin.Context) {
+	sid := session.IDFromRequest(c)
+	if sid != "" {
+		_ = session.Delete(sid)
+	}
+	session.ClearCookie(c)
+	resp.OK(c, "已退出登录")
 }
 
 func (h *AuthHandler) GetPlatform(c *gin.Context) {
@@ -154,6 +166,7 @@ func (h *AuthHandler) Profile(c *gin.Context) {
 	if userID == 0 {
 		resp.OK(c, "success", gin.H{
 			"username": c.GetString("username"),
+			"name":     c.GetString("username"),
 			"role":     role,
 		})
 		return
@@ -165,7 +178,20 @@ func (h *AuthHandler) Profile(c *gin.Context) {
 		return
 	}
 
-	resp.OK(c, "success", user)
+	resp.OK(c, "success", gin.H{
+		"id":           user.ID,
+		"uid":          user.UID,
+		"username":     user.Username,
+		"name":         user.Name,
+		"email":        user.Email,
+		"phone":        user.Phone,
+		"organization": user.Organization,
+		"role_id":      user.RoleID,
+		"status":       user.Status,
+		"created_at":   user.CreatedAt,
+		"updated_at":   user.UpdatedAt,
+		"role":         role,
+	})
 }
 
 func (h *AuthHandler) UpdateProfile(c *gin.Context) {
@@ -187,5 +213,5 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "保存成功", "data": user})
+	resp.OK(c, "保存成功", user)
 }

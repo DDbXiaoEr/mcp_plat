@@ -24,7 +24,7 @@ MCP Service Platform · Admin Console
 
 ## Tech Stack
 
-- **Backend**: Go 1.25 + Gin + GORM + PostgreSQL/MySQL + JWT + gRPC
+- **Backend**: Go 1.25 + Gin + GORM + PostgreSQL/MySQL + Redis Cookie Session + gRPC
 - **Audit log storage**: Relational DB (PostgreSQL/MySQL) or ClickHouse (optional, separate from the main DB)
 - **Frontend**: Vue 3 + Vite (`web/` directory)
 
@@ -82,7 +82,7 @@ All services share the following test accounts (student ID is passed as the `stu
 ### 1. Configuration
 
 ```bash
-# Copy the sample config file, then edit config.yaml with your DB, JWT, and other settings
+# Copy the sample config file, then edit config.yaml with your DB, Redis, secrets, and other settings
 # The main DB supports both PostgreSQL and MySQL
 cp config.yaml.example config.yaml
 ```
@@ -122,7 +122,17 @@ audit_log_db:
   #   cluster: ""                   # required when engine is replicated_merge_tree
   #   ttl_days: 90                  # data retention in days
 
-jwt_secret: "at-least-32-character-random-string"
+redis:
+  addr: 127.0.0.1:6379
+  password: ""
+  db: 0
+
+session:
+  cookie_name: mcp_session
+  max_age: 86400
+  secure: false
+  same_site: lax
+
 access_key_secret: "another-at-least-32-character-random-string"
 server_port: 8080
 
@@ -265,6 +275,7 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse mode
 | accesskey-auth-server | 9090 | AccessKey auth service |
 | audit-log-server | 9091 | Audit log service |
 | OpenLDAP | 389 | LDAP directory service |
+| Redis | 6379 | Cookie Session store |
 | Etcd | 2379 | APISIX config center |
 
 ### Default Admin Account
@@ -281,7 +292,7 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse mode
 - LDAP directory authentication with attribute mapping (auto-syncs user info on login)
 - CAS single sign-on (frontend auto-detects the ticket parameter in the URL)
 - Login method switchable via system settings, with online testing of LDAP connection and mapping
-- JWT Bearer Token auth, distinguishing regular users from admins
+- Cookie Session auth (Redis-backed, HttpOnly), distinguishing regular users from admins
 
 ### Platform Overview
 
@@ -359,18 +370,19 @@ System configuration is managed in groups and edited on a single page:
 
 | Method | Path | Auth | Description |
 |--------|------|:---:|------|
-| POST | `/api/auth/login` | - | Login |
+| POST | `/api/auth/login` | - | Login (sets HttpOnly cookie) |
+| POST | `/api/auth/logout` | - | Logout (clears cookie / Redis session) |
 | GET | `/api/auth/method` | - | Get auth method (local / ldap / cas) |
 | GET | `/api/auth/platform` | - | Get public platform info (login page name/logo/background) |
 | POST | `/api/auth/cas/validate` | - | CAS login validation |
-| GET | `/api/auth/profile` | Bearer | Profile |
-| GET | `/api/access-keys` | Bearer | List AccessKeys |
-| POST | `/api/access-keys` | Bearer | Create AccessKey |
-| PUT | `/api/access-keys/:id` | Bearer | Update AccessKey |
-| DELETE | `/api/access-keys/:id` | Bearer | Delete AccessKey |
-| GET | `/api/history` | Bearer | Usage history (audit logs) |
-| GET | `/api/audit-logs` | Bearer | Audit log list |
-| GET | `/api/servers` | Bearer | MCP Server list |
+| GET | `/api/auth/profile` | Cookie | Profile |
+| GET | `/api/access-keys` | Cookie | List AccessKeys |
+| POST | `/api/access-keys` | Cookie | Create AccessKey |
+| PUT | `/api/access-keys/:id` | Cookie | Update AccessKey |
+| DELETE | `/api/access-keys/:id` | Cookie | Delete AccessKey |
+| GET | `/api/history` | Cookie | Usage history (audit logs) |
+| GET | `/api/audit-logs` | Cookie | Audit log list |
+| GET | `/api/servers` | Cookie | MCP Server list |
 | POST | `/api/servers` | Admin | Create MCP Server |
 | PUT | `/api/servers/:id` | Admin | Update MCP Server |
 | DELETE | `/api/servers/:id` | Admin | Delete MCP Server |
@@ -392,8 +404,8 @@ System configuration is managed in groups and edited on a single page:
 | PUT | `/api/settings/:key` | Admin | Save system setting |
 | POST | `/api/settings/test-ldap` | Admin | Test LDAP connection and mapping |
 | POST | `/api/settings/test-smtp` | Admin | Test SMTP mail sending |
-| GET | `/api/settings/:key` | Bearer | Get a single setting |
-| GET | `/api/settings/gateway-status` | Bearer | Check API gateway config status |
+| GET | `/api/settings/:key` | Cookie | Get a single setting |
+| GET | `/api/settings/gateway-status` | Cookie | Check API gateway config status |
 
 > See `public/api_doc.md` for detailed request/response fields and `public/api-devstatus.md` for development progress (both in Chinese)
 

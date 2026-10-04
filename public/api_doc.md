@@ -33,14 +33,16 @@ POST /api/auth/login
 | username | string | 是 | 用户名 |
 | password | string | 是 | 密码 |
 
+登录成功后服务端下发 HttpOnly Cookie（默认名 `mcp_session`，会话存 Redis）。后续需鉴权接口由浏览器自动携带 Cookie，无需 `Authorization` 头。
+
 **成功响应：**
 ```json
 {
   "code": 200,
   "message": "登录成功",
   "data": {
-    "token": "eyJhbGciOi...",
     "username": "admin",
+    "name": "admin",
     "role": "admin"
   }
 }
@@ -52,10 +54,7 @@ POST /api/auth/login
 GET /api/auth/profile
 ```
 
-**请求头：**
-| 字段 | 说明 |
-|------|------|
-| Authorization | Bearer {token} |
+**鉴权：** Cookie Session（登录后自动携带 `mcp_session`）
 
 **成功响应：**
 ```json
@@ -81,10 +80,7 @@ GET /api/auth/profile
 PUT /api/auth/profile
 ```
 
-**请求头：**
-| 字段 | 说明 |
-|------|------|
-| Authorization | Bearer {token} |
+**鉴权：** Cookie Session（登录后自动携带 `mcp_session`）
 
 > 仅普通用户（非管理员）可调用，管理员账号返回 403。修改邮箱后 LDAP 用户下次登录仍可能被 LDAP 属性覆盖同步。
 
@@ -187,16 +183,34 @@ POST /api/auth/cas/validate
 | ticket | string | 是 | CAS 返回的 ticket |
 | serviceUrl | string | 是 | 回调地址，需与 CAS redirect 时一致 |
 
+登录成功后同样下发 HttpOnly Cookie。
+
 **成功响应：**
 ```json
 {
   "code": 200,
   "message": "登录成功",
   "data": {
-    "token": "eyJhbGciOi...",
     "username": "2021001",
+    "name": "2021001",
     "role": "user"
   }
+}
+```
+
+### 1.7 退出登录
+
+```
+POST /api/auth/logout
+```
+
+删除 Redis 中的会话并清除 Cookie。未登录时也可调用。
+
+**成功响应：**
+```json
+{
+  "code": 200,
+  "message": "已退出登录"
 }
 ```
 
@@ -204,7 +218,7 @@ POST /api/auth/cas/validate
 
 ## 2. AccessKey 管理
 
-以下接口均需携带认证头：`Authorization: Bearer {token}`
+以下接口均需登录后的 Cookie Session（`mcp_session`）。
 
 ### 2.1 获取 AccessKey 列表
 
@@ -357,7 +371,7 @@ GET /api/history
 
 ## 4. MCP 服务器管理
 
-> 所有接口均需认证，在请求头中携带 `Authorization: Bearer <token>`
+> 所有接口均需登录后的 Cookie Session（`mcp_session`）
 
 ### 4.1 获取 MCP 服务器列表
 
@@ -487,7 +501,7 @@ POST /api/servers/publish
 POST /api/servers/fetch-tools
 ```
 
-> 所有接口均需认证，在请求头中携带 `Authorization: Bearer <token>`
+> 所有接口均需登录后的 Cookie Session（`mcp_session`）
 
 **请求参数（JSON Body）：**
 
@@ -597,7 +611,7 @@ DELETE /api/servers/:id
 
 ## 5. RBAC 管理
 
-> 所有接口均需认证，在请求头中携带 `Authorization: Bearer <token>`，且仅管理员可调用。
+> 所有接口均需登录后的 Cookie Session（`mcp_session`），且仅管理员可调用。
 
 ### 5.1 角色管理
 
@@ -972,7 +986,7 @@ GET /api/roles/:id/users
 
 ## 6. 系统设置
 
-> 以下接口均需管理员权限（`Authorization: Bearer <token>`，且用户为管理员）。
+> 以下接口均需管理员权限（Cookie Session，且用户为管理员）。
 
 ### 6.1 获取全部设置
 
@@ -1282,7 +1296,7 @@ POST /api/settings/test-smtp
 
 ## 7. 平台概况统计
 
-> 仅管理员可调用，需携带 `Authorization: Bearer <token>`。
+> 仅管理员可调用，需登录后的 Cookie Session。
 
 ### 7.1 获取平台概况统计
 
@@ -1319,7 +1333,7 @@ GET /api/overview/stats
 GET /api/overview/call-trend
 ```
 
-> 仅管理员可调用，需携带 `Authorization: Bearer <token>`。
+> 仅管理员可调用，需登录后的 Cookie Session。
 
 **请求参数（Query String）：**
 

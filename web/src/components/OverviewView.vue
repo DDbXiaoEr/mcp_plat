@@ -390,28 +390,27 @@ onBeforeUnmount(() => {
 .stat-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  aspect-ratio: 2 / 1;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 20px;
+  gap: 8px;
+  justify-content: flex-end;
+  min-height: 132px;
+  padding: 18px 20px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border-left: 3px solid var(--xauat-accent);
 }
 
 .stat-card__value {
-  font-size: 44px;
+  font-size: 36px;
   font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
   color: var(--xauat-blue);
 }
 
 .stat-card__label {
-  font-size: 17px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--text-muted);
 }
 
 @media (max-width: 900px) {
@@ -446,7 +445,7 @@ onBeforeUnmount(() => {
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   outline: none;
 }
@@ -461,9 +460,9 @@ onBeforeUnmount(() => {
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .overview__refresh:hover:not(:disabled) {
@@ -498,8 +497,6 @@ onBeforeUnmount(() => {
   padding: 20px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
 }
 
 .trend__head {
@@ -527,9 +524,9 @@ onBeforeUnmount(() => {
   color: var(--text-muted);
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .trend__tab:hover {
@@ -579,7 +576,6 @@ onBeforeUnmount(() => {
   padding: 16px;
   background: var(--panel-bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 
 .pie-card__title {

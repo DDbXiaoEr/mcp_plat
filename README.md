@@ -26,7 +26,7 @@ MCP 服务平台 · 管理控制台
 
 ## 技术栈
 
-- **后端**: Go 1.25 + Gin + GORM + PostgreSQL/MySQL + JWT + gRPC
+- **后端**: Go 1.25 + Gin + GORM + PostgreSQL/MySQL + Redis Cookie Session + gRPC
 - **审计日志存储**: 关系库（PostgreSQL/MySQL）或 ClickHouse（可选，两库分离）
 - **前端**: Vue 3 + Vite（`web/` 目录）
 
@@ -84,7 +84,7 @@ make run-all
 ### 1. 配置
 
 ```bash
-# 从示例复制配置文件，然后编辑 config.yaml 填写数据库、JWT 等配置
+# 从示例复制配置文件，然后编辑 config.yaml 填写数据库、Redis、密钥等配置
 # 主库支持 PostgreSQL 和 MySQL 两种数据库
 cp config.yaml.example config.yaml
 ```
@@ -124,7 +124,17 @@ audit_log_db:
   #   cluster: ""                   # replicated_merge_tree 时必填
   #   ttl_days: 90                  # 数据保留天数
 
-jwt_secret: "at-least-32-character-random-string"
+redis:
+  addr: 127.0.0.1:6379
+  password: ""
+  db: 0
+
+session:
+  cookie_name: mcp_session
+  max_age: 86400
+  secure: false
+  same_site: lax
+
 access_key_secret: "another-at-least-32-character-random-string"
 server_port: 8080
 
@@ -267,6 +277,7 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse 模式
 | accesskey-auth-server | 9090 | AccessKey 鉴权服务 |
 | audit-log-server | 9091 | 审计日志服务 |
 | OpenLDAP | 389 | LDAP 目录服务 |
+| Redis | 6379 | Cookie Session 存储 |
 | Etcd | 2379 | APISIX 配置中心 |
 
 ### 4. 默认管理员账号
@@ -283,7 +294,7 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse 模式
 - LDAP 目录服务认证，支持属性映射（登录时自动同步用户信息）
 - CAS 单点登录（前端自动检测 URL 中的 ticket 参数）
 - 登录方式可通过系统设置切换，支持 LDAP 连接与映射在线测试
-- JWT Bearer Token 鉴权，区分普通用户和管理员权限
+- Cookie Session 鉴权（Redis 存储，HttpOnly），区分普通用户和管理员权限
 
 ### 平台概况
 
@@ -361,18 +372,19 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse 模式
 
 | Method | Path | 鉴权 | 说明 |
 |--------|------|:---:|------|
-| POST | `/api/auth/login` | - | 登录 |
+| POST | `/api/auth/login` | - | 登录（下发 HttpOnly Cookie） |
+| POST | `/api/auth/logout` | - | 退出登录（清除 Cookie / Redis Session） |
 | GET | `/api/auth/method` | - | 获取认证方式（local / ldap / cas） |
 | GET | `/api/auth/platform` | - | 获取平台公开信息（登录页名称/Logo/背景图） |
 | POST | `/api/auth/cas/validate` | - | CAS 登录验证 |
-| GET | `/api/auth/profile` | Bearer | 个人信息 |
-| GET | `/api/access-keys` | Bearer | AccessKey 列表 |
-| POST | `/api/access-keys` | Bearer | 创建 AccessKey |
-| PUT | `/api/access-keys/:id` | Bearer | 更新 AccessKey |
-| DELETE | `/api/access-keys/:id` | Bearer | 删除 AccessKey |
-| GET | `/api/history` | Bearer | 使用历史（审计日志） |
-| GET | `/api/audit-logs` | Bearer | 审计日志列表 |
-| GET | `/api/servers` | Bearer | MCP Server 列表 |
+| GET | `/api/auth/profile` | Cookie | 个人信息 |
+| GET | `/api/access-keys` | Cookie | AccessKey 列表 |
+| POST | `/api/access-keys` | Cookie | 创建 AccessKey |
+| PUT | `/api/access-keys/:id` | Cookie | 更新 AccessKey |
+| DELETE | `/api/access-keys/:id` | Cookie | 删除 AccessKey |
+| GET | `/api/history` | Cookie | 使用历史（审计日志） |
+| GET | `/api/audit-logs` | Cookie | 审计日志列表 |
+| GET | `/api/servers` | Cookie | MCP Server 列表 |
 | POST | `/api/servers` | Admin | 创建 MCP Server |
 | PUT | `/api/servers/:id` | Admin | 更新 MCP Server |
 | DELETE | `/api/servers/:id` | Admin | 删除 MCP Server |
@@ -394,8 +406,8 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse 模式
 | PUT | `/api/settings/:key` | Admin | 保存系统设置 |
 | POST | `/api/settings/test-ldap` | Admin | 测试 LDAP 连接与属性映射 |
 | POST | `/api/settings/test-smtp` | Admin | 测试 SMTP 邮件发送 |
-| GET | `/api/settings/:key` | Bearer | 获取单个设置项 |
-| GET | `/api/settings/gateway-status` | Bearer | 检查 API 网关配置状态 |
+| GET | `/api/settings/:key` | Cookie | 获取单个设置项 |
+| GET | `/api/settings/gateway-status` | Cookie | 检查 API 网关配置状态 |
 
 > 详细请求/响应字段见 `public/api_doc.md`，开发进度见 `public/api-devstatus.md`
 

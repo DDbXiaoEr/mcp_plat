@@ -106,8 +106,19 @@ data:
         cluster: ""                      # replicated_merge_tree 时必填
         ttl_days: 90                     # 数据保留天数（ClickHouse 原生 TTL，自动清理）
 
+    # Redis（用户 Cookie Session 存储）
+    redis:
+      addr: redis:6379
+      password: ""
+      db: 0
+
+    session:
+      cookie_name: mcp_session
+      max_age: 86400
+      secure: false
+      same_site: lax
+
     # 密钥需至少 32 字符随机值，生产环境建议通过环境变量注入
-    jwt_secret: changeme-jwt-secret
     access_key_secret: changeme-access-key-secret
 
     # HTTP 监听端口

@@ -22,14 +22,12 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	"mcp_plat-console/config"
 	"mcp_plat-console/database"
-	"mcp_plat-console/middleware"
 	"mcp_plat-console/model"
+	"mcp_plat-console/session"
 
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -40,10 +38,10 @@ type LoginInput struct {
 }
 
 type LoginOutput struct {
-	Token    string `json:"token"`
-	Username string `json:"username"`
-	Name     string `json:"name"`
-	Role     string `json:"role"`
+	Username  string `json:"username"`
+	Name      string `json:"name"`
+	Role      string `json:"role"`
+	SessionID string `json:"-"`
 }
 
 type CASValidateInput struct {
@@ -108,16 +106,12 @@ func Login(input LoginInput) (*LoginOutput, error) {
 	cfg := config.AppConfig
 
 	if input.Username == cfg.Admin.Username && input.Password == cfg.Admin.Password {
-		token, err := generateAdminToken()
-		if err != nil {
-			return nil, err
-		}
-		return &LoginOutput{
-			Token:    token,
+		return issueSession(session.Data{
+			UserID:   0,
 			Username: cfg.Admin.Username,
 			Name:     cfg.Admin.Username,
 			Role:     "admin",
-		}, nil
+		})
 	}
 
 	var authCfg authSettings
@@ -137,16 +131,7 @@ func Login(input LoginInput) (*LoginOutput, error) {
 		}
 
 		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err == nil {
-			token, err := generateToken(user)
-			if err != nil {
-				return nil, err
-			}
-			return &LoginOutput{
-				Token:    token,
-				Username: user.Username,
-				Name:     user.Name,
-				Role:     "user",
-			}, nil
+			return issueUserSession(user)
 		}
 	}
 
@@ -211,16 +196,7 @@ func Login(input LoginInput) (*LoginOutput, error) {
 			database.DB.Model(&user).Updates(updates)
 		}
 
-		token, err := generateToken(user)
-		if err != nil {
-			return nil, err
-		}
-		return &LoginOutput{
-			Token:    token,
-			Username: user.Username,
-			Name:     user.Name,
-			Role:     "user",
-		}, nil
+		return issueUserSession(user)
 	}
 
 	return nil, errors.New("用户名或密码错误")
@@ -311,17 +287,7 @@ func CASLogin(input CASValidateInput) (*LoginOutput, error) {
 		}
 	}
 
-	token, err := generateToken(user)
-	if err != nil {
-		return nil, err
-	}
-
-	return &LoginOutput{
-		Token:    token,
-		Username: user.Username,
-		Name:     user.Name,
-		Role:     "user",
-	}, nil
+	return issueUserSession(user)
 }
 
 type AuthMethodOutput struct {
@@ -388,32 +354,28 @@ func UpdateProfile(userID uint, input UpdateProfileInput) (*model.User, error) {
 	return &user, nil
 }
 
-func generateAdminToken() (string, error) {
-	claims := &middleware.Claims{
-		UserID:   0,
-		Username: config.AppConfig.Admin.Username,
-		Role:     "admin",
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-		},
+func issueUserSession(user model.User) (*LoginOutput, error) {
+	name := user.Name
+	if name == "" {
+		name = user.Username
 	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(config.AppConfig.JWTSecret))
-}
-
-func generateToken(user model.User) (string, error) {
-	claims := &middleware.Claims{
+	return issueSession(session.Data{
 		UserID:   user.ID,
 		Username: user.Username,
+		Name:     name,
 		Role:     "user",
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-		},
-	}
+	})
+}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(config.AppConfig.JWTSecret))
+func issueSession(data session.Data) (*LoginOutput, error) {
+	id, err := session.Create(data)
+	if err != nil {
+		return nil, errors.New("创建会话失败")
+	}
+	return &LoginOutput{
+		Username:  data.Username,
+		Name:      data.Name,
+		Role:      data.Role,
+		SessionID: id,
+	}, nil
 }

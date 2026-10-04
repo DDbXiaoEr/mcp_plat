@@ -45,6 +45,7 @@ func Setup() *gin.Engine {
 	r.GET("/api/auth/method", authHandler.GetAuthMethod)
 	r.GET("/api/auth/platform", authHandler.GetPlatform)
 	r.POST("/api/auth/cas/validate", authHandler.CASValidate)
+	r.POST("/api/auth/logout", authHandler.Logout)
 
 	auth := r.Group("/api")
 	auth.Use(middleware.AuthRequired())

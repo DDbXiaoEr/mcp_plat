@@ -233,7 +233,6 @@ onMounted(async () => {
   padding: 18px 20px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 
 .filters__field {
@@ -251,15 +250,14 @@ onMounted(async () => {
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 6px;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.15s;
 }
 
 .filters__field input:focus,
 .filters__field select:focus {
-  border-color: var(--xauat-blue-light);
-  box-shadow: 0 0 0 3px rgba(30, 95, 176, 0.12);
+  border-color: var(--xauat-blue);
 }
 
 .filters__reset {
@@ -269,14 +267,14 @@ onMounted(async () => {
   color: var(--xauat-blue);
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .filters__reset:hover {
-  background: rgba(10, 61, 122, 0.06);
-  border-color: rgba(10, 61, 122, 0.25);
+  background: var(--hover-bg);
+  border-color: var(--xauat-blue);
 }
 
 .filters__search {
@@ -286,13 +284,13 @@ onMounted(async () => {
   color: #fff;
   background: var(--xauat-blue);
   border: 1px solid var(--xauat-blue);
-  border-radius: 999px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.15s;
 }
 
 .filters__search:hover {
-  background: var(--xauat-blue-dark);
+  background: var(--xauat-blue-light);
 }
 
 .history {
@@ -301,7 +299,6 @@ onMounted(async () => {
   border-collapse: collapse;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
   overflow: hidden;
 }
 

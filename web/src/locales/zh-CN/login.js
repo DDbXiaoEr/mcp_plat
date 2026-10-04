@@ -19,6 +19,7 @@
 export default {
   brand: '某某大学 MCP 服务平台',
   tagline: '管理控制台',
+  stageLead: '签发密钥、管理 MCP 服务、查看调用。',
   username: '账号',
   password: '密码',
   usernamePlaceholder: '请输入账号',

@@ -99,7 +99,6 @@
 
 | 密钥类型 | 值 |
 |----------|-----|
-| JWT Secret | 48554e69f60343595de5aae5430d0c3f90bd38f5cd513d88b16d972a7b23ad74 |
 | Access Key Secret | 093e4f7d88cf7c8fa98244574dac873399ca3cf94f7128c1fb8f8f2789a8b132 |
 
 ## 服务端口
@@ -110,6 +109,7 @@
 | APISIX网关 | 80, 443, 9180 |
 | AccessKey认证服务 | 9090 |
 | 审计日志服务 | 9091 |
+| Redis | 6379 |
 | PostgreSQL (主) | 5432 |
 | PostgreSQL (审计) | 5433 |
 | ClickHouse HTTP | 8123 |

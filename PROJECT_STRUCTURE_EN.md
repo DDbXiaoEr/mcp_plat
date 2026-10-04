@@ -33,7 +33,7 @@ mcp_plat-console/
 │       └── main.go           # test data generator
 │
 ├── config/
-│   └── config.go             # config loading (DB / JWT / port / admin account)
+│   └── config.go             # config loading (DB / Redis session / port / admin account)
 │
 ├── database/
 │   └── database.go           # GORM init + AutoMigrate (entry point for the AuditStore abstraction)
@@ -46,6 +46,9 @@ mcp_plat-console/
 ├── logging/
 │   └── logging.go            # logging init (default stdout + local file ./logs/mcp_plat.log with rotation; both disabled when Syslog is enabled)
 │
+├── session/
+│   └── session.go            # Cookie Session (Redis-backed, HttpOnly cookie)
+│
 ├── model/
 │   ├── user.go               # User model
 │   ├── access_key.go         # AccessKey model
@@ -57,7 +60,7 @@ mcp_plat-console/
 │   └── setting.go            # Setting key-value model (system settings)
 │
 ├── handler/
-│   ├── auth.go               # POST /api/auth/login, GET /api/auth/profile
+│   ├── auth.go               # POST /api/auth/login, POST /api/auth/logout, GET /api/auth/profile
 │   ├── access_key.go         # CRUD /api/access-keys
 │   ├── health.go             # GET /healthz (liveness), GET /readyz (readiness, checks DB)
 │   ├── history.go            # GET /api/history
@@ -77,7 +80,7 @@ mcp_plat-console/
 │   └── resp_test.go
 │
 ├── service/
-│   ├── auth.go               # login business logic + JWT generation
+│   ├── auth.go               # login business logic + Redis session issuance
 │   ├── access_key.go         # AccessKey business logic
 │   ├── cas.go                # CAS auth business logic
 │   ├── ldap.go               # LDAP auth business logic
@@ -93,7 +96,7 @@ mcp_plat-console/
 │   └── setting.go            # system-settings business logic (key-value JSON storage)
 │
 ├── middleware/
-│   ├── auth.go               # JWT Bearer auth middleware + AdminRequired
+│   ├── auth.go               # Cookie Session auth middleware + AdminRequired
 │   └── locale.go             # language middleware (parses Accept-Language → c.Set("locale"))
 │
 ├── plugin/
@@ -198,6 +201,7 @@ mcp_plat-console/
 | GET | `/healthz` | no | - | handler/health.go → Healthz |
 | GET | `/readyz` | no | - | handler/health.go → Readyz |
 | POST | `/api/auth/login` | no | - | handler/auth.go → Login |
+| POST | `/api/auth/logout` | no | - | handler/auth.go → Logout |
 | GET | `/api/auth/method` | no | - | handler/auth.go → GetAuthMethod |
 | GET | `/api/auth/platform` | no | - | handler/auth.go → GetPlatform |
 | POST | `/api/auth/cas/validate` | no | - | handler/auth.go → CASValidate |

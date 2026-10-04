@@ -17,5 +17,17 @@
 
 // Author: deepseek-v4-pro / opencode
 export default {
-  title: 'Welcome, {role}'
+  title: 'Welcome, {role}',
+  lead: 'Pick a task from the index.',
+  indexLabel: 'Index',
+  hint: {
+    profile: 'View and update your profile',
+    accesskey: 'Issue and manage keys',
+    quickaccess: 'Setup notes and examples',
+    history: 'Review call records',
+    overview: 'Usage and trends',
+    servers: 'Connect, publish, maintain',
+    rbac: 'Roles and accounts',
+    settings: 'Name, logo, and gateway'
+  }
 }

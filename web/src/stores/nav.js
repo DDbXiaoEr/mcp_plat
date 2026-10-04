@@ -21,16 +21,16 @@ import { reactive, readonly } from 'vue'
 // TODO: 后端/路由接入后，菜单可改为配置化或路由驱动
 const MENUS = {
   user: [
-    { key: 'profile', labelKey: 'nav.profile' },
-    { key: 'accesskey', labelKey: 'nav.accesskey' },
-    { key: 'quickaccess', labelKey: 'nav.quickaccess' },
-    { key: 'history', labelKey: 'nav.history' }
+    { key: 'profile', labelKey: 'nav.profile', icon: 'user' },
+    { key: 'accesskey', labelKey: 'nav.accesskey', icon: 'key' },
+    { key: 'quickaccess', labelKey: 'nav.quickaccess', icon: 'spark' },
+    { key: 'history', labelKey: 'nav.history', icon: 'clock' }
   ],
   admin: [
-    { key: 'overview', labelKey: 'nav.overview' },
-    { key: 'servers', labelKey: 'nav.servers' },
-    { key: 'rbac', labelKey: 'nav.rbac' },
-    { key: 'settings', labelKey: 'nav.settings' }
+    { key: 'overview', labelKey: 'nav.overview', icon: 'layout' },
+    { key: 'servers', labelKey: 'nav.servers', icon: 'server' },
+    { key: 'rbac', labelKey: 'nav.rbac', icon: 'users' },
+    { key: 'settings', labelKey: 'nav.settings', icon: 'sliders' }
   ]
 }
 

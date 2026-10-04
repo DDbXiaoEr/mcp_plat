@@ -20,6 +20,7 @@ import (
 
 	"mcp_plat-console/database"
 	"mcp_plat-console/resp"
+	"mcp_plat-console/session"
 
 	"github.com/gin-gonic/gin"
 )
@@ -38,6 +39,10 @@ func Readyz(c *gin.Context) {
 	}
 	if err := sqlDB.Ping(); err != nil {
 		resp.Fail(c, http.StatusServiceUnavailable, "database unavailable")
+		return
+	}
+	if err := session.Ping(); err != nil {
+		resp.Fail(c, http.StatusServiceUnavailable, "session store unavailable")
 		return
 	}
 	resp.OK(c, "ok")

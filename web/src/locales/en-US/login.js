@@ -19,6 +19,7 @@
 export default {
   brand: 'MCP Service Platform',
   tagline: 'Management Console',
+  stageLead: 'Issue keys, manage MCP servers, and review calls.',
   username: 'Username',
   password: 'Password',
   usernamePlaceholder: 'Please enter username',

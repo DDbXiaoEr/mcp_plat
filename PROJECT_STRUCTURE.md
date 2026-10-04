@@ -33,7 +33,7 @@ mcp_plat-console/
 │       └── main.go           # 测试数据生成工具
 │
 ├── config/
-│   └── config.go             # 配置加载（DB / JWT / 端口 / 管理员账号）
+│   └── config.go             # 配置加载（DB / Redis Session / 端口 / 管理员账号）
 │
 ├── database/
 │   └── database.go           # GORM 初始化 + AutoMigrate（AuditStore 审计存储抽象入口）
@@ -46,6 +46,9 @@ mcp_plat-console/
 ├── logging/
 │   └── logging.go            # 日志初始化（默认标准输出 + 本地文件 ./logs/mcp_plat.log 并轮转；启用 Syslog 后二者失效）
 │
+├── session/
+│   └── session.go            # Cookie Session（Redis 存储，HttpOnly Cookie）
+│
 ├── model/
 │   ├── user.go               # User 模型
 │   ├── access_key.go         # AccessKey 模型
@@ -57,7 +60,7 @@ mcp_plat-console/
 │   └── setting.go            # Setting 键值模型（系统设置）
 │
 ├── handler/
-│   ├── auth.go               # POST /api/auth/login, GET /api/auth/profile
+│   ├── auth.go               # POST /api/auth/login, POST /api/auth/logout, GET /api/auth/profile
 │   ├── access_key.go         # CRUD /api/access-keys
 │   ├── health.go             # GET /healthz（存活探针）, GET /readyz（就绪探针，校验 DB）
 │   ├── history.go            # GET /api/history
@@ -77,7 +80,7 @@ mcp_plat-console/
 │   └── resp_test.go
 │
 ├── service/
-│   ├── auth.go               # 登录业务逻辑 + JWT 生成
+│   ├── auth.go               # 登录业务逻辑 + Redis Session 签发
 │   ├── access_key.go         # AccessKey 业务逻辑
 │   ├── cas.go                # CAS 认证业务逻辑
 │   ├── ldap.go               # LDAP 认证业务逻辑
@@ -93,7 +96,7 @@ mcp_plat-console/
 │   └── setting.go            # 系统设置业务逻辑（键值 JSON 存取）
 │
 ├── middleware/
-│   ├── auth.go               # JWT Bearer Token 鉴权中间件 + AdminRequired
+│   ├── auth.go               # Cookie Session 鉴权中间件 + AdminRequired
 │   └── locale.go             # 语言中间件（解析 Accept-Language → c.Set("locale")）
 │
 ├── plugin/
@@ -198,6 +201,7 @@ mcp_plat-console/
 | GET | `/healthz` | 否 | - | handler/health.go → Healthz |
 | GET | `/readyz` | 否 | - | handler/health.go → Readyz |
 | POST | `/api/auth/login` | 否 | - | handler/auth.go → Login |
+| POST | `/api/auth/logout` | 否 | - | handler/auth.go → Logout |
 | GET | `/api/auth/method` | 否 | - | handler/auth.go → GetAuthMethod |
 | GET | `/api/auth/platform` | 否 | - | handler/auth.go → GetPlatform |
 | POST | `/api/auth/cas/validate` | 否 | - | handler/auth.go → CASValidate |

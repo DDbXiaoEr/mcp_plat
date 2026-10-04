@@ -29,7 +29,7 @@ src/
   main.js                 # 入口
   App.vue                 # 根组件，按登录状态条件渲染
   styles/global.css       # 全局样式与 CSS 变量（设计令牌）
-  stores/auth.js          # 鉴权状态（临时账号、登录/登出、角色）
+  stores/auth.js          # 鉴权状态（Cookie Session、登录/登出、角色）
   components/
     LoginView.vue         # 登录页
     TheHeader.vue         # 顶部栏
@@ -50,6 +50,6 @@ src/
 
 - 尚无后端与路由。鉴权为临时实现，见 `src/stores/auth.js` 的 `TEMP_ACCOUNTS`。
 - 临时账号：`admin / admin123`（管理员）、`user / user123`（用户）。
-- 登录状态持久化在 `localStorage`（键 `mcp-console-auth`）。
+- 登录状态由服务端 HttpOnly Cookie Session 维持，前端启动时请求 `/api/auth/profile` 恢复。
 - 登录后按角色显示内容，目前仅显示「欢迎，{角色名}登录」。
 - 同级项目 `../mcp_plat_portal` 为对外门户站，本项目沿用其代码风格与设计令牌。

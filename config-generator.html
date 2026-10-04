@@ -222,20 +222,36 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       <section class="group" data-step="secrets">
         <h2 data-i18n="g_secret">密钥与管理员</h2>
         <div class="secret-row">
-          <div class="field"><label data-i18n="jwt_lbl">jwt_secret（≥32 字符）</label><input type="text" id="jwt_secret"></div>
-          <button type="button" class="btn" id="btn-jwt" data-i18n="random">随机</button>
-        </div>
-        <div class="secret-row">
           <div class="field"><label data-i18n="ak_lbl">access_key_secret（≥32 字符，三服务须一致）</label><input type="text" id="access_key_secret"></div>
           <button type="button" class="btn" id="btn-ak" data-i18n="random">随机</button>
         </div>
-        <label class="checkbox"><input type="checkbox" id="sync_secrets" checked><span data-i18n="sync_txt">access_key_secret 与 jwt_secret 使用同一密钥</span></label>
         <div class="frow">
           <div class="field fs"><label data-i18n="adm_user">管理员账号</label><input type="text" id="admin_username" value="admin"></div>
           <div class="field fs"><label data-i18n="adm_pass">管理员密码</label><input type="password" id="admin_password" value="admin123"></div>
         </div>
         <div class="frow">
           <div class="field fs"><label data-i18n="server_port_lbl">HTTP 监听端口 server_port</label><input type="text" id="server_port" value="8080"></div>
+        </div>
+        <div class="frow">
+          <div class="field fs"><label data-i18n="redis_addr_lbl">Redis 地址 addr</label><input type="text" id="redis_addr" value="redis:6379"></div>
+          <div class="field"><label data-i18n="redis_db_lbl">Redis DB</label><input type="number" id="redis_db" value="0" min="0"></div>
+        </div>
+        <div class="frow">
+          <div class="field fs"><label data-i18n="redis_pass_lbl">Redis 密码</label><input type="password" id="redis_password" value=""></div>
+        </div>
+        <div class="frow">
+          <div class="field fs"><label data-i18n="sess_cookie_lbl">Session Cookie 名</label><input type="text" id="session_cookie" value="mcp_session"></div>
+          <div class="field"><label data-i18n="sess_maxage_lbl">Session 有效期（秒）</label><input type="number" id="session_max_age" value="86400" min="60"></div>
+        </div>
+        <div class="frow">
+          <div class="field"><label data-i18n="sess_samesite_lbl">SameSite</label>
+            <select id="session_same_site">
+              <option value="lax" selected>lax</option>
+              <option value="strict">strict</option>
+              <option value="none">none</option>
+            </select>
+          </div>
+          <label class="checkbox" style="align-self:flex-end;margin-bottom:10px"><input type="checkbox" id="session_secure"><span data-i18n="sess_secure_txt">Cookie Secure（HTTPS）</span></label>
         </div>
       </section>
 
@@ -392,7 +408,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       nav_prev:'‹ 上一步', nav_next:'下一步 ›',
       note_head:'当前形态共生成 {n} 个文件，逐个步骤（左侧）配置后实时产出：',
       map_app:'应用配置', map_k8s:'K8s 清单',
-      f_main:'主程序 config.yaml：主库 / 审计存储 / 密钥 / 管理员。',
+      f_main:'主程序 config.yaml：主库 / 审计存储 / Redis Session / 密钥 / 管理员。',
       f_auth:'accesskey-auth-server 配置：密钥 + 主库。',
       f_audit:'audit-log-server 配置：密钥 + 审计存储 + 写缓冲。',
       f_apisix:'APISIX 网关配置（含 go-plugin runner）。',
@@ -408,8 +424,11 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       audit_type:'存储类型', ck_addr:'地址 addr', ck_db:'库 db', ck_table:'表 table', ck_engine:'引擎 engine',
       eng_merge:'merge_tree（单机）', eng_repl:'replicated_merge_tree（集群）',
       ck_cluster:'集群名 cluster（replicated 必填）', ck_ttl:'TTL 保留天数', audit_ret:'关系库保留天数（0=不清理）',
-      jwt_lbl:'jwt_secret（≥32 字符）', ak_lbl:'access_key_secret（≥32 字符，三服务须一致）',
-      random:'随机', sync_txt:'access_key_secret 与 jwt_secret 使用同一密钥',
+      ak_lbl:'access_key_secret（≥32 字符，三服务须一致）',
+      random:'随机',
+      redis_addr_lbl:'Redis 地址 addr', redis_db_lbl:'Redis DB', redis_pass_lbl:'Redis 密码',
+      sess_cookie_lbl:'Session Cookie 名', sess_maxage_lbl:'Session 有效期（秒）',
+      sess_samesite_lbl:'SameSite', sess_secure_txt:'Cookie Secure（HTTPS）',
       adm_user:'管理员账号', adm_pass:'管理员密码', server_port_lbl:'HTTP 监听端口 server_port',
       auth_grpc_lbl:'accesskey gRPC 地址', audit_grpc_lbl:'audit gRPC 地址', wr_batch_lbl:'audit 写入 batch_size', wr_hint:'writer 仅在 audit_log_server.yml 中使用',
       ap_key_lbl:'admin key', ap_ui_txt:'启用 admin_ui（无需则取消勾选）', ap_allow_lbl:'allow_admin（每行一个 CIDR）',
@@ -432,14 +451,14 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       copied:'已复制', dl_fail_head:'以下文件写入失败：',
       ext_enable:'启用', ext_del:'删除', ext_name_lbl:'Service 名（= 配置中的 host）', ext_ips_lbl:'外部固定 IP（多 IP 用逗号/换行分隔）',
       w_err_ak:'✘ access_key_secret 不足 32 字符，主程序 / 认证服务 / 审计服务将拒绝启动。',
-      w_err_jwt:'✘ jwt_secret 不足 32 字符，主程序将拒绝启动。',
+      w_err_redis:'✘ Redis 地址为空，主程序将拒绝连接会话存储。',
       w_err_admin:'✘ 管理员账号或密码为空，主程序将拒绝启动。',
       w_err_etcd:'✘ etcd 副本数应保持 1：当前生成的是单节点 etcd（ETCD_INITIAL_CLUSTER 固定单成员），多副本将无法组成集群。',
       w_ph_head:'—— 以下仍为示例/占位值，请在左侧对应输入框修改（口令可用旁边的“随机”） ——',
       ph_db:'主程序数据库密码（database.password）',
       ph_audit_db:'审计库密码（audit database.password）',
       ph_admin:'管理员初始密码（admin.password）',
-      ph_jwt:'jwt_secret', ph_ak:'access_key_secret', ph_ap:'APISIX admin key',
+      ph_ak:'access_key_secret', ph_ap:'APISIX admin key',
       ph_ip:'外部服务“{n}”仍使用示例 IP 192.168.31.233',
       st_gen:'✔ 已生成 {n} 个文件（{t}）',
       st_ph_suffix:' · {n} 处仍为示例/占位值，见下方提示',
@@ -457,7 +476,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       nav_prev:'‹ Back', nav_next:'Next ›',
       note_head:'{n} files are generated for the current mode and update live as you configure each step (on the left):',
       map_app:'App configs', map_k8s:'K8s manifests',
-      f_main:'Main config.yaml: main DB / audit storage / secrets / admin.',
+      f_main:'Main config.yaml: main DB / audit storage / Redis session / secrets / admin.',
       f_auth:'accesskey-auth-server config: secret + main DB.',
       f_audit:'audit-log-server config: secret + audit storage + write buffer.',
       f_apisix:'APISIX gateway config (incl. go-plugin runner).',
@@ -473,8 +492,11 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       audit_type:'Storage type', ck_addr:'Address (addr)', ck_db:'Database (db)', ck_table:'Table (table)', ck_engine:'Engine (engine)',
       eng_merge:'merge_tree (standalone)', eng_repl:'replicated_merge_tree (cluster)',
       ck_cluster:'Cluster name (required for replicated)', ck_ttl:'TTL retention (days)', audit_ret:'Retention (days, 0 = keep all)',
-      jwt_lbl:'jwt_secret (≥32 chars)', ak_lbl:'access_key_secret (≥32 chars, must match across services)',
-      random:'Random', sync_txt:'Use the same key for access_key_secret and jwt_secret',
+      ak_lbl:'access_key_secret (≥32 chars, must match across services)',
+      random:'Random',
+      redis_addr_lbl:'Redis address (addr)', redis_db_lbl:'Redis DB', redis_pass_lbl:'Redis password',
+      sess_cookie_lbl:'Session cookie name', sess_maxage_lbl:'Session TTL (seconds)',
+      sess_samesite_lbl:'SameSite', sess_secure_txt:'Cookie Secure (HTTPS)',
       adm_user:'Admin username', adm_pass:'Admin password', server_port_lbl:'HTTP listen port (server_port)',
       auth_grpc_lbl:'accesskey gRPC address', audit_grpc_lbl:'audit gRPC address', wr_batch_lbl:'audit writer batch_size', wr_hint:'writer is only used in audit_log_server.yml',
       ap_key_lbl:'Admin key', ap_ui_txt:'Enable admin_ui (uncheck if not needed)', ap_allow_lbl:'allow_admin (one CIDR per line)',
@@ -497,14 +519,14 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       copied:'Copied', dl_fail_head:'Failed to write the following files: ',
       ext_enable:'Enabled', ext_del:'Remove', ext_name_lbl:'Service name (= host in configs)', ext_ips_lbl:'External fixed IPs (comma/newline separated)',
       w_err_ak:'✘ access_key_secret is shorter than 32 chars — the main server, auth server and audit server will refuse to start.',
-      w_err_jwt:'✘ jwt_secret is shorter than 32 chars — the main server will refuse to start.',
+      w_err_redis:'✘ Redis address is empty — the main server cannot connect to the session store.',
       w_err_admin:'✘ Admin username or password is empty — the main server will refuse to start.',
       w_err_etcd:'✘ etcd replicas should stay 1: the generated etcd is single-node (ETCD_INITIAL_CLUSTER has a fixed single member), so multiple replicas cannot form a cluster.',
       w_ph_head:'—— The following still use example/placeholder values; edit the matching field on the left (use “Random” for secrets) ——',
       ph_db:'Main DB password (database.password)',
       ph_audit_db:'Audit DB password (audit database.password)',
       ph_admin:'Admin initial password (admin.password)',
-      ph_jwt:'jwt_secret', ph_ak:'access_key_secret', ph_ap:'APISIX admin key',
+      ph_ak:'access_key_secret', ph_ap:'APISIX admin key',
       ph_ip:'External service “{n}” still uses the example IP 192.168.31.233',
       st_gen:'✔ Generated {n} files ({t})',
       st_ph_suffix:' · {n} still use example/placeholder values — see note below',
@@ -563,6 +585,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
   }
   var EXT_DEFAULTS = [
     { enabled:true,  name:'mainpostgres', port:'5432', ips:'192.168.31.233' },
+    { enabled:true,  name:'redis',        port:'6379', ips:'192.168.31.233' },
     { enabled:true,  name:'clickhouse',   port:'9000', ips:'192.168.31.233' }
   ];
 
@@ -733,9 +756,20 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     return L.join('\n');
   }
   function secretsBlock(){
-    var jwt = chk('sync_secrets') ? val('access_key_secret') : val('jwt_secret');
-    return 'jwt_secret: '+yamlScalar(jwt)+'\n'+
-           'access_key_secret: '+yamlScalar(val('access_key_secret'));
+    return 'access_key_secret: '+yamlScalar(val('access_key_secret'));
+  }
+  function redisBlock(){
+    var L=[];
+    L.push('redis:');
+    L.push('  addr: '+yamlScalar(val('redis_addr')||'127.0.0.1:6379'));
+    L.push('  password: '+yamlScalar(val('redis_password')));
+    L.push('  db: '+yamlScalar(val('redis_db')||'0'));
+    L.push('session:');
+    L.push('  cookie_name: '+yamlScalar(val('session_cookie')||'mcp_session'));
+    L.push('  max_age: '+yamlScalar(val('session_max_age')||'86400'));
+    L.push('  secure: '+(chk('session_secure')?'true':'false'));
+    L.push('  same_site: '+yamlScalar(val('session_same_site')||'lax'));
+    return L.join('\n');
   }
 
   function state(){
@@ -820,6 +854,9 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     L.push('# 审计日志存储（须与 audit_log_server.yml 保持一致，否则查不到数据）');
     L.push('# ============================================================');
     L.push(auditStoreSection(s,'audit_log_db'));
+    L.push('');
+    L.push('# Redis（用户 Cookie Session 存储）');
+    L.push(redisBlock());
     L.push('');
     L.push('# 密钥需至少 32 字符随机值，生产环境建议通过环境变量注入');
     L.push(secretsBlock());
@@ -1399,7 +1436,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     // 仍以“示例/占位值”出现的字段清单（lang 无关，渲染时再翻译）
     var ph=[];
     var map={ db_password:'ph_db', audit_password:'ph_audit_db', admin_password:'ph_admin',
-              jwt_secret:'ph_jwt', access_key_secret:'ph_ak', ap_admin_key:'ph_ap' };
+              access_key_secret:'ph_ak', ap_admin_key:'ph_ap' };
     function add(id){
       var v=String(val(id)||'').toLowerCase();
       var isWeak=(v===''||v==='changeme'||v==='admin123'||/^changeme[- ]?/.test(v));
@@ -1408,7 +1445,6 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     add('db_password');
     if(val('audit_type')!=='clickhouse') add('audit_password');
     add('admin_password');
-    add('jwt_secret');
     add('access_key_secret');
     add('ap_admin_key');
     if(platform()==='k8s'){
@@ -1426,8 +1462,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     var msgs=[];
     var ak=val('access_key_secret');
     if(ak.length<32) msgs.push(t('w_err_ak'));
-    var jw=chk('sync_secrets')?ak:val('jwt_secret');
-    if(jw.length<32) msgs.push(t('w_err_jwt'));
+    if(!val('redis_addr')) msgs.push(t('w_err_redis'));
     if(!val('admin_username')||!val('admin_password')) msgs.push(t('w_err_admin'));
     if(platform()==='k8s' && chk('k8s_svc_etcd') && (parseInt(val('rep_etcd'),10)||0)!==1) msgs.push(t('w_err_etcd'));
     var ph=listPlaceholders();
@@ -1585,21 +1620,11 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       addExtRowDOM({enabled:true,name:'',port:'',ips:''});
       refresh();
     });
-    $('btn-jwt').addEventListener('click', function(){
-      $('jwt_secret').value=randHex(64);
-      if(chk('sync_secrets')) $('access_key_secret').value=randHex(64);
-      refresh();
-    });
     $('btn-ak').addEventListener('click', function(){
       $('access_key_secret').value=randHex(64);
-      if(chk('sync_secrets')) $('jwt_secret').value=$('access_key_secret').value;
       refresh();
     });
     $('btn-ap').addEventListener('click', function(){ $('ap_admin_key').value=randHex(48); refresh(); });
-    $('sync_secrets').addEventListener('change', function(){
-      if(this.checked) $('jwt_secret').value=$('access_key_secret').value;
-      syncVisibility(); refresh();
-    });
     $('btn-generate').addEventListener('click', function(){
       syncVisibility();
       refresh();
@@ -1677,10 +1702,6 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
   // ---------- 初始化 ----------
   function seed(){
     if(!val('access_key_secret')) $('access_key_secret').value=randHex(64);
-    if(!val('jwt_secret')){
-      if(chk('sync_secrets')) $('jwt_secret').value=val('access_key_secret');
-      else $('jwt_secret').value=randHex(64);
-    }
     if(!val('ap_admin_key')) $('ap_admin_key').value=randHex(48);
   }
 

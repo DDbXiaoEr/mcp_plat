@@ -18,7 +18,7 @@
 <script setup>
 
 // Author: deepseek-v4-pro / opencode
-import { computed } from 'vue'
+import { computed, h } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { auth } from '../stores/auth.js'
 import { nav, menusFor, setActive } from '../stores/nav.js'
@@ -27,6 +27,68 @@ import { theme, toggleTheme } from '../stores/theme.js'
 const { t } = useI18n()
 
 const menus = computed(() => menusFor(auth.user?.role))
+
+const icons = {
+  user: [
+    ['circle', { cx: '12', cy: '8', r: '3.25' }],
+    ['path', { d: 'M5.5 19.2c.9-3.1 3.4-5 6.5-5s5.6 1.9 6.5 5' }]
+  ],
+  key: [
+    ['circle', { cx: '8', cy: '12', r: '3.25' }],
+    ['path', { d: 'M11 12h8.5M16.5 12v3M19.5 12v2' }]
+  ],
+  spark: [
+    ['path', { d: 'M12 3.5v4M12 16.5v4M3.5 12h4M16.5 12h4M7.1 7.1l2.8 2.8M14.1 14.1l2.8 2.8M16.9 7.1l-2.8 2.8M9.9 14.1l-2.8 2.8' }]
+  ],
+  clock: [
+    ['circle', { cx: '12', cy: '12', r: '7.25' }],
+    ['path', { d: 'M12 8.2V12l2.6 2.2' }]
+  ],
+  layout: [
+    ['rect', { x: '4.5', y: '5', width: '15', height: '14', rx: '1.5' }],
+    ['path', { d: 'M4.5 10h15M10 10v9' }]
+  ],
+  server: [
+    ['rect', { x: '5', y: '4.5', width: '14', height: '5.5', rx: '1.2' }],
+    ['rect', { x: '5', y: '14', width: '14', height: '5.5', rx: '1.2' }],
+    ['path', { d: 'M8 7.2h.01M8 16.7h.01' }]
+  ],
+  users: [
+    ['circle', { cx: '9', cy: '8.5', r: '2.6' }],
+    ['path', { d: 'M4.5 18c.7-2.6 2.6-4 4.5-4s3.8 1.4 4.5 4' }],
+    ['circle', { cx: '16', cy: '9', r: '2.1' }],
+    ['path', { d: 'M14.6 18c.4-1.7 1.6-2.8 3-2.8 1.5 0 2.7 1.2 3.1 3' }]
+  ],
+  sliders: [
+    ['path', { d: 'M5 7h14M5 12h14M5 17h14' }],
+    ['circle', { cx: '9', cy: '7', r: '1.6' }],
+    ['circle', { cx: '15', cy: '12', r: '1.6' }],
+    ['circle', { cx: '11', cy: '17', r: '1.6' }]
+  ]
+}
+
+const NavIcon = {
+  props: { name: { type: String, required: true } },
+  setup(props) {
+    return () => {
+      const parts = icons[props.name] || icons.layout
+      return h(
+        'svg',
+        {
+          class: 'sidebar__icon',
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: '1.7',
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          'aria-hidden': 'true'
+        },
+        parts.map(([tag, attrs]) => h(tag, attrs))
+      )
+    }
+  }
+}
 </script>
 
 <template>
@@ -40,6 +102,7 @@ const menus = computed(() => menusFor(auth.user?.role))
         type="button"
         @click="setActive(item.key)"
       >
+        <NavIcon :name="item.icon" />
         {{ t(item.labelKey) }}
       </button>
     </nav>
@@ -80,23 +143,24 @@ const menus = computed(() => menusFor(auth.user?.role))
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 16px 12px;
+  gap: 2px;
+  padding: 12px 10px;
   overflow-y: auto;
 }
 
 .sidebar__item {
   display: flex;
   align-items: center;
-  padding: 10px 14px;
+  gap: 10px;
+  padding: 9px 12px;
   font-size: 14px;
   color: var(--text);
   text-align: left;
   background: transparent;
   border: none;
-  border-radius: 10px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.15s, color 0.15s;
 }
 
 .sidebar__item:hover {
@@ -107,6 +171,13 @@ const menus = computed(() => menusFor(auth.user?.role))
   color: var(--xauat-blue);
   font-weight: 600;
   background: var(--active-bg);
+  box-shadow: inset 3px 0 0 var(--xauat-accent);
+}
+
+.sidebar__icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 .sidebar__footer {
@@ -125,7 +196,7 @@ const menus = computed(() => menusFor(auth.user?.role))
   text-align: left;
   background: transparent;
   border: none;
-  border-radius: 10px;
+  border-radius: 6px;
   cursor: pointer;
   transition: background 0.2s;
 }
@@ -141,7 +212,7 @@ const menus = computed(() => menusFor(auth.user?.role))
   height: 22px;
   border-radius: 999px;
   background: var(--border);
-  transition: background 0.2s;
+  transition: background 0.15s;
 }
 
 .theme-toggle__thumb {

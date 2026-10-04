@@ -8,7 +8,8 @@
 |--------|----------|--------|-------|
 | Health check | GET /healthz | ✅ Done | liveness probe, no auth, for Docker / K8s |
 | Health check | GET /readyz | ✅ Done | readiness probe, checks DB connectivity, no auth |
-| Auth | POST /api/auth/login | ✅ Done | |
+| Auth | POST /api/auth/login | ✅ Done | Cookie session (Redis); sets HttpOnly cookie on success |
+| Auth | POST /api/auth/logout | ✅ Done | deletes Redis session and clears cookie |
 | Auth | GET /api/auth/method | ✅ Done | frontend login page renders by the returned method |
 | Auth | GET /api/auth/platform | ✅ Done | login page fetches public platform info (name / logo / jump link / login background image loginBackground), no auth |
 | Auth | POST /api/auth/cas/validate | ✅ Done | CAS ticket validation |

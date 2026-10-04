@@ -146,12 +146,30 @@ services:
         condition: service_healthy
       clickhouse:
         condition: service_healthy
-      accesskey-auth-server:
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - mcp_plat
+
+  accesskey-auth-server:
         condition: service_started
       audit-log-server:
         condition: service_started
       openldap:
         condition: service_started
+      redis:
+        condition: service_healthy
     ports:
       - "8080:8080"
     volumes:
@@ -170,6 +188,7 @@ volumes:
   clickhouse_data:
   openldap_data:
   openldap_config:
+  redis_data:
 
 networks:
   mcp_plat:

@@ -1302,8 +1302,6 @@ async function executeMaintenance() {
   gap: 8px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
   padding: 12px;
 }
 

@@ -366,7 +366,6 @@ function goAccessKey() {
   color: var(--text-muted);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 
 .qa__notice {
@@ -376,7 +375,6 @@ function goAccessKey() {
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 
 .qa__notice--warn {
@@ -404,7 +402,6 @@ function goAccessKey() {
   padding: 24px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 
 .qa__card-title {

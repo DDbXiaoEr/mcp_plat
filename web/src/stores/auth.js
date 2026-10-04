@@ -19,24 +19,10 @@
 import { reactive, readonly } from 'vue'
 import { i18n } from '../i18n.js'
 
-const STORAGE_KEY = 'mcp-console-auth'
-
-function loadUser() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    return null
-  }
-}
-
 const state = reactive({
-  user: loadUser()
+  user: null,
+  ready: false
 })
-
-export function getToken() {
-  return state.user?.token || ''
-}
 
 function t(key) {
   return i18n.global.t(key)
@@ -47,6 +33,7 @@ export async function login(username, password) {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ username, password })
     })
     const json = await res.json()
@@ -65,6 +52,7 @@ export async function casLogin(ticket, serviceUrl) {
     const res = await fetch('/api/auth/cas/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ ticket, serviceUrl })
     })
     const json = await res.json()
@@ -80,7 +68,7 @@ export async function casLogin(ticket, serviceUrl) {
 
 export async function fetchAuthMethod() {
   try {
-    const res = await fetch('/api/auth/method')
+    const res = await fetch('/api/auth/method', { credentials: 'include' })
     const json = await res.json()
     if (json.code !== 200) {
       return { method: 'local' }
@@ -92,26 +80,26 @@ export async function fetchAuthMethod() {
 }
 
 function saveLogin(data) {
-  const user = {
+  state.user = {
     username: data.username,
     name: data.name || data.username,
-    role: data.role,
-    token: data.token
+    role: data.role
   }
-  state.user = user
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
+  state.ready = true
 }
 
-export function logout() {
+export async function logout() {
   state.user = null
-  localStorage.removeItem(STORAGE_KEY)
+  try {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+  } catch {
+    // ignore
+  }
 }
 
 export async function fetchProfile() {
   try {
-    const res = await fetch('/api/auth/profile', {
-      headers: { Authorization: `Bearer ${getToken()}` }
-    })
+    const res = await fetch('/api/auth/profile', { credentials: 'include' })
     const json = await res.json()
     if (json.code !== 200) {
       return null
@@ -120,6 +108,16 @@ export async function fetchProfile() {
   } catch {
     return null
   }
+}
+
+export async function restoreSession() {
+  const data = await fetchProfile()
+  if (data && data.username) {
+    saveLogin(data)
+  } else {
+    state.user = null
+  }
+  state.ready = true
 }
 
 export const auth = readonly(state)

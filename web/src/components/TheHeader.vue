@@ -46,6 +46,7 @@ onMounted(() => loadSettings())
       >
         <span class="brand__mark" aria-hidden="true">
           <img v-if="platformSettings.platform.logoUrl" :src="platformSettings.platform.logoUrl" alt="" class="brand__logo" />
+          <span v-else class="brand__fallback">MCP</span>
         </span>
         <span class="brand__text">
           <strong>{{ platformSettings.platform.name }}</strong>
@@ -83,7 +84,7 @@ onMounted(() => loadSettings())
   justify-content: space-between;
   padding: 0 24px;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 3px solid var(--xauat-accent);
 }
 
 .header__brand {
@@ -107,6 +108,18 @@ onMounted(() => loadSettings())
   height: 36px;
   width: auto;
   object-fit: contain;
+}
+
+.brand__fallback {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--xauat-blue);
+  color: var(--xauat-accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
 }
 
 .brand__text {
@@ -138,7 +151,7 @@ onMounted(() => loadSettings())
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   outline: none;
   cursor: pointer;
 }
@@ -151,11 +164,12 @@ onMounted(() => loadSettings())
 }
 
 .header__role {
-  padding: 2px 10px;
-  border-radius: 999px;
+  padding: 2px 8px;
+  border-radius: 4px;
   font-size: 12px;
+  font-weight: 600;
   color: var(--xauat-blue);
-  background: rgba(30, 95, 176, 0.1);
+  background: var(--active-bg);
 }
 
 .header__name {
@@ -164,18 +178,19 @@ onMounted(() => loadSettings())
 }
 
 .header__logout {
-  padding: 7px 16px;
-  font-size: 14px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--xauat-blue);
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .header__logout:hover {
-  background: rgba(10, 61, 122, 0.06);
-  border-color: rgba(10, 61, 122, 0.25);
+  background: var(--hover-bg);
+  border-color: var(--xauat-blue);
 }
 </style>

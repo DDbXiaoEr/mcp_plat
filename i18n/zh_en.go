@@ -42,6 +42,11 @@ var zhEnMessages = map[string]string{
 	"未提供认证令牌":        "Missing authentication token",
 	"认证格式错误":         "Invalid authentication format",
 	"令牌无效或已过期":       "Invalid or expired token",
+	"未登录":            "Not logged in",
+	"会话无效或已过期":       "Session invalid or expired",
+	"会话存储不可用":        "Session store unavailable",
+	"创建会话失败":         "Failed to create session",
+	"已退出登录":          "Logged out",
 	"仅管理员可操作":        "Admin privileges required",
 
 	// auth / cas

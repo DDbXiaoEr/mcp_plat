@@ -16,7 +16,7 @@
  */
 
 // Author: deepseek-v4-pro / opencode
-import { getToken } from './stores/auth.js'
+import { logout } from './stores/auth.js'
 import { i18n } from './i18n.js'
 
 const BASE = '/api'
@@ -26,10 +26,7 @@ async function request(path, options = {}) {
     'Content-Type': 'application/json',
     ...options.headers
   }
-  if (getToken()) {
-    headers.Authorization = `Bearer ${getToken()}`
-  }
-  const res = await fetch(`${BASE}${path}`, { ...options, headers })
+  const res = await fetch(`${BASE}${path}`, { ...options, headers, credentials: 'include' })
   let json
   try {
     json = await res.json()
@@ -38,6 +35,9 @@ async function request(path, options = {}) {
     throw new Error(
       `${i18n.global.t('common.requestFailedStatus', { status: res.status })}${text ? `: ${text}` : ''}`
     )
+  }
+  if (json.code === 401) {
+    logout()
   }
   if (json.code !== 200) {
     throw new Error(json.message || i18n.global.t('common.requestFailed'))

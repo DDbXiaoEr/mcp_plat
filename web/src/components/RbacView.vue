@@ -935,7 +935,6 @@ async function removeUser(user) {
   border-collapse: collapse;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
   overflow: hidden;
 }
 

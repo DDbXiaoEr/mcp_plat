@@ -47,8 +47,20 @@ audit_log_db:
     cluster: ""                      # replicated_merge_tree 时必填
     ttl_days: 90                     # 数据保留天数（ClickHouse 原生 TTL，自动清理）
 
+# Redis（用户 Cookie Session 存储）
+redis:
+  addr: 127.0.0.1:6379
+  password: ""
+  db: 0
+
+# Cookie Session（HttpOnly，登录后由服务端下发）
+session:
+  cookie_name: mcp_session
+  max_age: 86400          # 秒，默认 24 小时；每次鉴权成功会滑动续期
+  secure: false           # HTTPS 部署时请设为 true
+  same_site: lax          # lax / strict / none（none 时必须 secure: true）
+
 # 密钥需至少 32 字符随机值，生产环境建议通过环境变量注入
-jwt_secret: changeme-please-generate-a-random-32-char-string
 access_key_secret: changeme-another-random-32-char-string
 
 # HTTP 监听端口（可被 -port 命令行参数覆盖）

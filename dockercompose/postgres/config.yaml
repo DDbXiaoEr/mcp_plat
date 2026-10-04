@@ -24,9 +24,19 @@ audit_log_db:
     password: changeme
     dbname: mcp_history_db
 
-# 密钥需至少 32 字符随机值，生产环境建议通过环境变量注入
+# Redis（用户 Cookie Session 存储）
+redis:
+  addr: redis:6379
+  password: ""
+  db: 0
 
-jwt_secret: changeme
+session:
+  cookie_name: mcp_session
+  max_age: 86400
+  secure: false
+  same_site: lax
+
+# 密钥需至少 32 字符随机值，生产环境建议通过环境变量注入
 access_key_secret: changeme
 
 # HTTP 监听端口

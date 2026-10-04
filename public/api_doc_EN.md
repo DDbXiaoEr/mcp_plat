@@ -33,14 +33,16 @@ POST /api/auth/login
 | username | string | yes | username |
 | password | string | yes | password |
 
+On success the server sets an HttpOnly cookie (default name `mcp_session`; session data is stored in Redis). Subsequent authenticated requests rely on the browser sending the cookie; no `Authorization` header is needed.
+
 **Success response:**
 ```json
 {
   "code": 200,
   "message": "登录成功",
   "data": {
-    "token": "eyJhbGciOi...",
     "username": "admin",
+    "name": "admin",
     "role": "admin"
   }
 }
@@ -52,10 +54,7 @@ POST /api/auth/login
 GET /api/auth/profile
 ```
 
-**Request headers:**
-| Field | Description |
-|-------|-------------|
-| Authorization | Bearer {token} |
+**Auth:** Cookie session (the browser sends `mcp_session` after login)
 
 **Success response:**
 ```json
@@ -81,10 +80,7 @@ GET /api/auth/profile
 PUT /api/auth/profile
 ```
 
-**Request headers:**
-| Field | Description |
-|-------|-------------|
-| Authorization | Bearer {token} |
+**Auth:** Cookie session (the browser sends `mcp_session` after login)
 
 > Only regular users (non-admin) may call this; admin accounts get a 403. After changing the email, an LDAP user's email may still be overwritten/synced by the LDAP attribute mapping on the next login.
 
@@ -187,16 +183,34 @@ POST /api/auth/cas/validate
 | ticket | string | yes | ticket returned by CAS |
 | serviceUrl | string | yes | callback URL; must match the one used when redirecting to CAS |
 
+On success the same HttpOnly cookie is set.
+
 **Success response:**
 ```json
 {
   "code": 200,
   "message": "登录成功",
   "data": {
-    "token": "eyJhbGciOi...",
     "username": "2021001",
+    "name": "2021001",
     "role": "user"
   }
+}
+```
+
+### 1.7 Logout
+
+```
+POST /api/auth/logout
+```
+
+Deletes the Redis session and clears the cookie. Safe to call when not logged in.
+
+**Success response:**
+```json
+{
+  "code": 200,
+  "message": "已退出登录"
 }
 ```
 
@@ -204,7 +218,7 @@ POST /api/auth/cas/validate
 
 ## 2. AccessKey Management
 
-All endpoints below require the auth header: `Authorization: Bearer {token}`
+All endpoints below require a logged-in cookie session (`mcp_session`).
 
 ### 2.1 List AccessKeys
 
@@ -357,7 +371,7 @@ GET /api/history
 
 ## 4. MCP Server Management
 
-> All endpoints require auth; send `Authorization: Bearer <token>` in the request header.
+> All endpoints require a logged-in cookie session (`mcp_session`).
 
 ### 4.1 List MCP Servers
 
@@ -487,7 +501,7 @@ POST /api/servers/publish
 POST /api/servers/fetch-tools
 ```
 
-> Requires auth; send `Authorization: Bearer <token>` in the request header.
+> Requires a logged-in cookie session (`mcp_session`).
 
 **Request params (JSON Body):**
 
@@ -597,7 +611,7 @@ DELETE /api/servers/:id
 
 ## 5. RBAC Management
 
-> All endpoints require auth — `Authorization: Bearer <token>` in the request header — and only admins may call them.
+> All endpoints require a logged-in cookie session (`mcp_session`), and only admins may call them.
 
 ### 5.1 Role Management
 
@@ -972,7 +986,7 @@ GET /api/roles/:id/users
 
 ## 6. System Settings
 
-> The endpoints below require admin permission (`Authorization: Bearer <token>` and the user is an admin).
+> The endpoints below require admin permission (cookie session, and the user is an admin).
 
 ### 6.1 Get All Settings
 
@@ -1282,7 +1296,7 @@ POST /api/settings/test-smtp
 
 ## 7. Platform Overview Stats
 
-> Admin only; requires `Authorization: Bearer <token>`.
+> Admin only; requires a logged-in cookie session.
 
 ### 7.1 Get Platform Overview Stats
 
@@ -1319,7 +1333,7 @@ GET /api/overview/stats
 GET /api/overview/call-trend
 ```
 
-> Admin only; requires `Authorization: Bearer <token>`.
+> Admin only; requires a logged-in cookie session.
 
 **Request params (Query String):**
 
