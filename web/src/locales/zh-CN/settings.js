@@ -80,8 +80,6 @@ export default {
     adminUrlTooltipKongPost: '。',
     adminUrlTooltipDefaultPre: '填写网关 Admin API 的基础地址，不要附带路径，例如 ', 
     adminUrlTooltipDefaultPost: '（而非 .../apisix/admin）。',
-    defaultPublishLabel: '默认发布域名',
-    defaultPublishPlaceholder: '例如 mcp.xauat.edu.cn',
     adminKeyLabel: 'Admin API Key',
     adminKeyPlaceholder: '请输入管理员 API Key',
     adminKeyKongHint: 'Kong 未启用 RBAC 时可不填；启用后填写 RBAC Admin 令牌。',
@@ -133,6 +131,12 @@ export default {
     loginBgHint: '留空则使用默认渐变背景；填写后登录页自适应填充显示该图片',
     siteUrlLabel: '跳转链接',
     siteUrlPlaceholder: '点击 Logo 时跳转到的网址，如：https://www.example.edu.cn'
+  },
+  publishDomain: {
+    title: '发布域名',
+    domainsLabel: 'MCP 发布域名',
+    domainPlaceholder: '例如 mcp.xauat.edu.cn',
+    hint: '支持配置多个发布域名，发布 MCP 服务时可从中选择；请填写不含协议和路径的域名。'
   },
   auth: {
     title: '用户认证',

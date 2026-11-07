@@ -33,7 +33,7 @@ export default {
   authLabel: 'Authentication',
   authNone: 'No AccessKey required',
   generateConfig: '③ Generate config',
-  noConfigWarn: 'Unable to generate the access config: the gateway has no default publish domain (defaultPublishDomain) configured, and this server has no full access address. Please contact an administrator to complete the setup.',
+  noConfigWarn: 'Unable to generate the access config: this server has no recorded publish domain and no publish domains are configured in operation settings. Please contact an administrator to complete the setup.',
   importConfig: 'Import config for {client}',
   openInClient: 'Open in {client}',
   openInClientTitle: 'Open and import in {client}',

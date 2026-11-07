@@ -96,7 +96,7 @@ var zhEnMessages = map[string]string{
 
 	// mcp server fetch tools
 	"MCP 服务器不存在":            "MCP server not found",
-	"请先在系统设置中配置 API 网关默认域名": "Please configure the API gateway default domain in system settings first",
+	"请先在运营设置中配置 MCP 发布域名": "Please configure the MCP publish domains in operation settings first",
 	"stdio 协议暂不支持远程获取工具列表":  "stdio protocol does not support fetching remote tool lists yet",
 	"不支持的协议类型":              "Unsupported protocol type",
 	"URL 解析失败":              "Failed to parse URL",

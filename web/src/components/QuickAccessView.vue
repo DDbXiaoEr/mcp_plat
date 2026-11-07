@@ -42,6 +42,7 @@ const CLIENTS = {
 const servers = ref([])
 const keys = ref([])
 const gateway = ref({})
+const publishDomains = ref([])
 const quickAccess = ref({ enabledClients: ['cherrystudio'], scheme: 'https' })
 const loading = ref(true)
 const selectedKeyId = ref('')
@@ -50,16 +51,20 @@ const copied = ref(false)
 
 onMounted(async () => {
   try {
-    const [srv, ak, gw, qa] = await Promise.all([
+    const [srv, ak, gw, qa, pd] = await Promise.all([
       fetchServers(),
       fetchAccessKeys(),
       fetchGatewayStatus(),
-      fetchSetting('quick_access').catch(() => null)
+      fetchSetting('quick_access').catch(() => null),
+      fetchSetting('publish_domain').catch(() => null)
     ])
     servers.value = (srv || []).filter((s) => s.status === 'published')
     keys.value = (ak || []).filter((k) => k.enabled && !k.is_expired)
     gateway.value = gw || {}
     if (qa) quickAccess.value = qa
+    publishDomains.value = Array.isArray(pd?.domains)
+      ? pd.domains.filter((d) => typeof d === 'string' && d.trim() !== '').map((d) => d.trim())
+      : []
     if (keys.value.length) selectedKeyId.value = String(keys.value[0].id)
     const allowed = serverOptions.value
     if (allowed.length) selectedServerId.value = String(allowed[0].id)
@@ -135,7 +140,8 @@ const endpointURL = computed(() => {
   if (!server) return ''
   const addr = (server.address || '').trim()
   if (/^https?:\/\//i.test(addr)) return addr
-  let base = (gateway.value.defaultPublishDomain || '').trim()
+  let base = (server.publish_domain || '').trim()
+  if (!base) base = (publishDomains.value[0] || '').trim()
   if (!base) return ''
   const scheme = quickAccess.value.scheme === 'http' ? 'http' : 'https'
   if (!/^https?:\/\//i.test(base)) base = scheme + '://' + base

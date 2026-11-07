@@ -251,4 +251,4 @@ mcp_plat-console/
 The frontend does not use Vue Router; it switches components through the reactive `active` state in `stores/nav.js`:
 - `App.vue` renders dynamically with `<component :is="...">`
 - Nav items are defined per role (admin / user)
-- The user menu includes a "Quick Access" page (QuickAccessView) that generates access configs carrying an AccessKey for common MCP clients (e.g. CherryStudio); the endpoint URL is assembled in the frontend from gateway settings (`defaultPublishDomain` + provider)
+- The user menu includes a "Quick Access" page (QuickAccessView) that generates access configs carrying an AccessKey for common MCP clients (e.g. CherryStudio); the endpoint URL prefers the publish domain recorded on the server and falls back to the publish domains in operation settings (`publish_domain`), assembled by the frontend together with the provider

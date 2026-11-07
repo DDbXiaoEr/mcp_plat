@@ -20,7 +20,7 @@
 // Author: deepseek-v4-pro / opencode
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { fetchServers, createServer, fetchServerTools, publishServers, setServersMaintenance, deleteServer, updateServer, fetchGatewayStatus } from '../api.js'
+import { fetchServers, createServer, fetchServerTools, publishServers, setServersMaintenance, deleteServer, updateServer, fetchGatewayStatus, fetchSetting } from '../api.js'
 
 const { t } = useI18n()
 
@@ -38,7 +38,8 @@ const savingDesc = ref(false)
 onMounted(async () => {
   await Promise.all([
     loadServers(),
-    loadGatewaySettings()
+    loadGatewaySettings(),
+    loadPublishDomains()
   ])
   loading.value = false
 })
@@ -50,6 +51,20 @@ async function loadGatewaySettings() {
     gatewayProvider.value = data.provider || 'apisix'
   } catch (e) {
     console.error('加载 API 网关状态失败:', e)
+  }
+}
+
+async function loadPublishDomains() {
+  try {
+    const data = await fetchSetting('publish_domain')
+    publishDomains.value = Array.isArray(data?.domains)
+      ? data.domains.filter((d) => typeof d === 'string' && d.trim() !== '').map((d) => d.trim())
+      : []
+  } catch {
+    publishDomains.value = []
+  }
+  if (!publishDomains.value.includes(publishDomain.value)) {
+    publishDomain.value = publishDomains.value[0] || ''
   }
 }
 
@@ -263,6 +278,8 @@ const showingPublishConfirm = ref(false)
 const publishing = ref(false)
 const enableAuth = ref(false)
 const enableAuditLog = ref(false)
+const publishDomains = ref([])
+const publishDomain = ref('')
 const publishSearchLeft = ref('')
 const publishSearchRight = ref('')
 const publishSelectedIds = ref([])
@@ -306,6 +323,10 @@ function openPublish() {
   publishSearchRight.value = ''
   enableAuth.value = false
   enableAuditLog.value = false
+  if (!publishDomains.value.includes(publishDomain.value)) {
+    publishDomain.value = publishDomains.value[0] || ''
+  }
+  loadPublishDomains()
   showingPublish.value = true
 }
 
@@ -357,7 +378,7 @@ function backToPublish() {
 async function executePublish() {
   publishing.value = true
   try {
-    await publishServers(publishSelected.value, enableAuth.value, '', enableAuditLog.value)
+    await publishServers(publishSelected.value, enableAuth.value, '', enableAuditLog.value, publishDomain.value)
     alert(t('servers.alert.publishSuccess'))
     showingPublishConfirm.value = false
     await loadServers()
@@ -823,6 +844,20 @@ async function executeMaintenance() {
           <p v-if="isKongGateway" class="publish-gateway__hint publish-gateway__hint--warn">
             {{ t('servers.publish.kongHint') }}
           </p>
+          <label class="publish-domain">
+            <span class="publish-domain__label">{{ t('servers.publish.domainLabel') }}</span>
+            <select
+              v-model="publishDomain"
+              class="publish-domain__select"
+              :disabled="publishDomains.length === 0"
+            >
+              <option v-if="publishDomains.length === 0" value="">{{ t('servers.publish.domainEmpty') }}</option>
+              <option v-for="d in publishDomains" :key="d" :value="d">{{ d }}</option>
+            </select>
+          </label>
+          <p v-if="publishDomains.length === 0" class="publish-gateway__hint publish-gateway__hint--warn">
+            {{ t('servers.publish.domainHint') }}
+          </p>
           <div class="shuttle">
             <div class="shuttle__panel">
               <div class="shuttle__head">
@@ -983,6 +1018,10 @@ async function executeMaintenance() {
                   <template v-if="formatServiceAddresses(server.service_address)">{{ formatServiceAddresses(server.service_address).split('\n').join(', ') }}</template>
                   <span v-else>{{ t('servers.notFilled') }}</span>
                 </span>
+              </div>
+              <div class="publish-preview__row">
+                <span class="publish-preview__label">{{ t('servers.preview.publishDomain') }}</span>
+                <span class="publish-preview__value">{{ publishDomain || t('servers.notFilled') }}</span>
               </div>
               <div class="publish-preview__row">
                 <span class="publish-preview__label">{{ t('servers.preview.authStatus') }}</span>
@@ -1856,6 +1895,7 @@ async function executeMaintenance() {
 .dialog--publish .dialog__title,
 .dialog--publish .dialog__desc,
 .dialog--publish .publish-gateway__hint,
+.dialog--publish .publish-domain,
 .dialog--publish .publish-auth {
   flex-shrink: 0;
 }
@@ -2068,6 +2108,36 @@ async function executeMaintenance() {
 .publish-preview__auth-on {
   color: var(--xauat-blue);
   font-weight: 600;
+}
+
+.publish-domain {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.publish-domain__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.publish-domain__select {
+  min-width: 260px;
+  padding: 9px 14px;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: none;
+  cursor: pointer;
+}
+
+.publish-domain__select:focus {
+  border-color: var(--xauat-blue);
 }
 
 .publish-auth {

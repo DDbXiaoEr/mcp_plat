@@ -33,7 +33,7 @@ export default {
   authLabel: '鉴权',
   authNone: '无需 AccessKey',
   generateConfig: '③ 生成配置',
-  noConfigWarn: '无法生成接入配置：网关未配置默认发布域名（defaultPublishDomain），且该服务器未填写完整接入地址，请先联系管理员配置。',
+  noConfigWarn: '无法生成接入配置：该服务器未记录发布域名且运营设置中未配置发布域名，请先联系管理员配置。',
   importConfig: '{client} 导入配置',
   openInClient: '在 {client} 中打开',
   openInClientTitle: '在 {client} 中打开并导入',

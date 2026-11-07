@@ -80,8 +80,6 @@ export default {
     adminUrlTooltipKongPost: '.',
     adminUrlTooltipDefaultPre: 'Enter the base URL of the gateway Admin API without a trailing path, e.g. ', 
     adminUrlTooltipDefaultPost: ' (not .../apisix/admin).',
-    defaultPublishLabel: 'Default publish domain',
-    defaultPublishPlaceholder: 'e.g. mcp.xauat.edu.cn',
     adminKeyLabel: 'Admin API Key',
     adminKeyPlaceholder: 'Enter the administrator API Key',
     adminKeyKongHint: 'Can be left blank if Kong RBAC is not enabled; once enabled, enter the RBAC Admin token.',
@@ -133,6 +131,12 @@ export default {
     loginBgHint: 'Leave blank to use the default gradient background; when filled, the login page fills and displays this image responsively',
     siteUrlLabel: 'Site link',
     siteUrlPlaceholder: 'URL to open when the Logo is clicked, e.g. https://www.example.edu.cn'
+  },
+  publishDomain: {
+    title: 'Publish Domains',
+    domainsLabel: 'MCP publish domains',
+    domainPlaceholder: 'e.g. mcp.xauat.edu.cn',
+    hint: 'Multiple publish domains are supported and can be selected when publishing an MCP service; enter domains without protocol or path.'
   },
   auth: {
     title: 'User Authentication',

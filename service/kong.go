@@ -32,7 +32,7 @@ import (
 
 // publishKongServer 发布 MCP 服务器到 Kong 网关。
 // 仅创建/更新 上游（Upstream）+ Service + 路由（Route），不部署任何插件。
-func publishKongServer(client *http.Client, gw ApiGatewaySetting, srv model.MCPServer) error {
+func publishKongServer(client *http.Client, gw ApiGatewaySetting, srv model.MCPServer, publishDomain string) error {
 	addresses := parseServiceAddresses(srv.ServiceAddress)
 	if len(addresses) == 0 {
 		return errors.New("未配置后端服务地址")
@@ -72,8 +72,8 @@ func publishKongServer(client *http.Client, gw ApiGatewaySetting, srv model.MCPS
 			"name": srv.ID,
 		},
 	}
-	if gw.DefaultPublishDomain != "" {
-		routeBody["hosts"] = []string{gw.DefaultPublishDomain}
+	if publishDomain != "" {
+		routeBody["hosts"] = []string{publishDomain}
 	}
 	if err := kongRequest(client, gw, http.MethodPut, "/routes/"+srv.ID, routeBody); err != nil {
 		return fmt.Errorf("创建路由失败: %w", err)

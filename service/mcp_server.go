@@ -351,11 +351,11 @@ func FetchTools(input FetchToolsInput) ([]toolInfo, error) {
 	address := input.Address
 	if !strings.Contains(address, "://") {
 		if strings.HasPrefix(address, "/") {
-			var gw ApiGatewaySetting
-			if err := GetSetting("api_gateway", &gw); err != nil || gw.DefaultPublishDomain == "" {
-				return nil, errors.New("请先在系统设置中配置 API 网关默认域名")
+			domains := GetPublishDomains()
+			if len(domains) == 0 {
+				return nil, errors.New("请先在运营设置中配置 MCP 发布域名")
 			}
-			address = strings.TrimRight(gw.DefaultPublishDomain, "/") + address
+			address = domains[0] + address
 		} else {
 			address = "http://" + address
 		}
@@ -574,16 +574,16 @@ type PublishInput struct {
 	EnableAuth      bool     `json:"enable_auth"`
 	EnableAuditLog  bool     `json:"enable_audit_log"`
 	AccesskeyHeader string   `json:"accesskey_header"`
+	PublishDomain   string   `json:"publish_domain"`
 }
 
 type ApiGatewaySetting struct {
-	Provider             string   `json:"provider"`
-	AdminURL             string   `json:"adminUrl"`
-	AdminKey             string   `json:"adminKey"`
-	DefaultPublishDomain string   `json:"defaultPublishDomain"`
-	AuthGrpcAddr         string   `json:"authGrpcAddr"`
-	AuthGrpcAddrs        []string `json:"authGrpcAddrs"`
-	AccesskeyHeader      string   `json:"accesskeyHeader"`
+	Provider        string   `json:"provider"`
+	AdminURL        string   `json:"adminUrl"`
+	AdminKey        string   `json:"adminKey"`
+	AuthGrpcAddr    string   `json:"authGrpcAddr"`
+	AuthGrpcAddrs   []string `json:"authGrpcAddrs"`
+	AccesskeyHeader string   `json:"accesskeyHeader"`
 }
 
 func PublishServers(input PublishInput) error {
@@ -606,12 +606,19 @@ func PublishServers(input PublishInput) error {
 		return errors.New("未找到指定的服务器")
 	}
 
+	publishDomain := NormalizePublishDomain(input.PublishDomain)
+	if publishDomain == "" {
+		if domains := GetPublishDomains(); len(domains) > 0 {
+			publishDomain = domains[0]
+		}
+	}
+
 	client := &http.Client{Timeout: 10 * time.Second}
 	var errs []string
 
 	for _, srv := range servers {
 		if gw.Provider == "kong" {
-			if err := publishKongServer(client, gw, srv); err != nil {
+			if err := publishKongServer(client, gw, srv, publishDomain); err != nil {
 				errs = append(errs, fmt.Sprintf("%s: %v", srv.Name, err))
 			}
 			continue
@@ -643,8 +650,8 @@ func PublishServers(input PublishInput) error {
 			"uris":        []string{"/" + srv.ID, "/" + srv.ID + "/*"},
 			"upstream_id": srv.ID,
 		}
-		if gw.DefaultPublishDomain != "" {
-			routeBody["host"] = gw.DefaultPublishDomain
+		if publishDomain != "" {
+			routeBody["host"] = publishDomain
 		}
 
 		plugins := map[string]interface{}{}
@@ -751,14 +758,18 @@ func PublishServers(input PublishInput) error {
 	}
 
 	if err := database.DB.Model(&model.MCPServer{}).Where("id IN ?", input.ServerIDs).
-		Updates(map[string]interface{}{"status": "published", "auth_enabled": authEnabled}).Error; err != nil {
+		Updates(map[string]interface{}{
+			"status":         "published",
+			"auth_enabled":   authEnabled,
+			"publish_domain": publishDomain,
+		}).Error; err != nil {
 		return fmt.Errorf("更新发布状态失败: %w", err)
 	}
 
 	return nil
 }
 
-func buildAPISIXMaintenanceRoute(gw ApiGatewaySetting, srv model.MCPServer, pluginName, statusKey string) map[string]interface{} {
+func buildAPISIXMaintenanceRoute(srv model.MCPServer, pluginName, statusKey string) map[string]interface{} {
 	plugin := map[string]interface{}{
 		"response_example": "{\"code\":503,\"message\":\"服务维护中，请稍后再试\"}",
 	}
@@ -771,23 +782,23 @@ func buildAPISIXMaintenanceRoute(gw ApiGatewaySetting, srv model.MCPServer, plug
 			pluginName: plugin,
 		},
 	}
-	if gw.DefaultPublishDomain != "" {
-		route["host"] = gw.DefaultPublishDomain
+	if host := serverPublishDomain(srv); host != "" {
+		route["host"] = host
 	}
 	return route
 }
 
 func setAPISIXMaintenance(client *http.Client, gw ApiGatewaySetting, srv model.MCPServer) error {
 	err := putAPISIXAdmin(client, gw.AdminURL, gw.AdminKey, "/apisix/admin/routes/"+srv.ID,
-		buildAPISIXMaintenanceRoute(gw, srv, "mocking", "response_status"))
+		buildAPISIXMaintenanceRoute(srv, "mocking", "response_status"))
 	if err == nil {
 		return nil
 	}
 	return putAPISIXAdmin(client, gw.AdminURL, gw.AdminKey, "/apisix/admin/routes/"+srv.ID,
-		buildAPISIXMaintenanceRoute(gw, srv, "mock", "response_code"))
+		buildAPISIXMaintenanceRoute(srv, "mock", "response_code"))
 }
 
-func buildAPISIXRestoreRoute(gw ApiGatewaySetting, srv model.MCPServer) map[string]interface{} {
+func buildAPISIXRestoreRoute(srv model.MCPServer) map[string]interface{} {
 	if srv.GatewayRoute != "" {
 		var route map[string]interface{}
 		if err := json.Unmarshal([]byte(srv.GatewayRoute), &route); err == nil {
@@ -799,8 +810,8 @@ func buildAPISIXRestoreRoute(gw ApiGatewaySetting, srv model.MCPServer) map[stri
 		"uris":        []string{"/" + srv.ID, "/" + srv.ID + "/*"},
 		"upstream_id": srv.ID,
 	}
-	if gw.DefaultPublishDomain != "" {
-		route["host"] = gw.DefaultPublishDomain
+	if host := serverPublishDomain(srv); host != "" {
+		route["host"] = host
 	}
 	if srv.Address != "" && srv.Address != "/" {
 		route["plugins"] = map[string]interface{}{
@@ -813,6 +824,18 @@ func buildAPISIXRestoreRoute(gw ApiGatewaySetting, srv model.MCPServer) map[stri
 		}
 	}
 	return route
+}
+
+func serverPublishDomain(srv model.MCPServer) string {
+	if srv.GatewayRoute != "" {
+		var route map[string]interface{}
+		if err := json.Unmarshal([]byte(srv.GatewayRoute), &route); err == nil {
+			if host, ok := route["host"].(string); ok && host != "" {
+				return host
+			}
+		}
+	}
+	return NormalizePublishDomain(srv.PublishDomain)
 }
 
 type MaintenanceInput struct {
@@ -871,7 +894,7 @@ func SetMaintenance(input MaintenanceInput) error {
 					continue
 				}
 			} else {
-				if err := putAPISIXAdmin(client, gw.AdminURL, gw.AdminKey, "/apisix/admin/routes/"+srv.ID, buildAPISIXRestoreRoute(gw, srv)); err != nil {
+				if err := putAPISIXAdmin(client, gw.AdminURL, gw.AdminKey, "/apisix/admin/routes/"+srv.ID, buildAPISIXRestoreRoute(srv)); err != nil {
 					errs = append(errs, fmt.Sprintf("%s: 取消维护失败: %v", srv.Name, err))
 					continue
 				}

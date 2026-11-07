@@ -251,4 +251,4 @@ mcp_plat-console/
 前端不使用 Vue Router，通过 `stores/nav.js` 的响应式 `active` 状态切换组件：
 - `App.vue` 使用 `<component :is="...">` 动态渲染
 - 导航项按角色定义（admin / user）
-- 用户菜单含「快速接入」页（QuickAccessView），用于为常见 MCP 客户端（如 CherryStudio）生成带 AccessKey 的接入配置；端点 URL 依据网关设置（`defaultPublishDomain` + provider）由前端拼接
+- 用户菜单含「快速接入」页（QuickAccessView），用于为常见 MCP 客户端（如 CherryStudio）生成带 AccessKey 的接入配置；端点 URL 优先使用服务器记录的发布域名，未记录时回退运营设置中的发布域名（`publish_domain`）并结合 provider 由前端拼接

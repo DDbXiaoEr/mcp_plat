@@ -80,6 +80,9 @@ export default {
     gatewayConfigured: 'API 网关已配置{kong}',
     kongSuffix: '（Kong）',
     kongHint: 'Kong 仅发布上游与路由，不会下发认证/审计插件，以下开关在 Kong 下不生效。',
+    domainLabel: '发布域名',
+    domainEmpty: '暂未配置发布域名',
+    domainHint: '尚未配置发布域名，请先在「运营设置 → 发布域名」中添加。',
     optionAuth: '启用 Access Key 认证',
     authHint: '启用后请求本 MCP 服务时需要携带有效的 access key',
     optionAudit: '启用审计日志',
@@ -92,6 +95,7 @@ export default {
   preview: {
     serviceName: '服务名称',
     gatewayPath: '网关路径',
+    publishDomain: '发布域名',
     backendAddress: '后端地址',
     authStatus: '认证状态',
     authEnabled: '已启用 Access Key 认证',

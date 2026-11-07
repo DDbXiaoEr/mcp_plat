@@ -398,6 +398,7 @@ GET /api/servers
       "tools": "[{\"name\":\"查询课表\",\"description\":\"查询学期课程安排\"},{\"name\":\"成绩查询\",\"description\":\"查询考试成绩\"}]",
       "description": "教务系统 MCP 服务，提供课表查询与成绩查询能力",
       "status": "published",
+      "publish_domain": "mcp.xauat.edu.cn",
       "created_at": "2026-01-01T12:00:00Z",
       "updated_at": "2026-01-01T12:00:00Z"
     }
@@ -417,6 +418,7 @@ GET /api/servers
 | tools | string | 工具列表，JSON 字符串数组格式，每个元素为 `{"name":"...","description":"..."}` |
 | description | string | 服务器描述信息 |
 | status | string | 发布状态，`published`（已发布）、`maintenance`（维护中）或 `unpublished`（未发布） |
+| publish_domain | string | 发布时选择的发布域名（未发布或未选择时为空字符串） |
 | auth_enabled | bool | 是否启用了 Access Key 认证（发布时根据 `enable_auth` 记录；Kong 网关发布时不生效，恒为 `false`；未发布服务器为默认值 `true`） |
 
 ### 4.2 新增 MCP 服务器
@@ -474,12 +476,14 @@ POST /api/servers/publish
 | enable_auth | bool | 否 | 是否启用 Access Key 认证（默认 false），启用后路由会下发 accesskey_verify 插件 |
 | enable_audit_log | bool | 否 | 是否启用审计日志（默认 false），启用后路由会下发 audit_log 插件 |
 | accesskey_header | string | 否 | 自定义 Access Key 的 HTTP Header 名称，未传时优先使用网关设置中配置的值，均未配置时默认 `X-Access-Key` |
+| publish_domain | string | 否 | 发布域名，从运营设置「发布域名」列表中选择；未传时使用列表中的第一个域名。用于网关路由的 host/hosts 匹配 |
 
 **请求示例：**
 ```json
 {
   "server_ids": ["uuid-1", "uuid-2"],
-  "enable_auth": true
+  "enable_auth": true,
+  "publish_domain": "mcp.xauat.edu.cn"
 }
 ```
 
@@ -491,7 +495,8 @@ POST /api/servers/publish
 }
 ```
 
-**说明：** 后端根据已配置的 API 网关设置（`api_gateway` 分组，`provider` 字段），将选中的 MCP 服务器路由注册到对应网关中。需先配置网关的 Admin API 地址（APISIX 还需 Key）。发布成功后会将服务器标记为 `published`，并根据 `enable_auth` 记录 `auth_enabled`（Kong 网关恒为 `false`）。
+**说明：** 后端根据已配置的 API 网关设置（`api_gateway` 分组，`provider` 字段），将选中的 MCP 服务器路由注册到对应网关中。需先配置网关的 Admin API 地址（APISIX 还需 Key）。发布成功后会将服务器标记为 `published`，记录所选的 `publish_domain`，并根据 `enable_auth` 记录 `auth_enabled`（Kong 网关恒为 `false`）。
+- 发布域名来自运营设置 `publish_domain`（`GET /api/settings/publish_domain`），可配置多个；发布时通过 `publish_domain` 传入所选域名，后端将其写入路由的 host（APISIX）或 hosts（Kong）。
 - `provider=apisix`（默认）：创建 上游 + 路由，可按需下发 `accesskey_verify` / `audit_log` / `proxy-rewrite` 等插件。若启用认证，还需配置 `authGrpcAddrs`（数组，支持多个地址，插件按连接数负载均衡）指向 accesskey-auth-server 的 gRPC 地址。
 - `provider=kong`：仅创建 上游（Upstream）+ Service + 路由（Route），**不下发任何插件**，因此认证、审计、路径重写等能力在 Kong 下不生效；网关路径使用服务器配置的 URI 路径（address）。Admin API Key 仅在 Kong 启用 RBAC 时需要。
 
@@ -1047,11 +1052,13 @@ GET /api/settings
       "siteUrl": "https://www.example.edu.cn",
       "loginBackground": "https://www.example.edu.cn/bg.jpg"
     },
+    "publish_domain": {
+      "domains": ["mcp.xauat.edu.cn", "mcp2.xauat.edu.cn"]
+    },
     "api_gateway": {
       "provider": "apisix",
       "adminUrl": "http://127.0.0.1:9180",
       "adminKey": "edd1c9f034335f136f87ad84b625c8f1",
-      "defaultPublishDomain": "mcp.xauat.edu.cn",
       "authGrpcAddrs": [":9090", "127.0.0.1:9091"],
       "accesskeyHeader": "X-Access-Key"
     },
@@ -1076,7 +1083,7 @@ PUT /api/settings/:key
 
 | 参数 | 说明 |
 |------|------|
-| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `api_gateway` / `network_security` / `audit_log` / `quick_access` |
+| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `publish_domain` / `api_gateway` / `network_security` / `audit_log` / `quick_access` |
 
 **请求参数（JSON Body）：**
 
@@ -1114,7 +1121,7 @@ GET /api/settings/:key
 
 | 参数 | 说明 |
 |------|------|
-| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `api_gateway` / `network_security` / `audit_log` / `quick_access` |
+| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `publish_domain` / `api_gateway` / `network_security` / `audit_log` / `quick_access` |
 
 **响应示例（`GET /api/settings/platform`）：**
 ```json
@@ -1149,7 +1156,6 @@ GET /api/settings/gateway-status
     "configured": true,
     "provider": "kong",
     "adminUrl": "http://127.0.0.1:8001",
-    "defaultPublishDomain": "mcp.xauat.edu.cn",
     "accesskeyHeader": "X-Access-Key"
   }
 }
@@ -1160,10 +1166,28 @@ GET /api/settings/gateway-status
 | configured | bool | 网关是否已配置（APISIX 需地址 + Key；Kong 仅需地址） |
 | provider | string | 当前网关类型，`apisix` / `kong` / `tyk` |
 | adminUrl | string | 已配置的 Admin API 基础地址 |
-| defaultPublishDomain | string | 默认发布域名，用于拼接 MCP 接入地址（未配置时为空字符串） |
 | accesskeyHeader | string | Access Key 鉴权使用的 HTTP Header 名称（未配置时为空字符串，前端回退默认 `X-Access-Key`） |
 
-> 注意：接口不返回网关管理凭据（如 adminKey），仅暴露拼接接入地址所需字段。
+> 注意：接口不返回网关管理凭据（如 adminKey）。发布域名已独立到运营设置 `publish_domain`，可通过 `GET /api/settings/publish_domain` 获取。
+
+---
+
+### 6.4.1 发布域名设置（publish_domain）
+
+> 需管理员权限保存（`PUT /api/settings/publish_domain`）；普通用户可通过 `GET /api/settings/publish_domain` 读取（仅需登录）。
+
+**保存示例（JSON Body）：**
+```json
+{
+  "domains": ["mcp.xauat.edu.cn", "mcp2.xauat.edu.cn"]
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| domains | []string | MCP 服务发布域名列表，支持配置多个；发布 MCP 服务时从中选择一个作为路由 host。填写时无需携带 `http://` / `https://` 或路径 |
+
+> 说明：发布域名配置已从 API 网关设置（`api_gateway`）迁移至此，原 `defaultPublishDomain` 字段不再使用。
 
 ---
 
@@ -1459,6 +1483,6 @@ GET /readyz
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| key | string (PK) | 设置项分组（log / smtp / auth / user_ops / platform / api_gateway / network_security / quick_access） |
+| key | string (PK) | 设置项分组（log / smtp / auth / user_ops / platform / publish_domain / api_gateway / network_security / quick_access） |
 | value | text | 该分组的 JSON 内容 |
 | updated_at | datetime | 更新时间 |

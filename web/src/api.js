@@ -193,10 +193,10 @@ export function fetchOverviewCallTrend(days = 30) {
   return request(`/overview/call-trend?days=${days}`)
 }
 
-export function publishServers(serverIds, enableAuth, accesskeyHeader, enableAuditLog) {
+export function publishServers(serverIds, enableAuth, accesskeyHeader, enableAuditLog, publishDomain) {
   return request('/servers/publish', {
     method: 'POST',
-    body: JSON.stringify({ server_ids: serverIds, enable_auth: enableAuth, accesskey_header: accesskeyHeader, enable_audit_log: enableAuditLog })
+    body: JSON.stringify({ server_ids: serverIds, enable_auth: enableAuth, accesskey_header: accesskeyHeader, enable_audit_log: enableAuditLog, publish_domain: publishDomain })
   })
 }
 

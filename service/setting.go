@@ -20,6 +20,7 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"mcp_plat-console/database"
 	"mcp_plat-console/model"
@@ -34,6 +35,7 @@ var settingKeys = map[string]bool{
 	"user_ops":         true,
 	"api_gateway":      true,
 	"platform":         true,
+	"publish_domain":   true,
 	"network_security": true,
 	"audit_log":        true,
 	"quick_access":     true,
@@ -54,6 +56,9 @@ func GetSettings() (map[string]json.RawMessage, error) {
 			result[s.Key] = json.RawMessage(s.Value)
 		}
 	}
+	if domainsJSON, err := json.Marshal(PublishDomainSetting{Domains: GetPublishDomains()}); err == nil {
+		result["publish_domain"] = domainsJSON
+	}
 
 	return result, nil
 }
@@ -73,6 +78,10 @@ func GetSettingByKey(key string) (json.RawMessage, error) {
 	if key == "api_gateway" {
 		status, _ := json.Marshal(CheckGatewayStatus())
 		return status, nil
+	}
+	if key == "publish_domain" {
+		domains, _ := json.Marshal(PublishDomainSetting{Domains: GetPublishDomains()})
+		return domains, nil
 	}
 	var setting model.Setting
 	if err := database.DB.Where("key = ?", key).First(&setting).Error; err != nil {
@@ -100,12 +109,11 @@ func GetPlatform() PlatformSetting {
 }
 
 type GatewayStatus struct {
-	Configured           bool     `json:"configured"`
-	Provider             string   `json:"provider"`
-	AdminURL             string   `json:"adminUrl"`
-	DefaultPublishDomain string   `json:"defaultPublishDomain"`
-	AccesskeyHeader      string   `json:"accesskeyHeader"`
-	AuthGrpcAddrs        []string `json:"authGrpcAddrs"`
+	Configured      bool     `json:"configured"`
+	Provider        string   `json:"provider"`
+	AdminURL        string   `json:"adminUrl"`
+	AccesskeyHeader string   `json:"accesskeyHeader"`
+	AuthGrpcAddrs   []string `json:"authGrpcAddrs"`
 }
 
 func CheckGatewayStatus() GatewayStatus {
@@ -125,13 +133,51 @@ func CheckGatewayStatus() GatewayStatus {
 		addrs = []string{}
 	}
 	return GatewayStatus{
-		Configured:           configured,
-		Provider:             gw.Provider,
-		AdminURL:             gw.AdminURL,
-		DefaultPublishDomain: gw.DefaultPublishDomain,
-		AccesskeyHeader:      gw.AccesskeyHeader,
-		AuthGrpcAddrs:        addrs,
+		Configured:      configured,
+		Provider:        gw.Provider,
+		AdminURL:        gw.AdminURL,
+		AccesskeyHeader: gw.AccesskeyHeader,
+		AuthGrpcAddrs:   addrs,
 	}
+}
+
+type PublishDomainSetting struct {
+	Domains []string `json:"domains"`
+}
+
+func NormalizePublishDomain(raw string) string {
+	raw = strings.TrimSpace(raw)
+	raw = strings.TrimPrefix(raw, "http://")
+	raw = strings.TrimPrefix(raw, "https://")
+	raw = strings.TrimRight(raw, "/")
+	if idx := strings.Index(raw, "/"); idx >= 0 {
+		raw = raw[:idx]
+	}
+	return raw
+}
+
+func GetPublishDomains() []string {
+	var setting PublishDomainSetting
+	domains := []string{}
+	if err := GetSetting("publish_domain", &setting); err == nil {
+		for _, raw := range setting.Domains {
+			domain := NormalizePublishDomain(raw)
+			if domain != "" {
+				domains = append(domains, domain)
+			}
+		}
+		return domains
+	}
+
+	var legacy struct {
+		DefaultPublishDomain string `json:"defaultPublishDomain"`
+	}
+	if err := GetSetting("api_gateway", &legacy); err == nil {
+		if domain := NormalizePublishDomain(legacy.DefaultPublishDomain); domain != "" {
+			domains = append(domains, domain)
+		}
+	}
+	return domains
 }
 
 func SaveSetting(key string, value json.RawMessage) error {

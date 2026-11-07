@@ -70,7 +70,6 @@ const smtpTestResult = ref(null)
 const apiGwForm = ref({
   provider: 'apisix',
   adminUrl: '',
-  defaultPublishDomain: '',
   adminKey: '',
   accesskeyHeader: '',
   authGrpcAddrs: []
@@ -223,6 +222,12 @@ const platformForm = ref({
   loginBackground: ''
 })
 
+const publishDomainOpen = ref(true)
+
+const publishDomainForm = ref({
+  domains: []
+})
+
 const quickAccessOpen = ref(true)
 
 const QUICK_ACCESS_CLIENTS = [
@@ -361,6 +366,14 @@ function savePlatformSettings() {
   applyPlatform(platformForm.value)
 }
 
+function savePublishDomainSettings() {
+  saveSection('publish_domain', {
+    domains: publishDomainForm.value.domains
+      .map(item => item.trim())
+      .filter(item => item !== '')
+  })
+}
+
 function saveQuickAccessSettings() {
   saveSection('quick_access', quickAccessForm.value)
 }
@@ -398,7 +411,6 @@ function applySettings(data) {
     apiGwConfigured.value = data.api_gateway.configured || false
     if (data.api_gateway.provider) apiGwForm.value.provider = data.api_gateway.provider
     if (data.api_gateway.adminUrl != null) apiGwForm.value.adminUrl = data.api_gateway.adminUrl
-    if (data.api_gateway.defaultPublishDomain != null) apiGwForm.value.defaultPublishDomain = data.api_gateway.defaultPublishDomain
     if (data.api_gateway.accesskeyHeader != null) apiGwForm.value.accesskeyHeader = data.api_gateway.accesskeyHeader
     if (data.api_gateway.authGrpcAddrs != null || data.api_gateway.authGrpcAddr != null) {
       apiGwForm.value.authGrpcAddrs = toAddrList(data.api_gateway.authGrpcAddrs ?? data.api_gateway.authGrpcAddr)
@@ -457,6 +469,11 @@ function applySettings(data) {
   if (data.platform) {
     Object.assign(platformForm.value, data.platform)
     applyPlatform(data.platform)
+  }
+  if (data.publish_domain) {
+    publishDomainForm.value.domains = Array.isArray(data.publish_domain.domains)
+      ? data.publish_domain.domains.slice()
+      : []
   }
   if (data.quick_access) {
     if (Array.isArray(data.quick_access.enabledClients)) {
@@ -810,16 +827,6 @@ onMounted(async () => {
           </label>
 
           <label class="field">
-            <span class="field__label">{{ t('settings.apiGw.defaultPublishLabel') }}</span>
-            <input
-              v-model="apiGwForm.defaultPublishDomain"
-              class="field__input"
-              type="text"
-              :placeholder="t('settings.apiGw.defaultPublishPlaceholder')"
-            />
-          </label>
-
-          <label class="field">
             <span class="field__label">{{ t('settings.apiGw.adminKeyLabel') }}</span>
             <input
               v-model="apiGwForm.adminKey"
@@ -1076,6 +1083,53 @@ onMounted(async () => {
             <span v-if="tips.platform" class="save-tip">{{ tips.platform }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'platform'" @click="savePlatformSettings">
               {{ saving === 'platform' ? t('common.saving') : t('common.save') }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="collapse">
+        <button class="collapse__head" type="button" @click="publishDomainOpen = !publishDomainOpen">
+          <span class="collapse__title">{{ t('settings.publishDomain.title') }}</span>
+          <span class="collapse__arrow" :class="{ 'collapse__arrow--open': publishDomainOpen }">▾</span>
+        </button>
+        <div v-show="publishDomainOpen" class="collapse__body">
+          <div class="field">
+            <span class="field__label">{{ t('settings.publishDomain.domainsLabel') }}</span>
+            <div
+              v-for="(domain, i) in publishDomainForm.domains"
+              :key="i"
+              class="addr-row"
+            >
+              <input
+                v-model="publishDomainForm.domains[i]"
+                class="field__input addr-row__input"
+                type="text"
+                :placeholder="t('settings.publishDomain.domainPlaceholder')"
+              />
+              <button
+                class="addr-row__remove"
+                type="button"
+                :title="t('settings.general.remove')"
+                @click="removeAddr(publishDomainForm.domains, i)"
+              >
+                ×
+              </button>
+            </div>
+            <button
+              class="addr-row__add"
+              type="button"
+              @click="addAddr(publishDomainForm.domains)"
+            >
+              {{ t('settings.general.addAddress') }}
+            </button>
+            <span class="field__help-text">{{ t('settings.publishDomain.hint') }}</span>
+          </div>
+
+          <div class="collapse__actions">
+            <span v-if="tips.publish_domain" class="save-tip">{{ tips.publish_domain }}</span>
+            <button class="btn btn--primary" type="button" :disabled="saving === 'publish_domain'" @click="savePublishDomainSettings">
+              {{ saving === 'publish_domain' ? t('common.saving') : t('common.save') }}
             </button>
           </div>
         </div>

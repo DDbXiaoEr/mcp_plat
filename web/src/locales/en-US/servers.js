@@ -80,6 +80,9 @@ export default {
     gatewayConfigured: 'API gateway is configured{kong}',
     kongSuffix: ' (Kong)',
     kongHint: 'Kong only publishes upstreams and routes; it does not install authentication/audit plugins, so the switches below have no effect under Kong.',
+    domainLabel: 'Publish domain',
+    domainEmpty: 'No publish domain configured',
+    domainHint: 'No publish domain configured yet. Add one in "Operation Settings → Publish Domains" first.',
     optionAuth: 'Enable Access Key authentication',
     authHint: 'When enabled, requests to this MCP service must carry a valid access key',
     optionAudit: 'Enable audit logging',
@@ -92,6 +95,7 @@ export default {
   preview: {
     serviceName: 'Service name',
     gatewayPath: 'Gateway path',
+    publishDomain: 'Publish domain',
     backendAddress: 'Backend address',
     authStatus: 'Auth status',
     authEnabled: 'Access Key authentication enabled',
