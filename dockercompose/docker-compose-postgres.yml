@@ -134,6 +134,12 @@ services:
     image: redis:7-alpine
     container_name: redis
     restart: unless-stopped
+    # 数据卷 /data 可能由旧容器或其他镜像创建（属主为 root），导致 redis 用户
+    # 无法写入 RDB 临时文件（Permission denied）。以 root 启动可确保数据目录可写；
+    # 官方镜像的入口脚本会先修正 /data 属主，再自动降权为 redis 用户运行。
+    user: "0:0"
+    # 快照失败时不再禁用写命令，避免出现 stop-writes-on-bgsave-error 报错
+    command: ["redis-server", "--dir", "/data", "--stop-writes-on-bgsave-error", "no"]
     ports:
       - "6379:6379"
     volumes:
