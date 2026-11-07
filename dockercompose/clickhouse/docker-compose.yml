@@ -32,6 +32,8 @@ services:
       - "80:80"
       - "443:443"
       - "9180:9180"
+    volumes:
+      - ../apisix_config.yaml:/usr/local/apisix/conf/config.yaml:ro
     networks:
       - mcp_plat
 
@@ -105,17 +107,6 @@ services:
     networks:
       - mcp_plat
 
-  mcp_plat_embed:
-    image: mcp_plat_embed:${TAG:-latest}
-    container_name: mcp_plat_embed
-    restart: unless-stopped
-    depends_on:
-      apisix:
-        condition: service_started
-      mainpostgres:
-        condition: service_healthy
-      clickhouse:
-        condition: service_healthy
   redis:
     image: redis:7-alpine
     container_name: redis
@@ -132,7 +123,18 @@ services:
     networks:
       - mcp_plat
 
-  accesskey-auth-server:
+  mcp_plat_embed:
+    image: mcp_plat_embed:${TAG:-latest}
+    container_name: mcp_plat_embed
+    restart: unless-stopped
+    depends_on:
+      apisix:
+        condition: service_started
+      mainpostgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      accesskey-auth-server:
         condition: service_started
       audit-log-server:
         condition: service_started

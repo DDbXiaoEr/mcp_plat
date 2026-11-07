@@ -277,7 +277,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
         <label class="checkbox"><input type="checkbox" id="ap_admin_ui" checked><span data-i18n="ap_ui_txt">启用 admin_ui（无需则取消勾选）</span></label>
         <div class="field"><label data-i18n="ap_allow_lbl">allow_admin（每行一个 CIDR）</label><textarea id="ap_allow_admin" rows="1">0.0.0.0/0</textarea></div>
         <div class="field"><label data-i18n="ap_etcd_lbl">etcd host（每行一个）</label><textarea id="ap_etcd" rows="2">http://${{ETCD_HOST:=etcd}}:2379</textarea></div>
-        <div class="field"><label data-i18n="ap_listen_lbl">node_listen（每行一个）</label><textarea id="ap_listen" rows="2">80
+        <div class="field"><label data-i18n="ap_listen_lbl">监听端口（每行一个；HTTPS 写 443:ssl）</label><textarea id="ap_listen" rows="2">80
 443:ssl</textarea></div>
         <div class="field"><label data-i18n="ap_cmd_lbl">ext-plugin 命令路径</label><input type="text" id="ap_cmd" value="/opt/mcp_plat/bin/apisix-go-runner"></div>
       </section>
@@ -432,7 +432,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       adm_user:'管理员账号', adm_pass:'管理员密码', server_port_lbl:'HTTP 监听端口 server_port',
       auth_grpc_lbl:'accesskey gRPC 地址', audit_grpc_lbl:'audit gRPC 地址', wr_batch_lbl:'audit 写入 batch_size', wr_hint:'writer 仅在 audit_log_server.yml 中使用',
       ap_key_lbl:'admin key', ap_ui_txt:'启用 admin_ui（无需则取消勾选）', ap_allow_lbl:'allow_admin（每行一个 CIDR）',
-      ap_etcd_lbl:'etcd host（每行一个）', ap_listen_lbl:'node_listen（每行一个）', ap_cmd_lbl:'ext-plugin 命令路径',
+      ap_etcd_lbl:'etcd host（每行一个）', ap_listen_lbl:'监听端口（每行一个；HTTPS 写 443:ssl）', ap_cmd_lbl:'ext-plugin 命令路径',
       ns_lbl:'命名空间',
       fe_mode_lbl:'前端部署方式', fe_embed:'内嵌前端（单二进制）', fe_nginx:'Nginx 独立托管（纯后端 + 前端分离）',
       ng_listen_lbl:'监听端口', ng_server_lbl:'server_name / 域名',
@@ -500,7 +500,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       adm_user:'Admin username', adm_pass:'Admin password', server_port_lbl:'HTTP listen port (server_port)',
       auth_grpc_lbl:'accesskey gRPC address', audit_grpc_lbl:'audit gRPC address', wr_batch_lbl:'audit writer batch_size', wr_hint:'writer is only used in audit_log_server.yml',
       ap_key_lbl:'Admin key', ap_ui_txt:'Enable admin_ui (uncheck if not needed)', ap_allow_lbl:'allow_admin (one CIDR per line)',
-      ap_etcd_lbl:'etcd hosts (one per line)', ap_listen_lbl:'node_listen (one per line)', ap_cmd_lbl:'ext-plugin command path',
+      ap_etcd_lbl:'etcd hosts (one per line)', ap_listen_lbl:'listen ports (one per line; use 443:ssl for HTTPS)', ap_cmd_lbl:'ext-plugin command path',
       ns_lbl:'Namespace',
       fe_mode_lbl:'Frontend deployment mode', fe_embed:'Embedded frontend (single binary)', fe_nginx:'Nginx hosting (pure backend + separate frontend)',
       ng_listen_lbl:'Listen port', ng_server_lbl:'server_name / domain',
@@ -940,8 +940,21 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     textLines('ap_etcd').forEach(function(h){ L.push('      - '+yamlScalar(h)); });
     L.push('');
     L.push('apisix:');
+    // APISIX 3.x：node_listen 只接受数字或 {ip, port} 对象；HTTPS 监听必须写到 ssl.listen，
+    // 旧写法（如 443:ssl）作为 node_listen 项会被静默忽略，SSL 会回落到默认 9443。
+    var plainListen = [], sslListen = [];
+    textLines('ap_listen').forEach(function(n){
+      var m = /^(\d+)\s*:\s*ssl$/i.exec(n);
+      if (m) { sslListen.push(m[1]); } else { plainListen.push(n); }
+    });
+    if (!plainListen.length) plainListen.push('80');
     L.push('  node_listen:');
-    textLines('ap_listen').forEach(function(n){ L.push('    - '+yamlScalar(n)); });
+    plainListen.forEach(function(n){ L.push('    - '+yamlScalar(n)); });
+    if (sslListen.length) {
+      L.push('  ssl:');
+      L.push('    listen:');
+      sslListen.forEach(function(p){ L.push('      - port: '+p); });
+    }
     L.push('');
     L.push('# APISIX 以子进程方式启动 go plugin runner，并自动管理其生命周期');
     L.push('# 注意：路径须与 apisix 镜像内部 go-runner 实际安装路径一致');
