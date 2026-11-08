@@ -125,5 +125,6 @@ data:
     server_port: 8080
 
     admin:
+      enabled: true
       username: admin
       password: changeme-admin-password

@@ -35,6 +35,8 @@ POST /api/auth/login
 
 登录成功后服务端下发 HttpOnly Cookie（默认名 `mcp_session`，会话存 Redis）。后续需鉴权接口由浏览器自动携带 Cookie，无需 `Authorization` 头。
 
+> **节点角色**：仅当启动配置 `admin.enabled: true`（控制节点）时，管理员账号密码可登录并进行平台设置；`admin.enabled: false`（服务节点）时管理员登录被禁用，改用系统设置中配置的认证方式（LDAP/CAS），未配置任何认证方式时直接返回登录错误。
+
 **成功响应：**
 ```json
 {

@@ -43,5 +43,6 @@ access_key_secret: changeme
 server_port: 8080
 
 admin:
+  enabled: true
   username: admin
   password: changeme

@@ -83,6 +83,7 @@ type ClickHouseConfig struct {
 }
 
 type AdminConfig struct {
+	Enabled  *bool  `yaml:"enabled"` // 是否启用管理员（控制节点）；省略时默认启用
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
 }
@@ -108,6 +109,10 @@ func Load() {
 
 	applySoftDefaults()
 	validateRequired()
+
+	if !AppConfig.AdminEnabled() {
+		log.Printf("config: admin login disabled, node runs as service node")
+	}
 }
 
 func applySoftDefaults() {
@@ -156,11 +161,13 @@ func validateRequired() {
 	if len(AppConfig.AccessKeySecret) < 32 {
 		log.Fatal("config: access_key_secret must be at least 32 characters")
 	}
-	if AppConfig.Admin.Username == "" {
-		log.Fatal("config: admin.username is required in config.yaml")
-	}
-	if AppConfig.Admin.Password == "" {
-		log.Fatal("config: admin.password is required in config.yaml")
+	if AppConfig.AdminEnabled() {
+		if AppConfig.Admin.Username == "" {
+			log.Fatal("config: admin.username is required in config.yaml when admin.enabled is true")
+		}
+		if AppConfig.Admin.Password == "" {
+			log.Fatal("config: admin.password is required in config.yaml when admin.enabled is true")
+		}
 	}
 }
 
@@ -168,6 +175,13 @@ func SetServerPort(port string) {
 	if port != "" {
 		AppConfig.ServerPort = port
 	}
+}
+
+func (c *Config) AdminEnabled() bool {
+	if c == nil || c.Admin.Enabled == nil {
+		return true
+	}
+	return *c.Admin.Enabled
 }
 
 func (c *Config) AdminUsername() string { return c.Admin.Username }

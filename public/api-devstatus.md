@@ -8,7 +8,7 @@
 |------|------|------|------|
 | 健康检查 | GET /healthz | ✅ 已完成 | 存活探针，无鉴权，供 Docker / K8s 使用 |
 | 健康检查 | GET /readyz | ✅ 已完成 | 就绪探针，校验数据库连通性，无鉴权 |
-| 认证 | POST /api/auth/login | ✅ 已完成 | Cookie Session（Redis），登录成功下发 HttpOnly Cookie |
+| 认证 | POST /api/auth/login | ✅ 已完成 | Cookie Session（Redis），登录成功下发 HttpOnly Cookie；`admin.enabled: true` 时管理员账号可登录，`false` 时禁用管理员登录，仅使用平台配置的认证方式 |
 | 认证 | POST /api/auth/logout | ✅ 已完成 | 删除 Redis 会话并清除 Cookie |
 | 认证 | GET /api/auth/method | ✅ 已完成 | 前端登录页按返回方式渲染 |
 | 认证 | GET /api/auth/platform | ✅ 已完成 | 登录页获取平台公开信息（名称/Logo/跳转链接/登录背景图 loginBackground），无鉴权 |

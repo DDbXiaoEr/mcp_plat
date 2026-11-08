@@ -139,6 +139,7 @@ access_key_secret: "another-at-least-32-character-random-string"
 server_port: 8080
 
 admin:
+  enabled: true
   username: admin
   password: admin123
 ```

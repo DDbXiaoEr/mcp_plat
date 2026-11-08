@@ -21,6 +21,7 @@ import (
 	"errors"
 	"net/http"
 
+	"mcp_plat-console/config"
 	"mcp_plat-console/resp"
 	"mcp_plat-console/session"
 
@@ -61,6 +62,12 @@ func AuthRequired() gin.HandlerFunc {
 
 func AdminRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if !config.AppConfig.AdminEnabled() {
+			resp.Fail(c, http.StatusForbidden, "当前节点未启用管理员功能")
+			c.Abort()
+			return
+		}
+
 		role, exists := c.Get("role")
 		if !exists || role.(string) != "admin" {
 			resp.Fail(c, http.StatusForbidden, "仅管理员可操作")

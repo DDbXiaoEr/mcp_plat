@@ -229,6 +229,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
           <div class="field fs"><label data-i18n="adm_user">管理员账号</label><input type="text" id="admin_username" value="admin"></div>
           <div class="field fs"><label data-i18n="adm_pass">管理员密码</label><input type="password" id="admin_password" value="admin123"></div>
         </div>
+        <label class="checkbox"><input type="checkbox" id="admin_enabled" checked><span data-i18n="adm_enabled_txt">启用管理员（控制节点；取消勾选后作为服务节点）</span></label>
         <div class="frow">
           <div class="field fs"><label data-i18n="server_port_lbl">HTTP 监听端口 server_port</label><input type="text" id="server_port" value="8080"></div>
         </div>
@@ -429,7 +430,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       redis_addr_lbl:'Redis 地址 addr', redis_db_lbl:'Redis DB', redis_pass_lbl:'Redis 密码',
       sess_cookie_lbl:'Session Cookie 名', sess_maxage_lbl:'Session 有效期（秒）',
       sess_samesite_lbl:'SameSite', sess_secure_txt:'Cookie Secure（HTTPS）',
-      adm_user:'管理员账号', adm_pass:'管理员密码', server_port_lbl:'HTTP 监听端口 server_port',
+      adm_user:'管理员账号', adm_pass:'管理员密码', adm_enabled_txt:'启用管理员（控制节点；取消勾选后作为服务节点）', server_port_lbl:'HTTP 监听端口 server_port',
       auth_grpc_lbl:'accesskey gRPC 地址', audit_grpc_lbl:'audit gRPC 地址', wr_batch_lbl:'audit 写入 batch_size', wr_hint:'writer 仅在 audit_log_server.yml 中使用',
       ap_key_lbl:'admin key', ap_ui_txt:'启用 admin_ui（无需则取消勾选）', ap_allow_lbl:'allow_admin（每行一个 CIDR）',
       ap_etcd_lbl:'etcd host（每行一个）', ap_listen_lbl:'监听端口（每行一个；HTTPS 写 443:ssl）', ap_cmd_lbl:'ext-plugin 命令路径',
@@ -497,7 +498,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
       redis_addr_lbl:'Redis address (addr)', redis_db_lbl:'Redis DB', redis_pass_lbl:'Redis password',
       sess_cookie_lbl:'Session cookie name', sess_maxage_lbl:'Session TTL (seconds)',
       sess_samesite_lbl:'SameSite', sess_secure_txt:'Cookie Secure (HTTPS)',
-      adm_user:'Admin username', adm_pass:'Admin password', server_port_lbl:'HTTP listen port (server_port)',
+      adm_user:'Admin username', adm_pass:'Admin password', adm_enabled_txt:'Enable admin (control node; uncheck to run as service node)', server_port_lbl:'HTTP listen port (server_port)',
       auth_grpc_lbl:'accesskey gRPC address', audit_grpc_lbl:'audit gRPC address', wr_batch_lbl:'audit writer batch_size', wr_hint:'writer is only used in audit_log_server.yml',
       ap_key_lbl:'Admin key', ap_ui_txt:'Enable admin_ui (uncheck if not needed)', ap_allow_lbl:'allow_admin (one CIDR per line)',
       ap_etcd_lbl:'etcd hosts (one per line)', ap_listen_lbl:'listen ports (one per line; use 443:ssl for HTTPS)', ap_cmd_lbl:'ext-plugin command path',
@@ -783,6 +784,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     s.akSecret = val('access_key_secret');
     s.adminUser = val('admin_username');
     s.adminPass = val('admin_password');
+    s.adminEnabled = chk('admin_enabled');
     s.serverPort = val('server_port') || '8080';
     s.authGrpc = val('auth_grpc') || ':9090';
     s.auditGrpc = val('audit_grpc') || '0.0.0.0:9091';
@@ -864,8 +866,10 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     L.push('# HTTP 监听端口（可被 -port 命令行参数覆盖）');
     L.push('server_port: '+yamlScalar(s.serverPort));
     L.push('');
-    L.push('# 默认管理员账号（首次启动时初始化使用）');
+    L.push('# 管理员账号（节点角色开关）');
+    L.push('# enabled: true 控制节点；false 服务节点（禁用管理员登录，仅使用平台配置的认证方式）');
     L.push('admin:');
+    L.push('  enabled: '+(s.adminEnabled?'true':'false'));
     L.push('  username: '+yamlScalar(s.adminUser));
     L.push('  password: '+yamlScalar(s.adminPass));
     return L.join('\n')+'\n';
@@ -1457,7 +1461,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     }
     add('db_password');
     if(val('audit_type')!=='clickhouse') add('audit_password');
-    add('admin_password');
+    if(chk('admin_enabled')) add('admin_password');
     add('access_key_secret');
     add('ap_admin_key');
     if(platform()==='k8s'){
@@ -1476,7 +1480,7 @@ textarea.view{width:100%;min-height:520px;padding:14px;border:1px solid var(--bo
     var ak=val('access_key_secret');
     if(ak.length<32) msgs.push(t('w_err_ak'));
     if(!val('redis_addr')) msgs.push(t('w_err_redis'));
-    if(!val('admin_username')||!val('admin_password')) msgs.push(t('w_err_admin'));
+    if(chk('admin_enabled') && (!val('admin_username')||!val('admin_password'))) msgs.push(t('w_err_admin'));
     if(platform()==='k8s' && chk('k8s_svc_etcd') && (parseInt(val('rep_etcd'),10)||0)!==1) msgs.push(t('w_err_etcd'));
     var ph=listPlaceholders();
     if(ph.length){

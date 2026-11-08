@@ -33,7 +33,7 @@ mcp_plat-console/
 │       └── main.go           # test data generator
 │
 ├── config/
-│   └── config.go             # config loading (DB / Redis session / port / admin account)
+│   └── config.go             # config loading (DB / Redis session / port / admin account + node role switch admin.enabled)
 │
 ├── database/
 │   └── database.go           # GORM init + AutoMigrate (entry point for the AuditStore abstraction)

@@ -105,7 +105,7 @@ func getAccessKeyCron() string {
 func Login(input LoginInput) (*LoginOutput, error) {
 	cfg := config.AppConfig
 
-	if input.Username == cfg.Admin.Username && input.Password == cfg.Admin.Password {
+	if cfg.AdminEnabled() && input.Username == cfg.Admin.Username && input.Password == cfg.Admin.Password {
 		return issueSession(session.Data{
 			UserID:   0,
 			Username: cfg.Admin.Username,
@@ -115,8 +115,68 @@ func Login(input LoginInput) (*LoginOutput, error) {
 	}
 
 	var authCfg authSettings
-	_ = GetSetting("auth", &authCfg)
+	authErr := GetSetting("auth", &authCfg)
 
+	if !cfg.AdminEnabled() {
+		// 服务节点：仅使用平台配置的认证方式，未配置时直接返回登录错误
+		if authErr != nil || authCfg.Method == "" {
+			return nil, errors.New("用户名或密码错误")
+		}
+
+		switch authCfg.Method {
+		case "local":
+			output, err := loginLocal(input)
+			if err != nil {
+				return nil, err
+			}
+			if output != nil {
+				return output, nil
+			}
+		case "ldap":
+			return loginLDAP(authCfg, input)
+		}
+
+		return nil, errors.New("用户名或密码错误")
+	}
+
+	output, err := loginLocal(input)
+	if err != nil {
+		return nil, err
+	}
+	if output != nil {
+		return output, nil
+	}
+
+	if authCfg.Method == "ldap" {
+		return loginLDAP(authCfg, input)
+	}
+
+	return nil, errors.New("用户名或密码错误")
+}
+
+// loginLocal 使用平台本地用户密码认证；用户不存在或密码不匹配返回 (nil, nil)。
+func loginLocal(input LoginInput) (*LoginOutput, error) {
+	var user model.User
+	err := database.DB.Where("username = ?", input.Username).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, errors.New("用户名或密码错误")
+	}
+
+	if user.Status == 0 {
+		return nil, errors.New("该用户已被禁用，请联系管理员")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
+		return nil, nil
+	}
+
+	return issueUserSession(user)
+}
+
+func loginLDAP(authCfg authSettings, input LoginInput) (*LoginOutput, error) {
 	var user model.User
 	userErr := database.DB.Where("username = ?", input.Username).First(&user).Error
 	userNotFound := errors.Is(userErr, gorm.ErrRecordNotFound)
@@ -125,81 +185,71 @@ func Login(input LoginInput) (*LoginOutput, error) {
 		return nil, errors.New("用户名或密码错误")
 	}
 
-	if !userNotFound {
-		if user.Status == 0 {
-			return nil, errors.New("该用户已被禁用，请联系管理员")
-		}
-
-		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err == nil {
-			return issueUserSession(user)
-		}
+	if !userNotFound && user.Status == 0 {
+		return nil, errors.New("该用户已被禁用，请联系管理员")
 	}
 
-	if authCfg.Method == "ldap" {
-		ldapAttrs, err := ldapAuthenticate(authCfg.Ldap, input.Username, input.Password)
-		if err != nil {
-			return nil, errors.New("用户名或密码错误")
-		}
-
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return nil, fmt.Errorf("密码加密失败: %v", err)
-		}
-
-		if userNotFound {
-			uid := ldapAttrs["uid"]
-			if uid == "" {
-				uid = input.Username
-			}
-			user = model.User{
-				UID:      input.Username,
-				Username: input.Username,
-				Password: string(hashedPassword),
-				RoleID: getAutoAssignRoleID(map[string]string{
-					"username":     input.Username,
-					"uid":          uid,
-					"name":         ldapAttrs["name"],
-					"email":        ldapAttrs["email"],
-					"phone":        ldapAttrs["phone"],
-					"organization": ldapAttrs["organization"],
-				}),
-				Name:         ldapAttrs["name"],
-				Email:        ldapAttrs["email"],
-				Phone:        ldapAttrs["phone"],
-				Organization: ldapAttrs["organization"],
-			}
-			if err := database.DB.Create(&user).Error; err != nil {
-				return nil, fmt.Errorf("创建用户失败: %v", err)
-			}
-		} else {
-			updates := map[string]interface{}{"password": string(hashedPassword)}
-			if v, ok := ldapAttrs["name"]; ok && v != "" {
-				updates["name"] = v
-				user.Name = v
-			}
-			if v, ok := ldapAttrs["uid"]; ok && v != "" {
-				updates["uid"] = v
-				user.UID = v
-			} else if user.UID != input.Username {
-				updates["uid"] = input.Username
-				user.UID = input.Username
-			}
-			if v, ok := ldapAttrs["email"]; ok && v != "" {
-				updates["email"] = v
-			}
-			if v, ok := ldapAttrs["phone"]; ok && v != "" {
-				updates["phone"] = v
-			}
-			if v, ok := ldapAttrs["organization"]; ok && v != "" {
-				updates["organization"] = v
-			}
-			database.DB.Model(&user).Updates(updates)
-		}
-
-		return issueUserSession(user)
+	ldapAttrs, err := ldapAuthenticate(authCfg.Ldap, input.Username, input.Password)
+	if err != nil {
+		return nil, errors.New("用户名或密码错误")
 	}
 
-	return nil, errors.New("用户名或密码错误")
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fmt.Errorf("密码加密失败: %v", err)
+	}
+
+	if userNotFound {
+		uid := ldapAttrs["uid"]
+		if uid == "" {
+			uid = input.Username
+		}
+		user = model.User{
+			UID:      input.Username,
+			Username: input.Username,
+			Password: string(hashedPassword),
+			RoleID: getAutoAssignRoleID(map[string]string{
+				"username":     input.Username,
+				"uid":          uid,
+				"name":         ldapAttrs["name"],
+				"email":        ldapAttrs["email"],
+				"phone":        ldapAttrs["phone"],
+				"organization": ldapAttrs["organization"],
+			}),
+			Name:         ldapAttrs["name"],
+			Email:        ldapAttrs["email"],
+			Phone:        ldapAttrs["phone"],
+			Organization: ldapAttrs["organization"],
+		}
+		if err := database.DB.Create(&user).Error; err != nil {
+			return nil, fmt.Errorf("创建用户失败: %v", err)
+		}
+	} else {
+		updates := map[string]interface{}{"password": string(hashedPassword)}
+		if v, ok := ldapAttrs["name"]; ok && v != "" {
+			updates["name"] = v
+			user.Name = v
+		}
+		if v, ok := ldapAttrs["uid"]; ok && v != "" {
+			updates["uid"] = v
+			user.UID = v
+		} else if user.UID != input.Username {
+			updates["uid"] = input.Username
+			user.UID = input.Username
+		}
+		if v, ok := ldapAttrs["email"]; ok && v != "" {
+			updates["email"] = v
+		}
+		if v, ok := ldapAttrs["phone"]; ok && v != "" {
+			updates["phone"] = v
+		}
+		if v, ok := ldapAttrs["organization"]; ok && v != "" {
+			updates["organization"] = v
+		}
+		database.DB.Model(&user).Updates(updates)
+	}
+
+	return issueUserSession(user)
 }
 
 func CASLogin(input CASValidateInput) (*LoginOutput, error) {

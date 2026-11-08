@@ -35,6 +35,8 @@ POST /api/auth/login
 
 On success the server sets an HttpOnly cookie (default name `mcp_session`; session data is stored in Redis). Subsequent authenticated requests rely on the browser sending the cookie; no `Authorization` header is needed.
 
+> **Node role**: The admin username/password can only log in and perform platform settings when the startup config has `admin.enabled: true` (control node). With `admin.enabled: false` (service node) admin login is disabled and the authentication method configured in system settings (LDAP/CAS) is used instead; if no method is configured, login returns an error.
+
 **Success response:**
 ```json
 {

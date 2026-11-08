@@ -33,7 +33,7 @@ mcp_plat-console/
 │       └── main.go           # 测试数据生成工具
 │
 ├── config/
-│   └── config.go             # 配置加载（DB / Redis Session / 端口 / 管理员账号）
+│   └── config.go             # 配置加载（DB / Redis Session / 端口 / 管理员账号及节点角色开关 admin.enabled）
 │
 ├── database/
 │   └── database.go           # GORM 初始化 + AutoMigrate（AuditStore 审计存储抽象入口）

@@ -46,5 +46,6 @@ access_key_secret: 093e4f7d88cf7c8fa98244574dac873399ca3cf94f7128c1fb8f8f2789a8b
 server_port: 8080
 
 admin:
+  enabled: true
   username: admin
   password: admin123
