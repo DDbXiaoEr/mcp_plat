@@ -54,6 +54,7 @@ mcp_plat-console/
 │   ├── access_key.go         # AccessKey 模型
 │   ├── usage_history.go      # UsageHistory 模型
 │   ├── mcp_server.go         # MCPServer 模型
+│   ├── gateway_server.go     # GatewayServer API 网关服务器实例模型
 │   ├── role.go               # Role 模型
 │   ├── role_server.go        # RoleServer 关联模型
 │   ├── audit_log.go          # AuditLog 模型（AccessKey 以 ID 存储，可落 ClickHouse）
@@ -66,6 +67,7 @@ mcp_plat-console/
 │   ├── history.go            # GET /api/history
 │   ├── mcp_server.go         # CRUD /api/servers
 │   ├── overview.go           # GET /api/overview/stats（平台概况统计，仅管理员）, GET /api/overview/call-trend（AI 调用历史趋势，仅管理员）
+│   ├── gateway_server.go     # CRUD /api/gateway-servers（网关实例、默认网关、连通性测试）
 │   ├── role.go               # CRUD /api/roles（仅管理员）
 │   ├── rbac_user.go          # CRUD /api/users（仅管理员）
 │   └── setting.go            # GET/PUT /api/settings（仅管理员）
@@ -91,6 +93,7 @@ mcp_plat-console/
 │   ├── mcp_server_test.go    # FetchTools 单元测试（mock + 可选真实服务器）
 │   ├── notify.go             # 邮件通知统一封装（SendNotificationMail 等，SMTP 配置来自系统设置）
 │   ├── overview.go           # 平台概况统计业务逻辑（用户/服务器/工具/当天调用数）
+│   ├── gateway_server.go     # API 网关服务器业务逻辑（默认网关选择、连通性检测、旧网关配置迁移）
 │   ├── role.go               # Role 业务逻辑
 │   ├── rbac_user.go          # RBACUser 业务逻辑
 │   └── setting.go            # 系统设置业务逻辑（键值 JSON 存取）
@@ -183,6 +186,7 @@ mcp_plat-console/
             ├── ServersView.vue
             ├── HistoryView.vue
             ├── QuickAccessView.vue
+            ├── GatewayView.vue     # API 网关服务器管理（admin，卡片式实例列表）
             ├── RbacView.vue
             └── SettingsView.vue
 ```
@@ -232,6 +236,13 @@ mcp_plat-console/
 | POST | `/api/users/batch` | 是 | 是 | handler/rbac_user.go → BatchCreate |
 | PUT | `/api/users/:id` | 是 | 是 | handler/rbac_user.go → Update |
 | DELETE | `/api/users/:id` | 是 | 是 | handler/rbac_user.go → Delete |
+| GET | `/api/gateway-servers` | 是 | - | handler/gateway_server.go → List |
+| POST | `/api/gateway-servers` | 是 | 是 | handler/gateway_server.go → Create |
+| POST | `/api/gateway-servers/check` | 是 | 是 | handler/gateway_server.go → Check |
+| PUT | `/api/gateway-servers/:id` | 是 | 是 | handler/gateway_server.go → Update |
+| DELETE | `/api/gateway-servers/:id` | 是 | 是 | handler/gateway_server.go → Delete |
+| POST | `/api/gateway-servers/:id/default` | 是 | 是 | handler/gateway_server.go → SetDefault |
+| POST | `/api/gateway-servers/:id/test` | 是 | 是 | handler/gateway_server.go → Test |
 | GET | `/api/settings` | 是 | 是 | handler/setting.go → Get |
 | PUT | `/api/settings/:key` | 是 | 是 | handler/setting.go → Save |
 | GET | `/api/settings/:key` | 是 | - | handler/setting.go → GetByKey |
@@ -252,3 +263,4 @@ mcp_plat-console/
 - `App.vue` 使用 `<component :is="...">` 动态渲染
 - 导航项按角色定义（admin / user）
 - 用户菜单含「快速接入」页（QuickAccessView），用于为常见 MCP 客户端（如 CherryStudio）生成带 AccessKey 的接入配置；端点 URL 优先使用服务器记录的发布域名，未记录时回退运营设置中的发布域名（`publish_domain`）并结合 provider 由前端拼接
+- admin 菜单含「API 网关服务器」（gateways）页：以卡片展示网关实例，支持新增/编辑/删除、设为默认与连通性测试；发布 MCP 服务器时可在对话框中指定目标网关（默认选中默认网关），维护/取消维护按服务器记录的网关执行；系统设置中不再包含 API 网关配置

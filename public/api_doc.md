@@ -421,6 +421,7 @@ GET /api/servers
 | description | string | 服务器描述信息 |
 | status | string | 发布状态，`published`（已发布）、`maintenance`（维护中）或 `unpublished`（未发布） |
 | publish_domain | string | 发布时选择的发布域名（未发布或未选择时为空字符串） |
+| gateway_id | string | 发布时选择的 API 网关服务器 ID（未发布或接入早期版本发布时为空字符串），维护/取消维护按此字段定位网关 |
 | auth_enabled | bool | 是否启用了 Access Key 认证（发布时根据 `enable_auth` 记录；Kong 网关发布时不生效，恒为 `false`；未发布服务器为默认值 `true`） |
 
 ### 4.2 新增 MCP 服务器
@@ -477,15 +478,17 @@ POST /api/servers/publish
 | server_ids | []string | 是 | 要发布的 MCP 服务器 ID 列表 |
 | enable_auth | bool | 否 | 是否启用 Access Key 认证（默认 false），启用后路由会下发 accesskey_verify 插件 |
 | enable_audit_log | bool | 否 | 是否启用审计日志（默认 false），启用后路由会下发 audit_log 插件 |
-| accesskey_header | string | 否 | 自定义 Access Key 的 HTTP Header 名称，未传时优先使用网关设置中配置的值，均未配置时默认 `X-Access-Key` |
+| accesskey_header | string | 否 | 自定义 Access Key 的 HTTP Header 名称，未传时优先使用默认网关中配置的值，均未配置时默认 `X-Access-Key` |
 | publish_domain | string | 否 | 发布域名，从运营设置「发布域名」列表中选择；未传时使用列表中的第一个域名。用于网关路由的 host/hosts 匹配 |
+| gateway_id | string | 否 | 目标 API 网关服务器 ID（取自 `GET /api/gateway-servers`）；未传时使用默认网关 |
 
 **请求示例：**
 ```json
 {
   "server_ids": ["uuid-1", "uuid-2"],
   "enable_auth": true,
-  "publish_domain": "mcp.xauat.edu.cn"
+  "publish_domain": "mcp.xauat.edu.cn",
+  "gateway_id": "4b1d7f8e-2f3a-4c55-9a1e-0c9b6d2f7a11"
 }
 ```
 
@@ -497,7 +500,7 @@ POST /api/servers/publish
 }
 ```
 
-**说明：** 后端根据已配置的 API 网关设置（`api_gateway` 分组，`provider` 字段），将选中的 MCP 服务器路由注册到对应网关中。需先配置网关的 Admin API 地址（APISIX 还需 Key）。发布成功后会将服务器标记为 `published`，记录所选的 `publish_domain`，并根据 `enable_auth` 记录 `auth_enabled`（Kong 网关恒为 `false`）。
+**说明：** 后端将选中的 MCP 服务器路由注册到 `gateway_id` 指定的网关；未传 `gateway_id` 时使用默认网关。需先在「API 网关服务器」页面添加网关实例。发布成功后将所选网关 ID 记录到服务器的 `gateway_id` 字段，后续维护/取消维护操作按该字段定位网关（为空时回退默认网关）。发布成功后会将服务器标记为 `published`，记录所选的 `publish_domain`，并根据 `enable_auth` 记录 `auth_enabled`（Kong 网关恒为 `false`）。
 - 发布域名来自运营设置 `publish_domain`（`GET /api/settings/publish_domain`），可配置多个；发布时通过 `publish_domain` 传入所选域名，后端将其写入路由的 host（APISIX）或 hosts（Kong）。
 - `provider=apisix`（默认）：创建 上游 + 路由，可按需下发 `accesskey_verify` / `audit_log` / `proxy-rewrite` 等插件。若启用认证，还需配置 `authGrpcAddrs`（数组，支持多个地址，插件按连接数负载均衡）指向 accesskey-auth-server 的 gRPC 地址。
 - `provider=kong`：仅创建 上游（Upstream）+ Service + 路由（Route），**不下发任何插件**，因此认证、审计、路径重写等能力在 Kong 下不生效；网关路径使用服务器配置的 URI 路径（address）。Admin API Key 仅在 Kong 启用 RBAC 时需要。
@@ -566,7 +569,7 @@ POST /api/servers/maintenance
 }
 ```
 
-**说明：** 后端根据已配置的 API 网关设置（`api_gateway` 分组，`provider` 字段），将选中的 MCP 服务器路由改为直接返回 503：
+**说明：** 后端按每个服务器记录的 `gateway_id`（未记录时使用默认网关）将其路由改为直接返回 503：
 - `provider=apisix`（默认）：路由 `plugins` 整体替换为 `mocking` 插件（`response_status=503`，旧版 APISIX 回退为 `mock` 插件 `response_code=503`），取消维护时恢复发布时保存的原始路由配置（含认证/审计等插件）。
 - `provider=kong`：为路由下发 `request-termination` 插件（`status_code=503`），取消维护时删除该插件。
 - 进入维护后服务器 `status` 置为 `maintenance`，取消维护后恢复为 `published`。
@@ -1057,13 +1060,6 @@ GET /api/settings
     "publish_domain": {
       "domains": ["mcp.xauat.edu.cn", "mcp2.xauat.edu.cn"]
     },
-    "api_gateway": {
-      "provider": "apisix",
-      "adminUrl": "http://127.0.0.1:9180",
-      "adminKey": "edd1c9f034335f136f87ad84b625c8f1",
-      "authGrpcAddrs": [":9090", "127.0.0.1:9091"],
-      "accesskeyHeader": "X-Access-Key"
-    },
     "audit_log": {
       "enabled": true,
       "grpcAddrs": [":9091", "127.0.0.1:9191"]
@@ -1085,7 +1081,7 @@ PUT /api/settings/:key
 
 | 参数 | 说明 |
 |------|------|
-| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `publish_domain` / `api_gateway` / `network_security` / `audit_log` / `quick_access` |
+| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `publish_domain` / `network_security` / `audit_log` / `quick_access` |
 
 **请求参数（JSON Body）：**
 
@@ -1123,7 +1119,7 @@ GET /api/settings/:key
 
 | 参数 | 说明 |
 |------|------|
-| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `publish_domain` / `api_gateway` / `network_security` / `audit_log` / `quick_access` |
+| key | 设置项分组，支持 `log` / `smtp` / `auth` / `user_ops` / `platform` / `publish_domain` / `network_security` / `audit_log` / `quick_access` |
 
 **响应示例（`GET /api/settings/platform`）：**
 ```json
@@ -1165,12 +1161,12 @@ GET /api/settings/gateway-status
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| configured | bool | 网关是否已配置（APISIX 需地址 + Key；Kong 仅需地址） |
-| provider | string | 当前网关类型，`apisix` / `kong` / `tyk` |
+| configured | bool | 是否已配置默认网关（取自「API 网关服务器管理」，APISIX 需地址 + Key；Kong 仅需地址） |
+| provider | string | 默认网关类型，`apisix` / `kong` |
 | adminUrl | string | 已配置的 Admin API 基础地址 |
 | accesskeyHeader | string | Access Key 鉴权使用的 HTTP Header 名称（未配置时为空字符串，前端回退默认 `X-Access-Key`） |
 
-> 注意：接口不返回网关管理凭据（如 adminKey）。发布域名已独立到运营设置 `publish_domain`，可通过 `GET /api/settings/publish_domain` 获取。
+> 注意：接口不返回网关管理凭据（如 adminKey）。网关实例的增删改查请使用 `/api/gateway-servers`。发布域名已独立到运营设置 `publish_domain`，可通过 `GET /api/settings/publish_domain` 获取。
 
 ---
 
@@ -1320,7 +1316,131 @@ POST /api/settings/test-smtp
 
 ---
 
-## 7. 平台概况统计
+## 7. API 网关服务器管理
+
+> 列表接口仅需登录；新增 / 修改 / 删除 / 设为默认 / 连通性测试需管理员权限。
+
+网关实例可配置多个：发布 MCP 服务器时可在发布对话框中指定目标网关（未指定则使用**默认网关**），维护/取消维护按服务器记录的网关执行，快速接入等其余操作使用默认网关。系统设置页已不再包含 API 网关配置；旧版本保存在 `settings.api_gateway` 中的配置会在服务启动时自动迁移为一条名为「默认网关」的记录（并删除旧设置项）。
+
+### 7.1 获取网关服务器列表
+
+```
+GET /api/gateway-servers
+```
+
+**响应示例：**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": "4b1d7f8e-2f3a-4c55-9a1e-0c9b6d2f7a11",
+      "name": "主网关",
+      "provider": "apisix",
+      "admin_url": "http://127.0.0.1:9180",
+      "accesskey_header": "X-Access-Key",
+      "auth_grpc_addrs": ["127.0.0.1:9090"],
+      "description": "生产环境 APISIX",
+      "is_default": true,
+      "has_admin_key": true,
+      "status": "online",
+      "status_message": "连接成功",
+      "latency_ms": 8,
+      "created_at": "2026-01-01T12:00:00Z",
+      "updated_at": "2026-01-01T12:00:00Z"
+    }
+  ]
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | string | 网关实例 ID |
+| name | string | 网关名称 |
+| provider | string | 网关类型，`apisix` / `kong` |
+| admin_url | string | Admin API 基础地址（不含 `/apisix/admin` 等路径） |
+| accesskey_header | string | Access Key 的 HTTP Header 名称 |
+| auth_grpc_addrs | []string | Access Key 认证 gRPC 地址列表 |
+| description | string | 说明 |
+| is_default | bool | 是否为默认网关；发布与维护操作使用默认网关 |
+| has_admin_key | bool | 是否已配置 Admin API Key（不返回明文） |
+| status | string | 连通性状态：`online` / `offline` |
+| status_message | string | 连通性检测结果说明 |
+| latency_ms | int | 连通性检测耗时（毫秒） |
+
+> 列表接口会并发探测每个网关的 Admin API（单次超时 3 秒），网关较多或不可达时响应会稍慢。
+
+### 7.2 新增网关服务器
+
+```
+POST /api/gateway-servers
+```
+
+**请求参数（JSON Body）：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| name | string | 是 | 网关名称 |
+| provider | string | 否 | 网关类型，`apisix`（默认）/ `kong` |
+| admin_url | string | 是 | Admin API 基础地址，如 `http://127.0.0.1:9180` |
+| admin_key | string | 条件 | APISIX 必填；Kong 未启用 RBAC 时可留空 |
+| accesskey_header | string | 否 | Access Key 的 HTTP Header 名称，默认 `X-Access-Key` |
+| auth_grpc_addrs | []string | 否 | 认证 gRPC 地址列表 |
+| description | string | 否 | 说明 |
+
+**说明：** 新增的第一个网关会自动设为默认网关。成功响应 `data` 为网关对象（格式同列表项，`status` 为 `unknown`）。
+
+### 7.3 更新网关服务器
+
+```
+PUT /api/gateway-servers/:id
+```
+
+请求参数同上。`admin_key` 留空表示保留原有 Key。成功返回 `message: 更新成功`。
+
+### 7.4 删除网关服务器
+
+```
+DELETE /api/gateway-servers/:id
+```
+
+删除默认网关时，会自动将创建时间最早的剩余网关设为默认网关。该操作仅删除平台记录，不会从网关中下线已发布的路由。
+
+### 7.5 设为默认网关
+
+```
+POST /api/gateway-servers/:id/default
+```
+
+将指定网关设为默认网关，同时取消其它网关的默认标记。
+
+### 7.6 测试网关连通性
+
+```
+POST /api/gateway-servers/:id/test
+```
+
+**成功响应 data：**
+```json
+{
+  "online": true,
+  "message": "连接成功",
+  "latency_ms": 8
+}
+```
+
+### 7.7 测试未保存的网关配置
+
+```
+POST /api/gateway-servers/check
+```
+
+请求参数与新增一致，并额外支持可选字段 `id`：编辑已有网关时传入该 ID，`admin_key` 留空将复用已保存的 Key。
+
+---
+
+## 8. 平台概况统计
 
 > 仅管理员可调用，需登录后的 Cookie Session。
 
@@ -1405,7 +1525,7 @@ GET /api/overview/call-trend
 
 ---
 
-## 8. 健康检查
+## 9. 健康检查
 
 ### 8.1 存活探针
 
@@ -1449,7 +1569,7 @@ GET /readyz
 
 ---
 
-## 9. 数据模型说明
+## 10. 数据模型说明
 
 ### 7.1 角色表（roles）
 
@@ -1485,6 +1605,6 @@ GET /readyz
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| key | string (PK) | 设置项分组（log / smtp / auth / user_ops / platform / publish_domain / api_gateway / network_security / quick_access） |
+| key | string (PK) | 设置项分组（log / smtp / auth / user_ops / platform / publish_domain / network_security / audit_log / quick_access） |
 | value | text | 该分组的 JSON 内容 |
 | updated_at | datetime | 更新时间 |

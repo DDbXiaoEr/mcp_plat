@@ -14,7 +14,7 @@ MCP 服务平台 · 管理控制台
 - **灵活认证体系** — 支持本地账号、LDAP、CAS 多种登录方式，满足不同组织的基础设施环境
 - **精细化权限** — 基于角色的访问控制（RBAC），AccessKey 粒度的服务/工具级权限划分
 - **MCP 工具级管控** — AccessKey 可精确控制到每个 MCP Server 的具体工具（tool）粒度，通过 `tools/list` 协议自动发现工具列表，前端勾选式控制工具权限范围，配合 APISIX 自定义插件实现运行时工具级鉴权
-- **网关原生集成** — 深度集成 APISIX API 网关，一键发布路由，自定义 Go 插件实现运行时鉴权
+- **网关原生集成** — 深度集成 APISIX API 网关，多网关实例卡片化管理，发布时指定目标网关，自定义 Go 插件实现运行时鉴权
 - **单二进制部署** — 前端内嵌编译，一个可执行文件即可完成部署，简化运维
 
 ## 适用人群
@@ -307,7 +307,7 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse 模式
 - MCP Server 的创建、编辑、删除
 - 服务信息：名称、网关路径、后端地址（支持多个 IP:Port）、所属部门、协议（SSE / Streamable HTTP / stdio）、协议版本（2025-03-26 / 2025-06-18 / 2026-07-28）
 - **工具发现**：连接 MCP Server 自动调用 `tools/list` 协议拉取可用工具列表，支持下拉选择或自定义地址，多地址时随机选取
-- **一键发布**：批量选择 MCP Server 自动注册为 APISIX 网关路由，多地址发布为轮询负载均衡 upstream，支持勾选 AccessKey 鉴权插件与自定义 Header
+- **一键发布**：批量选择 MCP Server 并指定目标 API 网关，自动注册为网关路由，多地址发布为轮询负载均衡 upstream，支持勾选 AccessKey 鉴权插件与自定义 Header
 - 兼容 MCP 2025-06-18 规范，支持 Bearer Token 鉴权
 
 ### AccessKey 管理
@@ -325,12 +325,11 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse 模式
 
 ### 系统设置
 
-系统配置按分组管理，通过页面统一编辑：
+系统配置按分组管理，通过页面统一编辑（API 网关实例在侧边栏「API 网关服务器」页以卡片方式管理，不再属于系统设置）：
 
 | 分组 | 配置项 |
 |------|--------|
 | `platform` | 平台名称、Logo URL、站点地址 |
-| `api_gateway` | APISIX Admin API 地址/Key、发布域名、gRPC 鉴权地址、AccessKey Header |
 | `auth` | 登录方式切换（local / ldap / cas）、LDAP/CAS/OAuth 连接参数 |
 | `log` | syslog 转发（支持 TCP/UDP） |
 | `smtp` | 邮件服务配置 |
@@ -347,7 +346,7 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse 模式
 
 ### Kong 网关接入（测试中）
 
-- 在系统设置中切换网关类型为 **Kong**，即可通过 Kong Admin API 发布 MCP 服务
+- 在「API 网关服务器」页新增一个类型为 **Kong** 的网关实例并设为默认，即可通过 Kong Admin API 发布 MCP 服务
 - 仅创建/更新 **上游（Upstream）、Service、路由（Route）**，**不下发任何插件**
 - 因此 Kong 场景下 Access Key 认证、审计日志、路径重写等能力不生效；网关路径使用服务器配置的 URI 路径（address）
 - 本地 Docker 测试：Admin API 默认 `http://127.0.0.1:8001`，未启用 RBAC 时 Admin API Key 可留空
@@ -408,7 +407,14 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse 模式
 | POST | `/api/settings/test-ldap` | Admin | 测试 LDAP 连接与属性映射 |
 | POST | `/api/settings/test-smtp` | Admin | 测试 SMTP 邮件发送 |
 | GET | `/api/settings/:key` | Cookie | 获取单个设置项 |
-| GET | `/api/settings/gateway-status` | Cookie | 检查 API 网关配置状态 |
+| GET | `/api/settings/gateway-status` | Cookie | 检查默认网关配置状态 |
+| GET | `/api/gateway-servers` | Cookie | API 网关服务器列表（含连通性状态） |
+| POST | `/api/gateway-servers` | Admin | 新增 API 网关服务器 |
+| PUT | `/api/gateway-servers/:id` | Admin | 更新 API 网关服务器 |
+| DELETE | `/api/gateway-servers/:id` | Admin | 删除 API 网关服务器 |
+| POST | `/api/gateway-servers/:id/default` | Admin | 设为默认网关 |
+| POST | `/api/gateway-servers/:id/test` | Admin | 测试网关连通性 |
+| POST | `/api/gateway-servers/check` | Admin | 测试未保存的网关配置 |
 
 > 详细请求/响应字段见 `public/api_doc.md`，开发进度见 `public/api-devstatus.md`
 

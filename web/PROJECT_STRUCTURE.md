@@ -31,7 +31,7 @@ web/
     │   │   ├── index.js       #   合并入口
     │   │   ├── base.js        #   app/common/nav/role/auth 通用词条
     │   │   ├── login.js / welcome.js / profile.js
-    │   │   └── overview / history / servers / accesskey / rbac / settings / quickaccess.js
+    │   │   └── overview / history / servers / accesskey / rbac / settings / quickaccess / gateway.js
     │   └── en-US/         # 英文（键结构与 zh-CN 完全一致）
     │
     ├── styles/
@@ -56,6 +56,7 @@ web/
         ├── QuickAccessView.vue# 快速接入页（user）
         ├── OverviewView.vue   # 平台概况（admin，四项统计卡片 + AI 调用趋势折线图）
         ├── ServersView.vue    # MCP 服务器管理（admin，列表+详情+新增对话框）
+        ├── GatewayView.vue    # API 网关服务器管理（admin，卡片式实例列表）
         ├── RbacView.vue       # RBAC 设置（admin，角色/用户管理）
         └── SettingsView.vue   # 系统设置（admin）
 ```
@@ -66,7 +67,7 @@ web/
 - `App.vue` 使用 `<component :is="...">` 动态渲染
 - 导航项按角色定义（admin / user），菜单文案使用 `nav.*` 词条键（`labelKey`），渲染时按当前语言取词
 - user 菜单：个人信息（profile）、AccessKey 管理（accesskey）、快速接入（quickaccess）、使用历史（history）
-- admin 菜单：平台概况（overview）、MCP 服务器管理（servers）、RBAC 设置（rbac）、系统设置（settings）
+- admin 菜单：平台概况（overview）、MCP 服务器管理（servers）、API 网关服务器（gateways）、RBAC 设置（rbac）、系统设置（settings）
 
 ## 国际化约定
 

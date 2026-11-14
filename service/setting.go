@@ -33,7 +33,6 @@ var settingKeys = map[string]bool{
 	"smtp":             true,
 	"auth":             true,
 	"user_ops":         true,
-	"api_gateway":      true,
 	"platform":         true,
 	"publish_domain":   true,
 	"network_security": true,
@@ -49,12 +48,7 @@ func GetSettings() (map[string]json.RawMessage, error) {
 
 	result := make(map[string]json.RawMessage, len(settings))
 	for _, s := range settings {
-		if s.Key == "api_gateway" {
-			status, _ := json.Marshal(CheckGatewayStatus())
-			result[s.Key] = status
-		} else {
-			result[s.Key] = json.RawMessage(s.Value)
-		}
+		result[s.Key] = json.RawMessage(s.Value)
 	}
 	if domainsJSON, err := json.Marshal(PublishDomainSetting{Domains: GetPublishDomains()}); err == nil {
 		result["publish_domain"] = domainsJSON
@@ -74,10 +68,6 @@ func GetSetting(key string, out any) error {
 func GetSettingByKey(key string) (json.RawMessage, error) {
 	if !settingKeys[key] {
 		return nil, errors.New("不支持的设置项")
-	}
-	if key == "api_gateway" {
-		status, _ := json.Marshal(CheckGatewayStatus())
-		return status, nil
 	}
 	if key == "publish_domain" {
 		domains, _ := json.Marshal(PublishDomainSetting{Domains: GetPublishDomains()})
@@ -117,23 +107,16 @@ type GatewayStatus struct {
 }
 
 func CheckGatewayStatus() GatewayStatus {
-	var gw ApiGatewaySetting
-	if err := GetSetting("api_gateway", &gw); err != nil {
+	gw, err := GetDefaultGatewaySetting()
+	if err != nil {
 		return GatewayStatus{Configured: false, AuthGrpcAddrs: []string{}}
 	}
-	configured := gw.AdminURL != ""
-	if gw.Provider != "kong" {
-		configured = configured && gw.AdminKey != ""
-	}
 	addrs := gw.AuthGrpcAddrs
-	if len(addrs) == 0 && gw.AuthGrpcAddr != "" {
-		addrs = []string{gw.AuthGrpcAddr}
-	}
 	if addrs == nil {
 		addrs = []string{}
 	}
 	return GatewayStatus{
-		Configured:      configured,
+		Configured:      true,
 		Provider:        gw.Provider,
 		AdminURL:        gw.AdminURL,
 		AccesskeyHeader: gw.AccesskeyHeader,

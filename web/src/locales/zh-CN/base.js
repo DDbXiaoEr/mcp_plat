@@ -43,6 +43,7 @@ export default {
     history: '使用历史',
     overview: '平台概况',
     servers: 'MCP 服务器管理',
+    gateways: 'API 网关服务器',
     rbac: 'RBAC 设置',
     settings: '系统设置'
   },

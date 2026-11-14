@@ -27,7 +27,8 @@ export default {
     history: 'Review call records',
     overview: 'Usage and trends',
     servers: 'Connect, publish, maintain',
+    gateways: 'Gateway instances and health',
     rbac: 'Roles and accounts',
-    settings: 'Name, logo, and gateway'
+    settings: 'Name, logo, and policies'
   }
 }

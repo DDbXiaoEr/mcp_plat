@@ -421,6 +421,7 @@ GET /api/servers
 | description | string | server description |
 | status | string | publish status: `published`, `maintenance` or `unpublished` |
 | publish_domain | string | publish domain selected at publish time (empty string when unpublished or not selected) |
+| gateway_id | string | API gateway server ID selected at publish time (empty when unpublished or published by older versions); maintenance/cancel-maintenance use this field to locate the gateway |
 | auth_enabled | bool | whether Access-Key auth is enabled (recorded from `enable_auth` when publishing; always `false` for Kong-gateway publishing; default `true` for unpublished servers) |
 
 ### 4.2 Create MCP Server
@@ -477,15 +478,17 @@ POST /api/servers/publish
 | server_ids | []string | yes | list of MCP server IDs to publish |
 | enable_auth | bool | no | whether to enable Access-Key auth (default false); when enabled the route gets the accesskey_verify plugin |
 | enable_audit_log | bool | no | whether to enable audit logging (default false); when enabled the route gets the audit_log plugin |
-| accesskey_header | string | no | custom HTTP header name for the Access Key; when omitted, the value configured in gateway settings is preferred; if none is configured, default `X-Access-Key` |
+| accesskey_header | string | no | custom HTTP header name for the Access Key; when omitted, the value configured on the default gateway is preferred; if none is configured, default `X-Access-Key` |
 | publish_domain | string | no | publish domain selected from the operation-settings "Publish Domains" list; when omitted, the first configured domain is used. Written as the route host/hosts match |
+| gateway_id | string | no | target API gateway server ID (from `GET /api/gateway-servers`); when omitted, the default gateway is used |
 
 **Request example:**
 ```json
 {
   "server_ids": ["uuid-1", "uuid-2"],
   "enable_auth": true,
-  "publish_domain": "mcp.xauat.edu.cn"
+  "publish_domain": "mcp.xauat.edu.cn",
+  "gateway_id": "4b1d7f8e-2f3a-4c55-9a1e-0c9b6d2f7a11"
 }
 ```
 
@@ -497,7 +500,7 @@ POST /api/servers/publish
 }
 ```
 
-**Notes:** the backend registers routes for the selected MCP servers to the configured API gateway (settings group `api_gateway`, field `provider`). The gateway Admin API address must be configured first (APISIX also needs its Key). After a successful publish the server is marked `published`, the selected `publish_domain` is recorded, and `auth_enabled` is recorded from `enable_auth` (always `false` for Kong).
+**Notes:** the backend registers routes for the selected MCP servers to the gateway identified by `gateway_id`; the default gateway is used when `gateway_id` is omitted. Add a gateway instance on the "API Gateway Servers" page first. On success the gateway ID is stored in the server's `gateway_id` field, and maintenance/cancel-maintenance use that field to locate the gateway (falling back to the default gateway when empty). After a successful publish the server is marked `published`, the selected `publish_domain` is recorded, and `auth_enabled` is recorded from `enable_auth` (always `false` for Kong).
 - Publish domains come from the operation setting `publish_domain` (`GET /api/settings/publish_domain`) and multiple domains can be configured; pass the selected domain via `publish_domain` and the backend writes it into the route `host` (APISIX) or `hosts` (Kong).
 - `provider=apisix` (default): creates upstream + route, optionally pushing plugins such as `accesskey_verify` / `audit_log` / `proxy-rewrite`. If auth is enabled, `authGrpcAddrs` must also be configured (an array; multiple addresses are supported and load-balanced by connection count) pointing to the accesskey-auth-server gRPC addresses.
 - `provider=kong`: only creates upstream + Service + Route and **pushes no plugins**, so auth, audit and path-rewrite do not take effect under Kong; the gateway path uses the URI path configured on the server (`address`). The Admin API Key is only needed when Kong RBAC is enabled.
@@ -566,7 +569,7 @@ POST /api/servers/maintenance
 }
 ```
 
-**Notes:** the backend changes the selected MCP server routes so they return 503 directly, based on the configured API gateway settings (`api_gateway` group, `provider` field):
+**Notes:** the backend changes each server's route so it returns 503 directly, using the gateway recorded in the server's `gateway_id` (the default gateway when empty):
 - `provider=apisix` (default): the route `plugins` are fully replaced with the `mocking` plugin (`response_status=503`; older APISIX falls back to the `mock` plugin `response_code=503`). Leaving maintenance restores the original route config saved at publish time (including auth/audit plugins).
 - `provider=kong`: the `request-termination` plugin is pushed to the route (`status_code=503`); leaving maintenance removes it.
 - On entering maintenance the server `status` is set to `maintenance`; on restore it goes back to `published`.
@@ -1057,13 +1060,6 @@ GET /api/settings
     "publish_domain": {
       "domains": ["mcp.xauat.edu.cn", "mcp2.xauat.edu.cn"]
     },
-    "api_gateway": {
-      "provider": "apisix",
-      "adminUrl": "http://127.0.0.1:9180",
-      "adminKey": "edd1c9f034335f136f87ad84b625c8f1",
-      "authGrpcAddrs": [":9090", "127.0.0.1:9091"],
-      "accesskeyHeader": "X-Access-Key"
-    },
     "audit_log": {
       "enabled": true,
       "grpcAddrs": [":9091", "127.0.0.1:9191"]
@@ -1085,7 +1081,7 @@ PUT /api/settings/:key
 
 | Param | Description |
 |-------|-------------|
-| key | settings group; supports `log` / `smtp` / `auth` / `user_ops` / `platform` / `publish_domain` / `api_gateway` / `network_security` / `audit_log` / `quick_access` |
+| key | settings group; supports `log` / `smtp` / `auth` / `user_ops` / `platform` / `publish_domain` / `network_security` / `audit_log` / `quick_access` |
 
 **Request params (JSON Body):**
 
@@ -1123,7 +1119,7 @@ GET /api/settings/:key
 
 | Param | Description |
 |-------|-------------|
-| key | settings group; supports `log` / `smtp` / `auth` / `user_ops` / `platform` / `publish_domain` / `api_gateway` / `network_security` / `audit_log` / `quick_access` |
+| key | settings group; supports `log` / `smtp` / `auth` / `user_ops` / `platform` / `publish_domain` / `network_security` / `audit_log` / `quick_access` |
 
 **Response example (`GET /api/settings/platform`):**
 ```json
@@ -1165,12 +1161,12 @@ GET /api/settings/gateway-status
 
 | Field | Type | Description |
 |-------|------|-------------|
-| configured | bool | whether the gateway is configured (APISIX needs URL + Key; Kong needs only URL) |
-| provider | string | current gateway type: `apisix` / `kong` / `tyk` |
+| configured | bool | whether a default gateway is configured (from API Gateway Server Management; APISIX needs URL + Key, Kong needs only URL) |
+| provider | string | default gateway type: `apisix` / `kong` |
 | adminUrl | string | configured Admin API base URL |
 | accesskeyHeader | string | HTTP header name used for Access-Key auth (empty string when not configured; the frontend falls back to `X-Access-Key`) |
 
-> Note: the endpoint never returns gateway admin credentials (e.g. `adminKey`). Publish domains now live in the operation setting `publish_domain` and can be read via `GET /api/settings/publish_domain`.
+> Note: the endpoint never returns gateway admin credentials (e.g. `adminKey`). Use `/api/gateway-servers` to manage gateway instances. Publish domains live in the operation setting `publish_domain` and can be read via `GET /api/settings/publish_domain`.
 
 ---
 
@@ -1320,7 +1316,131 @@ POST /api/settings/test-smtp
 
 ---
 
-## 7. Platform Overview Stats
+## 7. API Gateway Server Management
+
+> The list endpoint requires login only; create / update / delete / set-default / connectivity test require admin permission.
+
+Multiple gateway instances can be configured: the publish dialog lets you choose the target gateway (falling back to the **default gateway**), maintenance/cancel-maintenance use the gateway recorded on each server, and other operations such as quick access use the default gateway. The system settings page no longer contains gateway configuration; legacy configuration stored in `settings.api_gateway` is migrated automatically at startup into a record named "默认网关" (and the old setting is deleted).
+
+### 7.1 List Gateway Servers
+
+```
+GET /api/gateway-servers
+```
+
+**Response example:**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": "4b1d7f8e-2f3a-4c55-9a1e-0c9b6d2f7a11",
+      "name": "Primary gateway",
+      "provider": "apisix",
+      "admin_url": "http://127.0.0.1:9180",
+      "accesskey_header": "X-Access-Key",
+      "auth_grpc_addrs": ["127.0.0.1:9090"],
+      "description": "Production APISIX",
+      "is_default": true,
+      "has_admin_key": true,
+      "status": "online",
+      "status_message": "连接成功",
+      "latency_ms": 8,
+      "created_at": "2026-01-01T12:00:00Z",
+      "updated_at": "2026-01-01T12:00:00Z"
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string | gateway instance ID |
+| name | string | gateway name |
+| provider | string | gateway type: `apisix` / `kong` |
+| admin_url | string | Admin API base URL (no `/apisix/admin` and similar paths) |
+| accesskey_header | string | HTTP header name carrying the Access Key |
+| auth_grpc_addrs | []string | Access-Key auth gRPC addresses |
+| description | string | description |
+| is_default | bool | whether this is the default gateway; publish and maintenance use it |
+| has_admin_key | bool | whether an Admin API Key is configured (plaintext never returned) |
+| status | string | connectivity status: `online` / `offline` |
+| status_message | string | connectivity check message |
+| latency_ms | int | connectivity check latency in milliseconds |
+
+> The list endpoint probes each gateway's Admin API concurrently (3s timeout per probe), so the response may be slower when gateways are numerous or unreachable.
+
+### 7.2 Create a Gateway Server
+
+```
+POST /api/gateway-servers
+```
+
+**Request params (JSON Body):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| name | string | yes | gateway name |
+| provider | string | no | gateway type: `apisix` (default) / `kong` |
+| admin_url | string | yes | Admin API base URL, e.g. `http://127.0.0.1:9180` |
+| admin_key | string | conditional | required for APISIX; may be empty for Kong when RBAC is disabled |
+| accesskey_header | string | no | HTTP header name carrying the Access Key, default `X-Access-Key` |
+| auth_grpc_addrs | []string | no | auth gRPC address list |
+| description | string | no | description |
+
+**Notes:** the first gateway created becomes the default automatically. The success response `data` is the gateway object (same shape as a list item, `status` is `unknown`).
+
+### 7.3 Update a Gateway Server
+
+```
+PUT /api/gateway-servers/:id
+```
+
+Same request params as create. An empty `admin_key` keeps the existing key. Returns `message: 更新成功`.
+
+### 7.4 Delete a Gateway Server
+
+```
+DELETE /api/gateway-servers/:id
+```
+
+Deleting the default gateway automatically promotes the oldest remaining gateway to default. This only removes the platform record; published routes are not removed from the gateway.
+
+### 7.5 Set the Default Gateway
+
+```
+POST /api/gateway-servers/:id/default
+```
+
+Marks the given gateway as default and clears the flag on all others.
+
+### 7.6 Test Gateway Connectivity
+
+```
+POST /api/gateway-servers/:id/test
+```
+
+**Success response data:**
+```json
+{
+  "online": true,
+  "message": "连接成功",
+  "latency_ms": 8
+}
+```
+
+### 7.7 Test an Unsaved Gateway Config
+
+```
+POST /api/gateway-servers/check
+```
+
+Same params as create, plus an optional `id`: when editing an existing gateway, pass its ID and leave `admin_key` empty to reuse the saved key.
+
+---
+
+## 8. Platform Overview Stats
 
 > Admin only; requires a logged-in cookie session.
 
@@ -1405,7 +1525,7 @@ GET /api/overview/call-trend
 
 ---
 
-## 8. Health Checks
+## 9. Health Checks
 
 ### 8.1 Liveness Probe
 
@@ -1449,7 +1569,7 @@ No auth; returns 200 only when the process is alive and the database is reachabl
 
 ---
 
-## 9. Data Model Notes
+## 10. Data Model Notes
 
 ### 7.1 Role table (roles)
 
@@ -1485,6 +1605,6 @@ No auth; returns 200 only when the process is alive and the database is reachabl
 
 | Field | Type | Description |
 |-------|------|-------------|
-| key | string (PK) | settings group (log / smtp / auth / user_ops / platform / publish_domain / api_gateway / network_security / quick_access) |
+| key | string (PK) | settings group (log / smtp / auth / user_ops / platform / publish_domain / network_security / audit_log / quick_access) |
 | value | text | JSON content of the group |
 | updated_at | datetime | update time |

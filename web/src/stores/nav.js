@@ -29,6 +29,7 @@ const MENUS = {
   admin: [
     { key: 'overview', labelKey: 'nav.overview', icon: 'layout' },
     { key: 'servers', labelKey: 'nav.servers', icon: 'server' },
+    { key: 'gateways', labelKey: 'nav.gateways', icon: 'gateway' },
     { key: 'rbac', labelKey: 'nav.rbac', icon: 'users' },
     { key: 'settings', labelKey: 'nav.settings', icon: 'sliders' }
   ]

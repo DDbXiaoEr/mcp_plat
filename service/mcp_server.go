@@ -575,6 +575,7 @@ type PublishInput struct {
 	EnableAuditLog  bool     `json:"enable_audit_log"`
 	AccesskeyHeader string   `json:"accesskey_header"`
 	PublishDomain   string   `json:"publish_domain"`
+	GatewayID       string   `json:"gateway_id"`
 }
 
 type ApiGatewaySetting struct {
@@ -587,16 +588,11 @@ type ApiGatewaySetting struct {
 }
 
 func PublishServers(input PublishInput) error {
-	var gw ApiGatewaySetting
-	if err := GetSetting("api_gateway", &gw); err != nil {
-		return errors.New("请先在系统设置中配置 API 网关参数")
+	gwServer, err := resolveGateway(input.GatewayID)
+	if err != nil {
+		return err
 	}
-	if gw.AdminURL == "" {
-		return errors.New("API 网关 Admin API 地址未配置")
-	}
-	if gw.Provider != "kong" && gw.AdminKey == "" {
-		return errors.New("API 网关 Admin API Key 未配置")
-	}
+	gw := gatewaySettingOf(gwServer)
 
 	var servers []model.MCPServer
 	if err := database.DB.Where("id IN ?", input.ServerIDs).Find(&servers).Error; err != nil {
@@ -762,6 +758,7 @@ func PublishServers(input PublishInput) error {
 			"status":         "published",
 			"auth_enabled":   authEnabled,
 			"publish_domain": publishDomain,
+			"gateway_id":     gwServer.ID,
 		}).Error; err != nil {
 		return fmt.Errorf("更新发布状态失败: %w", err)
 	}
@@ -844,19 +841,23 @@ type MaintenanceInput struct {
 }
 
 func SetMaintenance(input MaintenanceInput) error {
-	var gw ApiGatewaySetting
-	if err := GetSetting("api_gateway", &gw); err != nil {
-		return errors.New("请先在系统设置中配置 API 网关参数")
-	}
-	if gw.AdminURL == "" {
-		return errors.New("API 网关 Admin API 地址未配置")
-	}
-	if gw.Provider != "kong" && gw.AdminKey == "" {
-		return errors.New("API 网关 Admin API Key 未配置")
-	}
-
 	client := &http.Client{Timeout: 10 * time.Second}
 	var errs []string
+
+	gatewayCache := map[string]ApiGatewaySetting{}
+	gatewayIDs := map[string]string{}
+	loadGateway := func(id string) (ApiGatewaySetting, string, error) {
+		if cached, ok := gatewayCache[id]; ok {
+			return cached, gatewayIDs[id], nil
+		}
+		gwServer, err := resolveGateway(id)
+		if err != nil {
+			return ApiGatewaySetting{}, "", err
+		}
+		gatewayCache[id] = gatewaySettingOf(gwServer)
+		gatewayIDs[id] = gwServer.ID
+		return gatewayCache[id], gwServer.ID, nil
+	}
 
 	if len(input.ServerIDs) > 0 {
 		var servers []model.MCPServer
@@ -864,6 +865,11 @@ func SetMaintenance(input MaintenanceInput) error {
 			return fmt.Errorf("查询服务器失败: %w", err)
 		}
 		for _, srv := range servers {
+			gw, gwID, err := loadGateway(srv.GatewayID)
+			if err != nil {
+				errs = append(errs, fmt.Sprintf("%s: 设置维护失败: %v", srv.Name, err))
+				continue
+			}
 			if gw.Provider == "kong" {
 				if err := kongSetMaintenance(client, gw, srv); err != nil {
 					errs = append(errs, fmt.Sprintf("%s: 设置维护失败: %v", srv.Name, err))
@@ -876,7 +882,7 @@ func SetMaintenance(input MaintenanceInput) error {
 				}
 			}
 			if err := database.DB.Model(&model.MCPServer{}).Where("id = ?", srv.ID).
-				Update("status", "maintenance").Error; err != nil {
+				Updates(map[string]interface{}{"status": "maintenance", "gateway_id": gwID}).Error; err != nil {
 				errs = append(errs, fmt.Sprintf("%s: 更新维护状态失败: %v", srv.Name, err))
 			}
 		}
@@ -888,6 +894,11 @@ func SetMaintenance(input MaintenanceInput) error {
 			return fmt.Errorf("查询服务器失败: %w", err)
 		}
 		for _, srv := range servers {
+			gw, _, err := loadGateway(srv.GatewayID)
+			if err != nil {
+				errs = append(errs, fmt.Sprintf("%s: 取消维护失败: %v", srv.Name, err))
+				continue
+			}
 			if gw.Provider == "kong" {
 				if err := kongRestoreMaintenance(client, gw, srv); err != nil {
 					errs = append(errs, fmt.Sprintf("%s: 取消维护失败: %v", srv.Name, err))

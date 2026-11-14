@@ -27,6 +27,7 @@ import accesskey from './accesskey.js'
 import rbac from './rbac.js'
 import settings from './settings.js'
 import quickaccess from './quickaccess.js'
+import gateway from './gateway.js'
 
 export default {
   ...base,
@@ -39,5 +40,6 @@ export default {
   accesskey,
   rbac,
   settings,
-  quickaccess
+  quickaccess,
+  gateway
 }

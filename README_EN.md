@@ -305,7 +305,7 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse mode
 - Create, edit, and delete MCP Servers
 - Service info: name, gateway path, backend address (multiple IP:Port), department, protocol (SSE / Streamable HTTP / stdio), protocol version (2025-03-26 / 2025-06-18 / 2026-07-28)
 - **Tool discovery**: connect to an MCP Server and automatically call the `tools/list` protocol to pull available tools, with dropdown or custom address selection; picks randomly among multiple addresses
-- **One-click publish**: batch-select MCP Servers to register as APISIX gateway routes; multiple addresses publish as round-robin load-balanced upstreams, with optional AccessKey auth plugin and custom headers
+- **One-click publish**: batch-select MCP Servers and choose the target API gateway; routes are registered automatically, multiple addresses publish as round-robin load-balanced upstreams, with optional AccessKey auth plugin and custom headers
 - Compatible with MCP 2025-06-18 spec, supports Bearer Token auth
 
 ### AccessKey Management
@@ -323,12 +323,11 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse mode
 
 ### System Settings
 
-System configuration is managed in groups and edited on a single page:
+System configuration is managed in groups and edited on a single page (API gateway instances are managed as cards on the "API Gateway Servers" page in the sidebar and are no longer part of system settings):
 
 | Group | Items |
 |------|--------|
 | `platform` | Platform name, Logo URL, site address |
-| `api_gateway` | APISIX Admin API address/key, publish domain, gRPC auth address, AccessKey header |
 | `auth` | Login method switch (local / ldap / cas), LDAP/CAS/OAuth connection params |
 | `log` | syslog forwarding (TCP/UDP) |
 | `smtp` | Mail service configuration |
@@ -345,7 +344,7 @@ System configuration is managed in groups and edited on a single page:
 
 ### Kong Gateway Integration (experimental)
 
-- Switch the gateway type to **Kong** in system settings to publish MCP services via the Kong Admin API
+- Add a gateway instance of type **Kong** on the "API Gateway Servers" page and set it as default to publish MCP services via the Kong Admin API
 - Only creates/updates **Upstream, Service, and Route** — **no plugins are deployed**
 - Therefore, AccessKey auth, audit logging, and path rewriting do not work in the Kong scenario; the gateway path uses the URI path configured on the server (address)
 - Local Docker testing: Admin API defaults to `http://127.0.0.1:8001`; the Admin API Key can be left empty when RBAC is not enabled
@@ -406,7 +405,14 @@ System configuration is managed in groups and edited on a single page:
 | POST | `/api/settings/test-ldap` | Admin | Test LDAP connection and mapping |
 | POST | `/api/settings/test-smtp` | Admin | Test SMTP mail sending |
 | GET | `/api/settings/:key` | Cookie | Get a single setting |
-| GET | `/api/settings/gateway-status` | Cookie | Check API gateway config status |
+| GET | `/api/settings/gateway-status` | Cookie | Check the default gateway config status |
+| GET | `/api/gateway-servers` | Cookie | List API gateway servers (with connectivity status) |
+| POST | `/api/gateway-servers` | Admin | Create an API gateway server |
+| PUT | `/api/gateway-servers/:id` | Admin | Update an API gateway server |
+| DELETE | `/api/gateway-servers/:id` | Admin | Delete an API gateway server |
+| POST | `/api/gateway-servers/:id/default` | Admin | Set as the default gateway |
+| POST | `/api/gateway-servers/:id/test` | Admin | Test gateway connectivity |
+| POST | `/api/gateway-servers/check` | Admin | Test an unsaved gateway config |
 
 > See `public/api_doc.md` for detailed request/response fields and `public/api-devstatus.md` for development progress (both in Chinese)
 

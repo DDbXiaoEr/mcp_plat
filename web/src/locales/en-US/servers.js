@@ -36,6 +36,7 @@ export default {
     protocolVersion: 'Protocol version',
     tools: 'Tools',
     publishStatus: 'Publish status',
+    gateway: 'Publish gateway',
     noDescription: 'No description',
     descriptionPlaceholder: 'Please enter a description'
   },
@@ -77,8 +78,10 @@ export default {
     button: 'Publish',
     title: 'Publish to API gateway',
     desc: 'Select the MCP servers to publish:',
-    gatewayConfigured: 'API gateway is configured{kong}',
-    kongSuffix: ' (Kong)',
+    gatewayLabel: 'API gateway server',
+    gatewayEmpty: 'No gateway available',
+    gatewayHint: 'No API gateway server has been added yet. Add one on the "API Gateway Servers" page first.',
+    gatewayDefault: 'Default',
     kongHint: 'Kong only publishes upstreams and routes; it does not install authentication/audit plugins, so the switches below have no effect under Kong.',
     domainLabel: 'Publish domain',
     domainEmpty: 'No publish domain configured',
@@ -95,6 +98,7 @@ export default {
   preview: {
     serviceName: 'Service name',
     gatewayPath: 'Gateway path',
+    targetGateway: 'Target gateway',
     publishDomain: 'Publish domain',
     backendAddress: 'Backend address',
     authStatus: 'Auth status',

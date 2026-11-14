@@ -53,6 +53,12 @@ const icons = {
     ['rect', { x: '5', y: '14', width: '14', height: '5.5', rx: '1.2' }],
     ['path', { d: 'M8 7.2h.01M8 16.7h.01' }]
   ],
+  gateway: [
+    ['rect', { x: '3.5', y: '9', width: '6', height: '6', rx: '1.2' }],
+    ['rect', { x: '14.5', y: '3.5', width: '6', height: '6', rx: '1.2' }],
+    ['rect', { x: '14.5', y: '14.5', width: '6', height: '6', rx: '1.2' }],
+    ['path', { d: 'M9.5 12h2.5M12 12V6.5h2.5M12 12v5.5h2.5' }]
+  ],
   users: [
     ['circle', { cx: '9', cy: '8.5', r: '2.6' }],
     ['path', { d: 'M4.5 18c.7-2.6 2.6-4 4.5-4s3.8 1.4 4.5 4' }],

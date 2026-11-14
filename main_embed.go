@@ -37,6 +37,7 @@ import (
 	"mcp_plat-console/database"
 	"mcp_plat-console/logging"
 	"mcp_plat-console/router"
+	"mcp_plat-console/service"
 	"mcp_plat-console/session"
 
 	"github.com/gin-gonic/gin"
@@ -61,6 +62,7 @@ func main() {
 	fmt.Printf("mcp_plat-console version %s (commit %s), built at %s\n", Version, GitCommit, BuildTime)
 
 	database.Init()
+	service.MigrateLegacyGatewaySetting()
 	session.Init()
 	logging.Setup()
 

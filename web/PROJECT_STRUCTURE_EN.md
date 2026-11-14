@@ -31,7 +31,7 @@ web/
     │   │   ├── index.js      #   merge entry
     │   │   ├── base.js       #   shared entries for app/common/nav/role/auth
     │   │   ├── login.js / welcome.js / profile.js
-    │   │   └── overview / history / servers / accesskey / rbac / settings / quickaccess.js
+    │   │   └── overview / history / servers / accesskey / rbac / settings / quickaccess / gateway.js
     │   └── en-US/            # English (key structure identical to zh-CN)
     │
     ├── styles/
@@ -56,6 +56,7 @@ web/
         ├── QuickAccessView.vue   # quick access page (user)
         ├── OverviewView.vue      # platform overview (admin; 4 stat cards + AI call-trend chart)
         ├── ServersView.vue       # MCP server management (admin; list + detail + create dialog)
+        ├── GatewayView.vue       # API gateway server management (admin; card-based instance list)
         ├── RbacView.vue          # RBAC settings (admin; role/user management)
         └── SettingsView.vue      # system settings (admin)
 ```
@@ -66,7 +67,7 @@ The frontend does not use Vue Router; it switches components through the reactiv
 - `App.vue` renders dynamically with `<component :is="...">`
 - Nav items are defined per role (admin / user); menu copy uses `nav.*` entry keys (`labelKey`) and is looked up in the current language when rendered
 - user menu: Personal Info (profile), AccessKey (accesskey), Quick Access (quickaccess), Usage History (history)
-- admin menu: Platform Overview (overview), MCP Servers (servers), RBAC (rbac), System Settings (settings)
+- admin menu: Platform Overview (overview), MCP Servers (servers), API Gateway Servers (gateways), RBAC (rbac), System Settings (settings)
 
 ## i18n Conventions
 

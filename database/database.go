@@ -43,6 +43,7 @@ func Init() {
 		&model.AccessKey{},
 		&model.UsageHistory{},
 		&model.MCPServer{},
+		&model.GatewayServer{},
 		&model.Role{},
 		&model.RoleServer{},
 		&model.Setting{},

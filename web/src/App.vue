@@ -32,6 +32,7 @@ import SettingsView from './components/SettingsView.vue'
 import RbacView from './components/RbacView.vue'
 import OverviewView from './components/OverviewView.vue'
 import ServersView from './components/ServersView.vue'
+import GatewayView from './components/GatewayView.vue'
 import QuickAccessView from './components/QuickAccessView.vue'
 
 const views = {
@@ -42,6 +43,7 @@ const views = {
   rbac: RbacView,
   overview: OverviewView,
   servers: ServersView,
+  gateways: GatewayView,
   quickaccess: QuickAccessView
 }
 

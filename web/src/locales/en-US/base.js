@@ -43,6 +43,7 @@ export default {
     history: 'Usage History',
     overview: 'Overview',
     servers: 'MCP Server Management',
+    gateways: 'API Gateway Servers',
     rbac: 'RBAC',
     settings: 'System Settings'
   },

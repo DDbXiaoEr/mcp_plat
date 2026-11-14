@@ -36,6 +36,7 @@ export default {
     protocolVersion: '协议版本',
     tools: '工具列表',
     publishStatus: '发布状态',
+    gateway: '发布网关',
     noDescription: '暂无描述',
     descriptionPlaceholder: '请输入描述信息'
   },
@@ -77,8 +78,10 @@ export default {
     button: '发布',
     title: '发布到 API 网关',
     desc: '选择要发布的 MCP 服务器：',
-    gatewayConfigured: 'API 网关已配置{kong}',
-    kongSuffix: '（Kong）',
+    gatewayLabel: 'API 网关服务器',
+    gatewayEmpty: '暂无可选网关',
+    gatewayHint: '尚未添加 API 网关服务器，请先在「API 网关服务器」页面添加。',
+    gatewayDefault: '默认',
     kongHint: 'Kong 仅发布上游与路由，不会下发认证/审计插件，以下开关在 Kong 下不生效。',
     domainLabel: '发布域名',
     domainEmpty: '暂未配置发布域名',
@@ -95,6 +98,7 @@ export default {
   preview: {
     serviceName: '服务名称',
     gatewayPath: '网关路径',
+    targetGateway: '目标网关',
     publishDomain: '发布域名',
     backendAddress: '后端地址',
     authStatus: '认证状态',

@@ -20,16 +20,17 @@
 // Author: deepseek-v4-pro / opencode
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { fetchServers, createServer, fetchServerTools, publishServers, setServersMaintenance, deleteServer, updateServer, fetchGatewayStatus, fetchSetting } from '../api.js'
+import { fetchServers, createServer, fetchServerTools, publishServers, setServersMaintenance, deleteServer, updateServer, fetchSetting, fetchGatewayServers } from '../api.js'
 
 const { t } = useI18n()
 
 const servers = ref([])
 const loading = ref(true)
-const gatewayConfigured = ref(false)
-const gatewayProvider = ref('apisix')
+const gatewayServers = ref([])
+const publishGatewayId = ref('')
 
-const isKongGateway = computed(() => gatewayProvider.value === 'kong')
+const publishGateway = computed(() => gatewayServers.value.find((g) => g.id === publishGatewayId.value) || null)
+const isKongPublish = computed(() => publishGateway.value?.provider === 'kong')
 
 const editingDesc = ref(false)
 const editDescValue = ref('')
@@ -38,20 +39,36 @@ const savingDesc = ref(false)
 onMounted(async () => {
   await Promise.all([
     loadServers(),
-    loadGatewaySettings(),
+    loadGatewayServers(),
     loadPublishDomains()
   ])
   loading.value = false
 })
 
-async function loadGatewaySettings() {
+async function loadGatewayServers() {
   try {
-    const data = await fetchGatewayStatus()
-    gatewayConfigured.value = data.configured
-    gatewayProvider.value = data.provider || 'apisix'
+    const list = await fetchGatewayServers()
+    gatewayServers.value = Array.isArray(list) ? list : []
   } catch (e) {
-    console.error('加载 API 网关状态失败:', e)
+    console.error('加载 API 网关服务器失败:', e)
+    gatewayServers.value = []
   }
+  if (!gatewayServers.value.some((g) => g.id === publishGatewayId.value)) {
+    const preferred = gatewayServers.value.find((g) => g.is_default) || gatewayServers.value[0]
+    publishGatewayId.value = preferred ? preferred.id : ''
+  }
+}
+
+function gatewayLabel(gw) {
+  const provider = gw.provider === 'kong' ? t('gateway.provider.kong') : t('gateway.provider.apisix')
+  const suffix = gw.is_default ? ` · ${t('servers.publish.gatewayDefault')}` : ''
+  return `${gw.name} · ${provider}${suffix}`
+}
+
+function gatewayName(id) {
+  if (!id) return ''
+  const gw = gatewayServers.value.find((g) => g.id === id)
+  return gw ? gw.name : ''
 }
 
 async function loadPublishDomains() {
@@ -327,6 +344,7 @@ function openPublish() {
     publishDomain.value = publishDomains.value[0] || ''
   }
   loadPublishDomains()
+  loadGatewayServers()
   showingPublish.value = true
 }
 
@@ -378,7 +396,7 @@ function backToPublish() {
 async function executePublish() {
   publishing.value = true
   try {
-    await publishServers(publishSelected.value, enableAuth.value, '', enableAuditLog.value, publishDomain.value)
+    await publishServers(publishSelected.value, enableAuth.value, '', enableAuditLog.value, publishDomain.value, publishGatewayId.value)
     alert(t('servers.alert.publishSuccess'))
     showingPublishConfirm.value = false
     await loadServers()
@@ -637,6 +655,10 @@ async function executeMaintenance() {
               </dd>
             </div>
             <div class="server-detail__row">
+              <dt>{{ t('servers.detail.gateway') }}</dt>
+              <dd>{{ gatewayName(selected.gateway_id) || t('servers.notFilled') }}</dd>
+            </div>
+            <div class="server-detail__row">
               <div class="server-detail__label-row">
                 <dt>{{ t('common.description') }}</dt>
                 <button
@@ -838,12 +860,23 @@ async function executeMaintenance() {
         <div class="dialog dialog--wide dialog--publish">
           <h2 class="dialog__title">{{ t('servers.publish.title') }}</h2>
           <p class="dialog__desc">{{ t('servers.publish.desc') }}</p>
-          <p v-if="gatewayConfigured" class="publish-gateway__hint">
-            {{ t('servers.publish.gatewayConfigured', { kong: gatewayProvider === 'kong' ? t('servers.publish.kongSuffix') : '' }) }}
+          <p v-if="gatewayServers.length === 0" class="publish-gateway__hint publish-gateway__hint--warn">
+            {{ t('servers.publish.gatewayHint') }}
           </p>
-          <p v-if="isKongGateway" class="publish-gateway__hint publish-gateway__hint--warn">
+          <p v-if="isKongPublish" class="publish-gateway__hint publish-gateway__hint--warn">
             {{ t('servers.publish.kongHint') }}
           </p>
+          <label class="publish-domain">
+            <span class="publish-domain__label">{{ t('servers.publish.gatewayLabel') }}</span>
+            <select
+              v-model="publishGatewayId"
+              class="publish-domain__select"
+              :disabled="gatewayServers.length === 0"
+            >
+              <option v-if="gatewayServers.length === 0" value="">{{ t('servers.publish.gatewayEmpty') }}</option>
+              <option v-for="gw in gatewayServers" :key="gw.id" :value="gw.id">{{ gatewayLabel(gw) }}</option>
+            </select>
+          </label>
           <label class="publish-domain">
             <span class="publish-domain__label">{{ t('servers.publish.domainLabel') }}</span>
             <select
@@ -960,7 +993,7 @@ async function executeMaintenance() {
           </div>
           <div class="publish-auth">
             <label class="publish-auth__label">
-              <input type="checkbox" v-model="enableAuth" :disabled="isKongGateway" />
+              <input type="checkbox" v-model="enableAuth" :disabled="isKongPublish" />
               <span class="publish-auth__text">{{ t('servers.publish.optionAuth') }}</span>
             </label>
             <p class="publish-auth__hint">
@@ -969,7 +1002,7 @@ async function executeMaintenance() {
           </div>
           <div class="publish-auth">
             <label class="publish-auth__label">
-              <input type="checkbox" v-model="enableAuditLog" :disabled="isKongGateway" />
+              <input type="checkbox" v-model="enableAuditLog" :disabled="isKongPublish" />
               <span class="publish-auth__text">{{ t('servers.publish.optionAudit') }}</span>
             </label>
             <p class="publish-auth__hint">
@@ -983,7 +1016,7 @@ async function executeMaintenance() {
             <button
               class="btn btn--primary"
               type="button"
-              :disabled="publishSelected.length === 0"
+              :disabled="publishSelected.length === 0 || !publishGatewayId"
               @click="confirmPublish"
             >
               {{ t('servers.publish.confirm') }}
@@ -1020,6 +1053,10 @@ async function executeMaintenance() {
                 </span>
               </div>
               <div class="publish-preview__row">
+                <span class="publish-preview__label">{{ t('servers.preview.targetGateway') }}</span>
+                <span class="publish-preview__value">{{ publishGateway ? publishGateway.name : t('servers.notFilled') }}</span>
+              </div>
+              <div class="publish-preview__row">
                 <span class="publish-preview__label">{{ t('servers.preview.publishDomain') }}</span>
                 <span class="publish-preview__value">{{ publishDomain || t('servers.notFilled') }}</span>
               </div>
@@ -1044,7 +1081,7 @@ async function executeMaintenance() {
             <button
               class="btn btn--primary"
               type="button"
-              :disabled="publishing"
+              :disabled="publishing || !publishGatewayId"
               @click="executePublish"
             >
               {{ publishing ? t('servers.publish.progress') : t('servers.confirmPush') }}

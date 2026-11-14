@@ -54,6 +54,7 @@ func main() {
 	fmt.Printf("mcp_plat-console version %s (commit %s), built at %s\n", Version, GitCommit, BuildTime)
 
 	database.Init()
+	service.MigrateLegacyGatewaySetting()
 	session.Init()
 	logging.Setup()
 

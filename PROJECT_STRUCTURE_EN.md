@@ -54,6 +54,7 @@ mcp_plat-console/
 │   ├── access_key.go         # AccessKey model
 │   ├── usage_history.go      # UsageHistory model
 │   ├── mcp_server.go         # MCPServer model
+│   ├── gateway_server.go     # GatewayServer model (API gateway instances)
 │   ├── role.go               # Role model
 │   ├── role_server.go        # RoleServer association model
 │   ├── audit_log.go          # AuditLog model (AccessKey stored by ID, can be stored in ClickHouse)
@@ -66,6 +67,7 @@ mcp_plat-console/
 │   ├── history.go            # GET /api/history
 │   ├── mcp_server.go         # CRUD /api/servers
 │   ├── overview.go           # GET /api/overview/stats (platform stats, admin only), GET /api/overview/call-trend (AI call trend, admin only)
+│   ├── gateway_server.go     # CRUD /api/gateway-servers (instances, default gateway, connectivity checks)
 │   ├── role.go               # CRUD /api/roles (admin only)
 │   ├── rbac_user.go          # CRUD /api/users (admin only)
 │   └── setting.go            # GET/PUT /api/settings (admin only)
@@ -91,6 +93,7 @@ mcp_plat-console/
 │   ├── mcp_server_test.go    # FetchTools unit test (mock + optional real server)
 │   ├── notify.go             # unified email notification wrapper (SendNotificationMail etc.; SMTP config from system settings)
 │   ├── overview.go           # platform-overview stats business logic (users/servers/tools/daily calls)
+│   ├── gateway_server.go     # API gateway server logic (default selection, connectivity check, legacy config migration)
 │   ├── role.go               # Role business logic
 │   ├── rbac_user.go          # RBACUser business logic
 │   └── setting.go            # system-settings business logic (key-value JSON storage)
@@ -183,6 +186,7 @@ mcp_plat-console/
             ├── ServersView.vue
             ├── HistoryView.vue
             ├── QuickAccessView.vue
+            ├── GatewayView.vue     # API gateway server management (admin, card-based instance list)
             ├── RbacView.vue
             └── SettingsView.vue
 ```
@@ -232,6 +236,13 @@ mcp_plat-console/
 | POST | `/api/users/batch` | yes | yes | handler/rbac_user.go → BatchCreate |
 | PUT | `/api/users/:id` | yes | yes | handler/rbac_user.go → Update |
 | DELETE | `/api/users/:id` | yes | yes | handler/rbac_user.go → Delete |
+| GET | `/api/gateway-servers` | yes | - | handler/gateway_server.go → List |
+| POST | `/api/gateway-servers` | yes | yes | handler/gateway_server.go → Create |
+| POST | `/api/gateway-servers/check` | yes | yes | handler/gateway_server.go → Check |
+| PUT | `/api/gateway-servers/:id` | yes | yes | handler/gateway_server.go → Update |
+| DELETE | `/api/gateway-servers/:id` | yes | yes | handler/gateway_server.go → Delete |
+| POST | `/api/gateway-servers/:id/default` | yes | yes | handler/gateway_server.go → SetDefault |
+| POST | `/api/gateway-servers/:id/test` | yes | yes | handler/gateway_server.go → Test |
 | GET | `/api/settings` | yes | yes | handler/setting.go → Get |
 | PUT | `/api/settings/:key` | yes | yes | handler/setting.go → Save |
 | GET | `/api/settings/:key` | yes | - | handler/setting.go → GetByKey |
@@ -252,3 +263,4 @@ The frontend does not use Vue Router; it switches components through the reactiv
 - `App.vue` renders dynamically with `<component :is="...">`
 - Nav items are defined per role (admin / user)
 - The user menu includes a "Quick Access" page (QuickAccessView) that generates access configs carrying an AccessKey for common MCP clients (e.g. CherryStudio); the endpoint URL prefers the publish domain recorded on the server and falls back to the publish domains in operation settings (`publish_domain`), assembled by the frontend together with the provider
+- The admin menu includes an "API Gateway Servers" (gateways) page: gateway instances are shown as cards with create/edit/delete, set-default, and connectivity-test actions; the publish dialog lets you choose the target gateway (default gateway preselected), and maintenance/cancel-maintenance use the gateway recorded on each server; system settings no longer contains gateway configuration

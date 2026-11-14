@@ -24,6 +24,7 @@ const BASE = '/api'
 async function request(path, options = {}) {
   const headers = {
     'Content-Type': 'application/json',
+    'Accept-Language': i18n.global.locale.value,
     ...options.headers
   }
   const res = await fetch(`${BASE}${path}`, { ...options, headers, credentials: 'include' })
@@ -193,10 +194,10 @@ export function fetchOverviewCallTrend(days = 30) {
   return request(`/overview/call-trend?days=${days}`)
 }
 
-export function publishServers(serverIds, enableAuth, accesskeyHeader, enableAuditLog, publishDomain) {
+export function publishServers(serverIds, enableAuth, accesskeyHeader, enableAuditLog, publishDomain, gatewayId) {
   return request('/servers/publish', {
     method: 'POST',
-    body: JSON.stringify({ server_ids: serverIds, enable_auth: enableAuth, accesskey_header: accesskeyHeader, enable_audit_log: enableAuditLog, publish_domain: publishDomain })
+    body: JSON.stringify({ server_ids: serverIds, enable_auth: enableAuth, accesskey_header: accesskeyHeader, enable_audit_log: enableAuditLog, publish_domain: publishDomain, gateway_id: gatewayId || '' })
   })
 }
 
@@ -204,6 +205,43 @@ export function setServersMaintenance(serverIds, restoreIds) {
   return request('/servers/maintenance', {
     method: 'POST',
     body: JSON.stringify({ server_ids: serverIds, restore_ids: restoreIds })
+  })
+}
+
+export function fetchGatewayServers() {
+  return request('/gateway-servers')
+}
+
+export function createGatewayServer(body) {
+  return request('/gateway-servers', {
+    method: 'POST',
+    body: JSON.stringify(body)
+  })
+}
+
+export function updateGatewayServer(id, body) {
+  return request(`/gateway-servers/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(body)
+  })
+}
+
+export function deleteGatewayServer(id) {
+  return request(`/gateway-servers/${id}`, { method: 'DELETE' })
+}
+
+export function setDefaultGatewayServer(id) {
+  return request(`/gateway-servers/${id}/default`, { method: 'POST' })
+}
+
+export function testGatewayServer(id) {
+  return request(`/gateway-servers/${id}/test`, { method: 'POST' })
+}
+
+export function checkGatewayServer(body) {
+  return request('/gateway-servers/check', {
+    method: 'POST',
+    body: JSON.stringify(body)
   })
 }
 

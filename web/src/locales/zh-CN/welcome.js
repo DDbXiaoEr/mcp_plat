@@ -27,7 +27,8 @@ export default {
     history: '查阅调用记录',
     overview: '看用量与趋势',
     servers: '接入、发布与维护',
+    gateways: '网关实例与连通性',
     rbac: '角色与账号',
-    settings: '名称、标志与网关'
+    settings: '名称、标志与策略'
   }
 }

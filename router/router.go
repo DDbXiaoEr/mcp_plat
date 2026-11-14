@@ -33,6 +33,7 @@ func Setup() *gin.Engine {
 	historyHandler := handler.NewHistoryHandler()
 	auditLogHandler := handler.NewAuditLogHandler()
 	serverHandler := handler.NewMCPServerHandler()
+	gatewayServerHandler := handler.NewGatewayServerHandler()
 	overviewHandler := handler.NewOverviewHandler()
 	roleHandler := handler.NewRoleHandler()
 	userHandler := handler.NewRBACUserHandler()
@@ -63,6 +64,7 @@ func Setup() *gin.Engine {
 		auth.GET("/audit-logs", auditLogHandler.List)
 
 		auth.GET("/servers", serverHandler.List)
+		auth.GET("/gateway-servers", gatewayServerHandler.List)
 		auth.GET("/settings/gateway-status", settingHandler.GatewayStatus)
 		auth.GET("/settings/:key", settingHandler.GetByKey)
 	}
@@ -76,6 +78,13 @@ func Setup() *gin.Engine {
 		admin.DELETE("/servers/:id", serverHandler.Delete)
 		admin.POST("/servers/publish", serverHandler.Publish)
 		admin.POST("/servers/maintenance", serverHandler.Maintenance)
+
+		admin.POST("/gateway-servers", gatewayServerHandler.Create)
+		admin.POST("/gateway-servers/check", gatewayServerHandler.Check)
+		admin.PUT("/gateway-servers/:id", gatewayServerHandler.Update)
+		admin.DELETE("/gateway-servers/:id", gatewayServerHandler.Delete)
+		admin.POST("/gateway-servers/:id/default", gatewayServerHandler.SetDefault)
+		admin.POST("/gateway-servers/:id/test", gatewayServerHandler.Test)
 
 		admin.GET("/roles", roleHandler.List)
 		admin.POST("/roles", roleHandler.Create)

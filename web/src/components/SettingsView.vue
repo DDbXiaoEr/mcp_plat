@@ -18,7 +18,7 @@
 <script setup>
 
 // Author: deepseek-v4-pro / opencode
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fetchRoles, fetchSettings, saveSetting, testLdap, testSmtp } from '../api.js'
 import { applyPlatform } from '../stores/settings.js'
@@ -29,7 +29,6 @@ const tab = ref('ops')
 
 const logOpen = ref(true)
 const smtpOpen = ref(true)
-const apiGwOpen = ref(true)
 const networkSecurityOpen = ref(true)
 const auditLogOpen = ref(true)
 const authOpen = ref(true)
@@ -66,31 +65,6 @@ const smtpForm = ref({
 const smtpTestTo = ref('')
 const smtpTesting = ref(false)
 const smtpTestResult = ref(null)
-
-const apiGwForm = ref({
-  provider: 'apisix',
-  adminUrl: '',
-  adminKey: '',
-  accesskeyHeader: '',
-  authGrpcAddrs: []
-})
-
-const API_GW_PROVIDERS = [
-  { key: 'apisix', label: 'Apache APISIX' },
-  { key: 'kong', label: 'Kong' },
-  { key: 'tyk', label: 'Tyk' }
-]
-
-const showKongNotice = ref(false)
-
-watch(
-  () => apiGwForm.value.provider,
-  (val, oldVal) => {
-    if (val === 'kong' && oldVal !== 'kong') {
-      showKongNotice.value = true
-    }
-  }
-)
 
 const networkSecurityForm = ref({
   allowlist: ''
@@ -254,8 +228,6 @@ const ROLE_ATTRS = [
   { key: 'organization', labelKey: 'settings.fields.organization' }
 ]
 
-const apiGwConfigured = ref(false)
-
 const saving = ref('')
 const tips = ref({})
 
@@ -303,10 +275,6 @@ async function runSmtpTest() {
     smtpTestResult.value = { ok: false, message: e.message || t('settings.mail.sendFailed') }
   }
   smtpTesting.value = false
-}
-
-function saveApiGwSettings() {
-  saveSection('api_gateway', apiGwForm.value)
 }
 
 function saveNetworkSecuritySettings() {
@@ -407,15 +375,6 @@ function toggleQuickAccessClient(key) {
 function applySettings(data) {
   if (data.log) Object.assign(logForm.value, data.log)
   if (data.smtp) Object.assign(smtpForm.value, data.smtp)
-  if (data.api_gateway) {
-    apiGwConfigured.value = data.api_gateway.configured || false
-    if (data.api_gateway.provider) apiGwForm.value.provider = data.api_gateway.provider
-    if (data.api_gateway.adminUrl != null) apiGwForm.value.adminUrl = data.api_gateway.adminUrl
-    if (data.api_gateway.accesskeyHeader != null) apiGwForm.value.accesskeyHeader = data.api_gateway.accesskeyHeader
-    if (data.api_gateway.authGrpcAddrs != null || data.api_gateway.authGrpcAddr != null) {
-      apiGwForm.value.authGrpcAddrs = toAddrList(data.api_gateway.authGrpcAddrs ?? data.api_gateway.authGrpcAddr)
-    }
-  }
   if (data.network_security && data.network_security.allowlist) {
     networkSecurityForm.value.allowlist = data.network_security.allowlist.join('\n')
   }
@@ -769,163 +728,6 @@ onMounted(async () => {
             <span v-if="tips.smtp" class="save-tip">{{ tips.smtp }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'smtp'" @click="saveSmtpSettings">
               {{ saving === 'smtp' ? t('common.saving') : t('common.save') }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="collapse">
-        <button class="collapse__head" type="button" @click="apiGwOpen = !apiGwOpen">
-          <span class="collapse__title">{{ t('settings.apiGw.title') }}</span>
-          <span class="collapse__arrow" :class="{ 'collapse__arrow--open': apiGwOpen }">▾</span>
-        </button>
-        <div v-show="apiGwOpen" class="collapse__body">
-          <div v-if="apiGwConfigured" class="api-gw-warning">
-            <span class="api-gw-warning__icon">!</span>
-            {{ t('settings.apiGw.configuredWarning') }}
-          </div>
-          <label class="field">
-            <span class="field__label">{{ t('settings.apiGw.providerLabel') }}</span>
-            <select v-model="apiGwForm.provider" class="field__input">
-              <option
-                v-for="gw in API_GW_PROVIDERS"
-                :key="gw.key"
-                :value="gw.key"
-              >
-                {{ gw.label }}
-              </option>
-            </select>
-            <span v-if="apiGwForm.provider === 'kong'" class="field__help-text">
-              {{ t('settings.apiGw.kongHelpPre') }}
-              <code>http://127.0.0.1:8001</code>{{ t('settings.apiGw.kongHelpPost') }}
-            </span>
-          </label>
-
-          <label class="field">
-            <span class="field__label">
-              {{ t('settings.apiGw.adminUrlLabel') }}
-              <span class="field__help">
-                ?
-                <span class="field__tooltip">
-                  <template v-if="apiGwForm.provider === 'kong'">
-                    {{ t('settings.apiGw.adminUrlTooltipKongPre') }}
-                    <code>http://127.0.0.1:8001</code>{{ t('settings.apiGw.adminUrlTooltipKongPost') }}
-                  </template>
-                  <template v-else>
-                    {{ t('settings.apiGw.adminUrlTooltipDefaultPre') }}
-                    <code>http://127.0.0.1:9180</code>{{ t('settings.apiGw.adminUrlTooltipDefaultPost') }}
-                  </template>
-                </span>
-              </span>
-            </span>
-            <input
-              v-model="apiGwForm.adminUrl"
-              class="field__input"
-              type="text"
-              :placeholder="apiGwForm.provider === 'kong' ? 'http://127.0.0.1:8001' : 'http://127.0.0.1:9180'"
-            />
-          </label>
-
-          <label class="field">
-            <span class="field__label">{{ t('settings.apiGw.adminKeyLabel') }}</span>
-            <input
-              v-model="apiGwForm.adminKey"
-              class="field__input"
-              type="password"
-              :placeholder="t('settings.apiGw.adminKeyPlaceholder')"
-            />
-            <span v-if="apiGwForm.provider === 'kong'" class="field__help-text">
-              {{ t('settings.apiGw.adminKeyKongHint') }}
-            </span>
-          </label>
-
-          <div class="field">
-            <span class="field__label">
-              {{ t('settings.apiGw.authGrpcLabel') }}
-              <span class="field__help">
-                ?
-                <span class="field__tooltip">
-                  {{ t('settings.apiGw.authGrpcTip1') }}
-                  <code>:9090</code>{{ t('settings.apiGw.authGrpcTip2') }}<code>127.0.0.1:9090</code>{{ t('settings.apiGw.authGrpcTip3') }}
-                </span>
-              </span>
-            </span>
-            <div
-              v-for="(addr, i) in apiGwForm.authGrpcAddrs"
-              :key="i"
-              class="addr-row"
-            >
-              <input
-                v-model="apiGwForm.authGrpcAddrs[i]"
-                class="field__input addr-row__input"
-                type="text"
-                placeholder="127.0.0.1:9090"
-              />
-              <button
-                class="addr-row__remove"
-                type="button"
-                :title="t('settings.general.remove')"
-                @click="removeAddr(apiGwForm.authGrpcAddrs, i)"
-              >
-                ×
-              </button>
-            </div>
-            <button
-              class="addr-row__add"
-              type="button"
-              @click="addAddr(apiGwForm.authGrpcAddrs)"
-            >
-              {{ t('settings.general.addAddress') }}
-            </button>
-          </div>
-
-          <label class="field">
-            <span class="field__label">
-              {{ t('settings.apiGw.headerLabel') }}
-              <span class="field__help">
-                ?
-                <span class="field__tooltip">
-                  {{ t('settings.apiGw.headerTip1') }}<br />
-                  {{ t('settings.apiGw.headerTip2') }}
-                  <code>X-Access-Key</code>{{ t('settings.apiGw.headerTip3') }}
-                </span>
-              </span>
-            </span>
-            <input
-              v-model="apiGwForm.accesskeyHeader"
-              class="field__input"
-              type="text"
-              placeholder="X-Access-Key"
-            />
-          </label>
-
-          <div class="collapse__actions">
-            <span v-if="tips.api_gateway" class="save-tip">{{ tips.api_gateway }}</span>
-            <button class="btn btn--primary" type="button" :disabled="saving === 'api_gateway'" @click="saveApiGwSettings">
-              {{ saving === 'api_gateway' ? t('common.saving') : t('common.save') }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="showKongNotice" class="dialog-overlay" @click.self="showKongNotice = false">
-        <div class="dialog">
-          <h2 class="dialog__title">{{ t('settings.kongDialog.title') }}</h2>
-          <p class="dialog__desc">
-            {{ t('settings.kongDialog.intro1') }}<strong>Kong</strong>{{ t('settings.kongDialog.intro2') }}
-          </p>
-          <ul class="kong-notice__list">
-            <li>{{ t('settings.kongDialog.item1a') }}<strong>{{ t('settings.kongDialog.item1b') }}</strong>{{ t('settings.kongDialog.item1c') }}</li>
-            <li>{{ t('settings.kongDialog.item2') }}</li>
-            <li>{{ t('settings.kongDialog.item3') }}</li>
-          </ul>
-          <p class="dialog__desc">
-            {{ t('settings.kongDialog.dockerPre') }}
-            <code>http://127.0.0.1:8001</code>{{ t('settings.kongDialog.dockerPost') }}
-          </p>
-          <div class="dialog__actions">
-            <button class="btn btn--primary" type="button" @click="showKongNotice = false">
-              {{ t('settings.general.gotIt') }}
             </button>
           </div>
         </div>
@@ -1988,20 +1790,6 @@ onMounted(async () => {
   background: rgba(10, 61, 122, 0.04);
 }
 
-.api-gw-warning {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: #92400e;
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
-  border-radius: 10px;
-}
-
 .qa-clients {
   display: flex;
   flex-wrap: wrap;
@@ -2084,36 +1872,6 @@ onMounted(async () => {
   gap: 10px;
   margin-top: 24px;
   flex-shrink: 0;
-}
-
-.kong-notice__list {
-  margin: 0 0 16px;
-  padding-left: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--text);
-}
-
-.kong-notice__list strong {
-  color: #d93025;
-}
-
-.api-gw-warning__icon {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  margin-top: 1px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #fff;
-  background: #f59e0b;
-  border-radius: 50%;
 }
 
 .switch {
