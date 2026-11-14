@@ -27,6 +27,7 @@ type GatewayServer struct {
 	AdminKey        string    `gorm:"type:text" json:"-"`
 	AccesskeyHeader string    `gorm:"size:128" json:"accesskey_header"`
 	AuthGrpcAddrs   string    `gorm:"type:text" json:"-"`
+	AuditGrpcAddrs  string    `gorm:"type:text" json:"-"`
 	Description     string    `gorm:"type:text" json:"description"`
 	IsDefault       bool      `gorm:"default:false" json:"is_default"`
 	CreatedAt       time.Time `json:"created_at"`

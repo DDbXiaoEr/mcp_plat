@@ -77,14 +77,6 @@ export default {
     tip3: 'Once configured, connections to these intranet addresses will be allowed when fetching the tool list.',
     tip4: 'If you need to reach an MCP server\'s intranet IP, add the matching CIDR block here.'
   },
-  audit: {
-    title: 'Audit Logging',
-    enable: 'Enable audit logging',
-    grpcAddrLabel: 'Audit log gRPC address',
-    tip1: 'The gRPC listen address of the audit-log-server, e.g.',
-    tip2: ' or ',
-    tip3: '. Multiple addresses are supported; they are pushed to the audit_log plugin on publish and load-balanced by connection count (least connections). One address per line.'
-  },
   platform: {
     title: 'Platform Settings',
     nameLabel: 'Platform name',

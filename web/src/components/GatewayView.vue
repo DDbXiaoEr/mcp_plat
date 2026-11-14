@@ -117,6 +117,7 @@ const emptyForm = () => ({
   admin_key: '',
   accesskey_header: '',
   auth_grpc_addrs: [''],
+  audit_grpc_addrs: [''],
   description: ''
 })
 
@@ -155,6 +156,7 @@ function openEdit(gw) {
     admin_key: '',
     accesskey_header: gw.accesskey_header || '',
     auth_grpc_addrs: gw.auth_grpc_addrs.length ? gw.auth_grpc_addrs.slice() : [''],
+    audit_grpc_addrs: gw.audit_grpc_addrs.length ? gw.audit_grpc_addrs.slice() : [''],
     description: gw.description || ''
   }
   formError.value = ''
@@ -166,8 +168,8 @@ function closeForm() {
   showingForm.value = false
 }
 
-function cleanedAddrs() {
-  return form.value.auth_grpc_addrs.map((addr) => addr.trim()).filter((addr) => addr !== '')
+function cleanAddrs(list) {
+  return list.map((addr) => addr.trim()).filter((addr) => addr !== '')
 }
 
 function payload() {
@@ -177,18 +179,19 @@ function payload() {
     admin_url: form.value.admin_url.trim(),
     admin_key: form.value.admin_key,
     accesskey_header: form.value.accesskey_header.trim(),
-    auth_grpc_addrs: cleanedAddrs(),
+    auth_grpc_addrs: cleanAddrs(form.value.auth_grpc_addrs),
+    audit_grpc_addrs: cleanAddrs(form.value.audit_grpc_addrs),
     description: form.value.description.trim()
   }
 }
 
-function addAddr() {
-  form.value.auth_grpc_addrs.push('')
+function addAddr(field) {
+  form.value[field].push('')
 }
 
-function removeAddr(index) {
-  form.value.auth_grpc_addrs.splice(index, 1)
-  if (form.value.auth_grpc_addrs.length === 0) form.value.auth_grpc_addrs.push('')
+function removeAddr(field, index) {
+  form.value[field].splice(index, 1)
+  if (form.value[field].length === 0) form.value[field].push('')
 }
 
 async function runFormTest() {
@@ -334,6 +337,15 @@ onBeforeUnmount(() => {
               <span v-else class="gateway-card__muted">{{ t('gateway.card.noGrpc') }}</span>
             </dd>
           </div>
+          <div class="gateway-card__row">
+            <dt>{{ t('gateway.card.auditGrpcAddrs') }}</dt>
+            <dd class="gateway-card__addrs">
+              <template v-if="gw.audit_grpc_addrs.length">
+                <span v-for="addr in gw.audit_grpc_addrs" :key="addr" class="gateway-card__addr">{{ addr }}</span>
+              </template>
+              <span v-else class="gateway-card__muted">{{ t('gateway.card.noGrpc') }}</span>
+            </dd>
+          </div>
         </dl>
 
         <p v-if="gw.status === 'offline' && gw.status_message" class="gateway-card__error">
@@ -440,15 +452,40 @@ onBeforeUnmount(() => {
                   class="addr-row__remove"
                   type="button"
                   :title="t('common.delete')"
-                  @click="removeAddr(i)"
+                  @click="removeAddr('auth_grpc_addrs', i)"
                 >
                   ×
                 </button>
               </div>
-              <button class="addr-row__add" type="button" @click="addAddr">
+              <button class="addr-row__add" type="button" @click="addAddr('auth_grpc_addrs')">
                 {{ t('gateway.form.addAddress') }}
               </button>
               <span class="dialog__hint">{{ t('gateway.form.grpcHint') }}</span>
+            </div>
+
+            <div class="dialog__group">
+              <label class="dialog__label">{{ t('gateway.form.auditGrpcAddrs') }}</label>
+              <div v-for="(_, i) in form.audit_grpc_addrs" :key="i" class="addr-row">
+                <input
+                  v-model="form.audit_grpc_addrs[i]"
+                  class="dialog__input addr-row__input"
+                  type="text"
+                  :placeholder="t('gateway.form.auditGrpcPlaceholder')"
+                  @input="resetTestResult"
+                />
+                <button
+                  class="addr-row__remove"
+                  type="button"
+                  :title="t('common.delete')"
+                  @click="removeAddr('audit_grpc_addrs', i)"
+                >
+                  ×
+                </button>
+              </div>
+              <button class="addr-row__add" type="button" @click="addAddr('audit_grpc_addrs')">
+                {{ t('gateway.form.addAddress') }}
+              </button>
+              <span class="dialog__hint">{{ t('gateway.form.auditGrpcHint') }}</span>
             </div>
 
             <div class="dialog__group">

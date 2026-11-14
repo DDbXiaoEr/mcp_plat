@@ -333,14 +333,14 @@ System configuration is managed in groups and edited on a single page (API gatew
 | `smtp` | Mail service configuration |
 | `user_ops` | User default role, AccessKey limit, expiry-check cron expression |
 | `network_security` | Network security policy (IP whitelist) |
-| `audit_log` | Audit log toggle and audit-log-server gRPC address |
 
 ### APISIX Gateway Integration
 
 - **Go plugin runner** (`cmd/apisix-runner`): a custom plugin running on the APISIX side that performs request-level AccessKey validation
 - **gRPC auth service** (`cmd/accesskey-auth-server`): a standalone AccessKey verification service used by the gateway plugin
 - **gRPC audit service** (`cmd/audit-log-server`): a standalone audit log collection service that writes to the audit DB
-- Routes and upstreams are auto-registered to the APISIX Admin API when publishing MCP services
+- Routes and upstreams are auto-registered to the selected gateway's APISIX Admin API when publishing MCP services
+- Access-Key auth and audit-log gRPC addresses are configured per gateway instance on the "API Gateway Servers" page
 
 ### Kong Gateway Integration (experimental)
 

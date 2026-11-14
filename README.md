@@ -335,14 +335,14 @@ docker compose -f docker-compose-clickhouse.yml down  # ClickHouse 模式
 | `smtp` | 邮件服务配置 |
 | `user_ops` | 用户默认角色、AccessKey 数量上限、过期检查定时表达式 |
 | `network_security` | 网络安全策略（IP 白名单） |
-| `audit_log` | 审计日志开关与 audit-log-server 的 gRPC 地址 |
 
 ### APISIX 网关集成
 
 - **Go 插件运行器**（`cmd/apisix-runner`）：在 APISIX 侧运行的自定义插件，实现请求级 AccessKey 校验
 - **gRPC 鉴权服务**（`cmd/accesskey-auth-server`）：独立的 AccessKey 验证服务，供网关插件调用
 - **gRPC 审计服务**（`cmd/audit-log-server`）：独立的审计日志采集服务，负责写入审计库
-- MCP 服务发布时自动向 APISIX Admin API 注册路由和上游
+- MCP 服务发布时自动向所选网关的 APISIX Admin API 注册路由和上游
+- Access Key 认证与审计日志的 gRPC 地址按网关实例独立配置（「API 网关服务器」页）
 
 ### Kong 网关接入（测试中）
 

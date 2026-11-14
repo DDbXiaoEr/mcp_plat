@@ -77,14 +77,6 @@ export default {
     tip3: '配置后，获取工具列表时将允许连接这些内网地址。',
     tip4: '如需连接 MCP 服务器内网 IP，在此添加对应的地址段即可。'
   },
-  audit: {
-    title: '审计日志',
-    enable: '启用审计日志',
-    grpcAddrLabel: '审计日志 gRPC 地址',
-    tip1: '对应 audit-log-server 的 gRPC 监听地址，例如',
-    tip2: ' 或 ',
-    tip3: '。支持配置多个地址，发布时会下发到 audit_log 插件，并按连接数（最少连接）负载均衡。每行一个地址。'
-  },
   platform: {
     title: '平台设置',
     nameLabel: '平台名称',

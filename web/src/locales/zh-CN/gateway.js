@@ -39,6 +39,7 @@ export default {
     adminUrl: 'Admin API',
     accessKeyHeader: 'Access Key Header',
     authGrpcAddrs: '认证 gRPC 地址',
+    auditGrpcAddrs: '审计 gRPC 地址',
     noGrpc: '未配置',
     latency: '响应 {ms} ms',
     noDescription: '暂无说明'
@@ -66,6 +67,9 @@ export default {
     grpcPlaceholder: '127.0.0.1:9090',
     addAddress: '添加地址',
     grpcHint: '对应 accesskey-auth-server 的 gRPC 监听地址，每行一个，发布时下发到 accesskey_verify 插件。',
+    auditGrpcAddrs: '审计日志 gRPC 地址',
+    auditGrpcPlaceholder: '127.0.0.1:9091',
+    auditGrpcHint: '对应 audit-log-server 的 gRPC 监听地址，每行一个，发布时下发到 audit_log 插件。',
     description: '说明',
     descriptionPlaceholder: '可选，备注该网关的用途',
     providerHintApisix: '填写 APISIX Admin API 的基础地址，例如 http://127.0.0.1:9180（不要带 /apisix/admin）。',

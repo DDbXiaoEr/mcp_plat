@@ -39,6 +39,7 @@ export default {
     adminUrl: 'Admin API',
     accessKeyHeader: 'Access Key Header',
     authGrpcAddrs: 'Auth gRPC addresses',
+    auditGrpcAddrs: 'Audit gRPC addresses',
     noGrpc: 'Not configured',
     latency: '{ms} ms',
     noDescription: 'No description'
@@ -66,6 +67,9 @@ export default {
     grpcPlaceholder: '127.0.0.1:9090',
     addAddress: 'Add address',
     grpcHint: 'The gRPC listen address of accesskey-auth-server, one per line; it is pushed to the accesskey_verify plugin on publish.',
+    auditGrpcAddrs: 'Audit log gRPC addresses',
+    auditGrpcPlaceholder: '127.0.0.1:9091',
+    auditGrpcHint: 'The gRPC listen address of audit-log-server, one per line; it is pushed to the audit_log plugin on publish.',
     description: 'Description',
     descriptionPlaceholder: 'Optional notes about this gateway',
     providerHintApisix: 'Enter the base URL of the APISIX Admin API, e.g. http://127.0.0.1:9180 (without /apisix/admin).',

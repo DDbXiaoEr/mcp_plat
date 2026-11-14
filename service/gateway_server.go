@@ -42,6 +42,7 @@ type GatewayServerInput struct {
 	AdminKey        string   `json:"admin_key"`
 	AccesskeyHeader string   `json:"accesskey_header"`
 	AuthGrpcAddrs   []string `json:"auth_grpc_addrs"`
+	AuditGrpcAddrs  []string `json:"audit_grpc_addrs"`
 	Description     string   `json:"description"`
 }
 
@@ -52,6 +53,7 @@ type GatewayServerView struct {
 	AdminURL        string    `json:"admin_url"`
 	AccesskeyHeader string    `json:"accesskey_header"`
 	AuthGrpcAddrs   []string  `json:"auth_grpc_addrs"`
+	AuditGrpcAddrs  []string  `json:"audit_grpc_addrs"`
 	Description     string    `json:"description"`
 	IsDefault       bool      `json:"is_default"`
 	HasAdminKey     bool      `json:"has_admin_key"`
@@ -109,18 +111,24 @@ func normalizeGatewayInput(input *GatewayServerInput) error {
 		return errors.New("API 网关 Admin API 地址格式错误")
 	}
 
-	addrs := make([]string, 0, len(input.AuthGrpcAddrs))
-	for _, addr := range input.AuthGrpcAddrs {
-		if addr = strings.TrimSpace(addr); addr != "" {
-			addrs = append(addrs, addr)
-		}
-	}
+	addrs := cleanGatewayAddrs(input.AuthGrpcAddrs)
 	input.AuthGrpcAddrs = addrs
+	input.AuditGrpcAddrs = cleanGatewayAddrs(input.AuditGrpcAddrs)
 
 	return nil
 }
 
-func parseGatewayAuthAddrs(raw string) []string {
+func cleanGatewayAddrs(addrs []string) []string {
+	result := make([]string, 0, len(addrs))
+	for _, addr := range addrs {
+		if addr = strings.TrimSpace(addr); addr != "" {
+			result = append(result, addr)
+		}
+	}
+	return result
+}
+
+func parseGatewayAddrs(raw string) []string {
 	addrs := []string{}
 	if raw == "" {
 		return addrs
@@ -141,7 +149,8 @@ func gatewayServerView(gw model.GatewayServer) GatewayServerView {
 		Provider:        gw.Provider,
 		AdminURL:        gw.AdminURL,
 		AccesskeyHeader: gw.AccesskeyHeader,
-		AuthGrpcAddrs:   parseGatewayAuthAddrs(gw.AuthGrpcAddrs),
+		AuthGrpcAddrs:   parseGatewayAddrs(gw.AuthGrpcAddrs),
+		AuditGrpcAddrs:  parseGatewayAddrs(gw.AuditGrpcAddrs),
 		Description:     gw.Description,
 		IsDefault:       gw.IsDefault,
 		HasAdminKey:     gw.AdminKey != "",
@@ -243,6 +252,10 @@ func CreateGatewayServer(input GatewayServerInput) (GatewayServerView, error) {
 	if err != nil {
 		return GatewayServerView{}, errors.New("认证 gRPC 地址格式错误")
 	}
+	auditAddrsJSON, err := json.Marshal(input.AuditGrpcAddrs)
+	if err != nil {
+		return GatewayServerView{}, errors.New("审计日志 gRPC 地址格式错误")
+	}
 
 	gw := model.GatewayServer{
 		ID:              uuid.NewString(),
@@ -252,6 +265,7 @@ func CreateGatewayServer(input GatewayServerInput) (GatewayServerView, error) {
 		AdminKey:        input.AdminKey,
 		AccesskeyHeader: input.AccesskeyHeader,
 		AuthGrpcAddrs:   string(addrsJSON),
+		AuditGrpcAddrs:  string(auditAddrsJSON),
 		Description:     input.Description,
 		IsDefault:       count == 0,
 	}
@@ -282,6 +296,10 @@ func UpdateGatewayServer(id string, input GatewayServerInput) error {
 	if err != nil {
 		return errors.New("认证 gRPC 地址格式错误")
 	}
+	auditAddrsJSON, err := json.Marshal(input.AuditGrpcAddrs)
+	if err != nil {
+		return errors.New("审计日志 gRPC 地址格式错误")
+	}
 
 	if err := database.DB.Model(&model.GatewayServer{}).Where("id = ?", id).
 		Updates(map[string]interface{}{
@@ -291,6 +309,7 @@ func UpdateGatewayServer(id string, input GatewayServerInput) error {
 			"admin_key":        input.AdminKey,
 			"accesskey_header": input.AccesskeyHeader,
 			"auth_grpc_addrs":  string(addrsJSON),
+			"audit_grpc_addrs": string(auditAddrsJSON),
 			"description":      input.Description,
 		}).Error; err != nil {
 		return errors.New("更新网关失败")
@@ -386,7 +405,8 @@ func gatewaySettingOf(gw model.GatewayServer) ApiGatewaySetting {
 		Provider:        gw.Provider,
 		AdminURL:        gw.AdminURL,
 		AdminKey:        gw.AdminKey,
-		AuthGrpcAddrs:   parseGatewayAuthAddrs(gw.AuthGrpcAddrs),
+		AuthGrpcAddrs:   parseGatewayAddrs(gw.AuthGrpcAddrs),
+		AuditGrpcAddrs:  parseGatewayAddrs(gw.AuditGrpcAddrs),
 		AccesskeyHeader: gw.AccesskeyHeader,
 	}
 }
@@ -400,8 +420,35 @@ func GetDefaultGatewaySetting() (ApiGatewaySetting, error) {
 }
 
 func MigrateLegacyGatewaySetting() {
+	var auditSetting struct {
+		GrpcAddr  string   `json:"grpcAddr"`
+		GrpcAddrs []string `json:"grpcAddrs"`
+	}
+	_ = GetSetting("audit_log", &auditSetting)
+	auditAddrs := auditSetting.GrpcAddrs
+	if len(auditAddrs) == 0 && auditSetting.GrpcAddr != "" {
+		auditAddrs = []string{auditSetting.GrpcAddr}
+	}
+	auditAddrsJSON, _ := json.Marshal(auditAddrs)
+
 	var count int64
-	if err := database.DB.Model(&model.GatewayServer{}).Count(&count).Error; err != nil || count > 0 {
+	if err := database.DB.Model(&model.GatewayServer{}).Count(&count).Error; err != nil {
+		return
+	}
+
+	if count > 0 {
+		if len(auditAddrs) > 0 {
+			var gateways []model.GatewayServer
+			if err := database.DB.Find(&gateways).Error; err == nil {
+				for _, gw := range gateways {
+					if len(parseGatewayAddrs(gw.AuditGrpcAddrs)) == 0 {
+						database.DB.Model(&model.GatewayServer{}).Where("id = ?", gw.ID).
+							Update("audit_grpc_addrs", string(auditAddrsJSON))
+					}
+				}
+			}
+		}
+		database.DB.Delete(&model.Setting{}, "key = ?", "audit_log")
 		return
 	}
 
@@ -441,6 +488,7 @@ func MigrateLegacyGatewaySetting() {
 		AdminKey:        legacy.AdminKey,
 		AccesskeyHeader: legacy.AccesskeyHeader,
 		AuthGrpcAddrs:   string(addrsJSON),
+		AuditGrpcAddrs:  string(auditAddrsJSON),
 		IsDefault:       true,
 	}
 	if err := database.DB.Create(&gw).Error; err != nil {
@@ -457,4 +505,5 @@ func MigrateLegacyGatewaySetting() {
 	}
 
 	database.DB.Delete(&model.Setting{}, "key = ?", "api_gateway")
+	database.DB.Delete(&model.Setting{}, "key = ?", "audit_log")
 }

@@ -502,7 +502,7 @@ POST /api/servers/publish
 
 **Notes:** the backend registers routes for the selected MCP servers to the gateway identified by `gateway_id`; the default gateway is used when `gateway_id` is omitted. Add a gateway instance on the "API Gateway Servers" page first. On success the gateway ID is stored in the server's `gateway_id` field, and maintenance/cancel-maintenance use that field to locate the gateway (falling back to the default gateway when empty). After a successful publish the server is marked `published`, the selected `publish_domain` is recorded, and `auth_enabled` is recorded from `enable_auth` (always `false` for Kong).
 - Publish domains come from the operation setting `publish_domain` (`GET /api/settings/publish_domain`) and multiple domains can be configured; pass the selected domain via `publish_domain` and the backend writes it into the route `host` (APISIX) or `hosts` (Kong).
-- `provider=apisix` (default): creates upstream + route, optionally pushing plugins such as `accesskey_verify` / `audit_log` / `proxy-rewrite`. If auth is enabled, `authGrpcAddrs` must also be configured (an array; multiple addresses are supported and load-balanced by connection count) pointing to the accesskey-auth-server gRPC addresses.
+- `provider=apisix` (default): creates upstream + route, optionally pushing plugins such as `accesskey_verify` / `audit_log` / `proxy-rewrite`. The auth and audit gRPC addresses come from the selected gateway instance: `auth_grpc_addrs` points to accesskey-auth-server and `audit_grpc_addrs` to audit-log-server (both accept multiple addresses, load-balanced by connection count).
 - `provider=kong`: only creates upstream + Service + Route and **pushes no plugins**, so auth, audit and path-rewrite do not take effect under Kong; the gateway path uses the URI path configured on the server (`address`). The Admin API Key is only needed when Kong RBAC is enabled.
 
 ### 4.6 Fetch MCP Server Tools
@@ -1060,10 +1060,6 @@ GET /api/settings
     "publish_domain": {
       "domains": ["mcp.xauat.edu.cn", "mcp2.xauat.edu.cn"]
     },
-    "audit_log": {
-      "enabled": true,
-      "grpcAddrs": [":9091", "127.0.0.1:9191"]
-    },
     "network_security": {
       "allowlist": ["10.0.0.0/8", "172.16.0.0/12", "192.168.1.0/24"]
     }
@@ -1081,7 +1077,7 @@ PUT /api/settings/:key
 
 | Param | Description |
 |-------|-------------|
-| key | settings group; supports `log` / `smtp` / `auth` / `user_ops` / `platform` / `publish_domain` / `network_security` / `audit_log` / `quick_access` |
+| key | settings group; supports `log` / `smtp` / `auth` / `user_ops` / `platform` / `publish_domain` / `network_security` / `quick_access` |
 
 **Request params (JSON Body):**
 
@@ -1119,7 +1115,7 @@ GET /api/settings/:key
 
 | Param | Description |
 |-------|-------------|
-| key | settings group; supports `log` / `smtp` / `auth` / `user_ops` / `platform` / `publish_domain` / `network_security` / `audit_log` / `quick_access` |
+| key | settings group; supports `log` / `smtp` / `auth` / `user_ops` / `platform` / `publish_domain` / `network_security` / `quick_access` |
 
 **Response example (`GET /api/settings/platform`):**
 ```json
@@ -1320,7 +1316,7 @@ POST /api/settings/test-smtp
 
 > The list endpoint requires login only; create / update / delete / set-default / connectivity test require admin permission.
 
-Multiple gateway instances can be configured: the publish dialog lets you choose the target gateway (falling back to the **default gateway**), maintenance/cancel-maintenance use the gateway recorded on each server, and other operations such as quick access use the default gateway. The system settings page no longer contains gateway configuration; legacy configuration stored in `settings.api_gateway` is migrated automatically at startup into a record named "默认网关" (and the old setting is deleted).
+Multiple gateway instances can be configured: the publish dialog lets you choose the target gateway (falling back to the **default gateway**), maintenance/cancel-maintenance use the gateway recorded on each server, and other operations such as quick access use the default gateway. Each gateway instance has its own Access-Key auth gRPC addresses and audit-log gRPC addresses, and the corresponding plugins are pushed from the selected gateway when publishing. The system settings page no longer contains gateway configuration; legacy configuration stored in `settings.api_gateway` is migrated automatically at startup into a record named "默认网关" (and the old setting is deleted).
 
 ### 7.1 List Gateway Servers
 
@@ -1341,6 +1337,7 @@ GET /api/gateway-servers
       "admin_url": "http://127.0.0.1:9180",
       "accesskey_header": "X-Access-Key",
       "auth_grpc_addrs": ["127.0.0.1:9090"],
+      "audit_grpc_addrs": ["127.0.0.1:9091"],
       "description": "Production APISIX",
       "is_default": true,
       "has_admin_key": true,
@@ -1361,7 +1358,8 @@ GET /api/gateway-servers
 | provider | string | gateway type: `apisix` / `kong` |
 | admin_url | string | Admin API base URL (no `/apisix/admin` and similar paths) |
 | accesskey_header | string | HTTP header name carrying the Access Key |
-| auth_grpc_addrs | []string | Access-Key auth gRPC addresses |
+| auth_grpc_addrs | []string | Access-Key auth gRPC addresses (accesskey-auth-server) |
+| audit_grpc_addrs | []string | audit-log gRPC addresses (audit-log-server) |
 | description | string | description |
 | is_default | bool | whether this is the default gateway; publish and maintenance use it |
 | has_admin_key | bool | whether an Admin API Key is configured (plaintext never returned) |
@@ -1386,7 +1384,8 @@ POST /api/gateway-servers
 | admin_url | string | yes | Admin API base URL, e.g. `http://127.0.0.1:9180` |
 | admin_key | string | conditional | required for APISIX; may be empty for Kong when RBAC is disabled |
 | accesskey_header | string | no | HTTP header name carrying the Access Key, default `X-Access-Key` |
-| auth_grpc_addrs | []string | no | auth gRPC address list |
+| auth_grpc_addrs | []string | no | auth gRPC address list (accesskey-auth-server) |
+| audit_grpc_addrs | []string | no | audit-log gRPC address list (audit-log-server) |
 | description | string | no | description |
 
 **Notes:** the first gateway created becomes the default automatically. The success response `data` is the gateway object (same shape as a list item, `status` is `unknown`).
@@ -1605,6 +1604,6 @@ No auth; returns 200 only when the process is alive and the database is reachabl
 
 | Field | Type | Description |
 |-------|------|-------------|
-| key | string (PK) | settings group (log / smtp / auth / user_ops / platform / publish_domain / network_security / audit_log / quick_access) |
+| key | string (PK) | settings group (log / smtp / auth / user_ops / platform / publish_domain / network_security / quick_access) |
 | value | text | JSON content of the group |
 | updated_at | datetime | update time |

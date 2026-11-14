@@ -30,7 +30,6 @@ const tab = ref('ops')
 const logOpen = ref(true)
 const smtpOpen = ref(true)
 const networkSecurityOpen = ref(true)
-const auditLogOpen = ref(true)
 const authOpen = ref(true)
 const userOpsOpen = ref(true)
 const platformOpen = ref(true)
@@ -68,11 +67,6 @@ const smtpTestResult = ref(null)
 
 const networkSecurityForm = ref({
   allowlist: ''
-})
-
-const auditLogForm = ref({
-  enabled: false,
-  grpcAddrs: ['127.0.0.1:9091']
 })
 
 const authMethod = ref('cas')
@@ -286,10 +280,6 @@ function saveNetworkSecuritySettings() {
   })
 }
 
-function saveAuditLogSettings() {
-  saveSection('audit_log', auditLogForm.value)
-}
-
 function saveAuthSettings() {
   const saved = savedLdap.value || {}
   const ldap = {}
@@ -346,17 +336,6 @@ function saveQuickAccessSettings() {
   saveSection('quick_access', quickAccessForm.value)
 }
 
-function toAddrList(value) {
-  if (Array.isArray(value)) return value.slice()
-  if (typeof value === 'string' && value.trim()) {
-    return value
-      .split(/[,\n]/)
-      .map(s => s.trim())
-      .filter(Boolean)
-  }
-  return []
-}
-
 function addAddr(list) {
   list.push('')
 }
@@ -377,12 +356,6 @@ function applySettings(data) {
   if (data.smtp) Object.assign(smtpForm.value, data.smtp)
   if (data.network_security && data.network_security.allowlist) {
     networkSecurityForm.value.allowlist = data.network_security.allowlist.join('\n')
-  }
-  if (data.audit_log) {
-    if (data.audit_log.enabled != null) auditLogForm.value.enabled = data.audit_log.enabled
-    if (data.audit_log.grpcAddrs != null || data.audit_log.grpcAddr != null) {
-      auditLogForm.value.grpcAddrs = toAddrList(data.audit_log.grpcAddrs ?? data.audit_log.grpcAddr)
-    }
   }
   if (data.auth) {
     if (data.auth.method) authMethod.value = data.auth.method
@@ -764,69 +737,6 @@ onMounted(async () => {
             <span v-if="tips.network_security" class="save-tip">{{ tips.network_security }}</span>
             <button class="btn btn--primary" type="button" :disabled="saving === 'network_security'" @click="saveNetworkSecuritySettings">
               {{ saving === 'network_security' ? t('common.saving') : t('common.save') }}
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="collapse">
-        <button class="collapse__head" type="button" @click="auditLogOpen = !auditLogOpen">
-          <span class="collapse__title">{{ t('settings.audit.title') }}</span>
-          <span class="collapse__arrow" :class="{ 'collapse__arrow--open': auditLogOpen }">▾</span>
-        </button>
-        <div v-show="auditLogOpen" class="collapse__body">
-          <div class="field">
-            <span class="field__label">{{ t('settings.audit.enable') }}</span>
-            <label class="switch">
-              <input type="checkbox" v-model="auditLogForm.enabled" />
-              <span class="switch__track"><span class="switch__thumb"></span></span>
-              <span class="switch__label">{{ auditLogForm.enabled ? t('common.enabled') : t('common.disabled') }}</span>
-            </label>
-          </div>
-
-          <div class="field">
-            <span class="field__label">
-              {{ t('settings.audit.grpcAddrLabel') }}
-              <span class="field__help">
-                ?
-                <span class="field__tooltip">
-                  {{ t('settings.audit.tip1') }}
-                  <code>:9091</code>{{ t('settings.audit.tip2') }}<code>127.0.0.1:9091</code>{{ t('settings.audit.tip3') }}
-                </span>
-              </span>
-            </span>
-            <div
-              v-for="(addr, i) in auditLogForm.grpcAddrs"
-              :key="i"
-              class="addr-row"
-            >
-              <input
-                v-model="auditLogForm.grpcAddrs[i]"
-                class="field__input addr-row__input"
-                type="text"
-                placeholder="127.0.0.1:9091"
-              />
-              <button
-                class="addr-row__remove"
-                type="button"
-                :title="t('settings.general.remove')"
-                @click="removeAddr(auditLogForm.grpcAddrs, i)"
-              >
-                ×
-              </button>
-            </div>
-            <button
-              class="addr-row__add"
-              type="button"
-              @click="addAddr(auditLogForm.grpcAddrs)"
-            >
-              {{ t('settings.general.addAddress') }}
-            </button>
-          </div>
-
-          <div class="collapse__actions">
-            <span v-if="tips.audit_log" class="save-tip">{{ tips.audit_log }}</span>
-            <button class="btn btn--primary" type="button" :disabled="saving === 'audit_log'" @click="saveAuditLogSettings">
-              {{ saving === 'audit_log' ? t('common.saving') : t('common.save') }}
             </button>
           </div>
         </div>

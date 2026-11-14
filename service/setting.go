@@ -36,7 +36,6 @@ var settingKeys = map[string]bool{
 	"platform":         true,
 	"publish_domain":   true,
 	"network_security": true,
-	"audit_log":        true,
 	"quick_access":     true,
 }
 

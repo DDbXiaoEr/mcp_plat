@@ -22,21 +22,21 @@
 | 使用历史 | GET /api/history | ✅ 已完成 | 审计日志存储可配置（关系库 / ClickHouse），AccessKey 以 ID 存储减少数据量 |
 | 使用历史 | GET /api/audit-logs | ✅ 已完成 | 审计日志列表查询 |
 | 使用历史 | client_ip 记录 | ✅ 已完成 | APISIX audit_log 插件采集请求来源 IP（r.SrcIP）并随 gRPC LogAccessRequest 落库（audit_logs.client_ip），历史/审计列表返回 client_ip 字段；ClickHouse 建表含该列并对旧表幂等补列，关系库由 AutoMigrate 自动加列 |
-| MCP 服务器 | POST /api/servers/publish | ✅ 已完成 | 新增 accesskey_header 参数；新增 publish_domain 参数，从运营设置「发布域名」列表中选择，写入路由 host/hosts，并记录到服务器的 publish_domain；发布成功后自动标记 status=published 并记录 auth_enabled（Kong 恒 false）；支持 provider=kong 时仅发布上游/Service/路由（不下发插件）；accesskey_verify 与 audit_log 插件支持下发多个后端 gRPC 地址（grpc_addrs），按连接数负载均衡；新增 gateway_id 参数，可将服务器发布到指定网关，并记录到服务器的 gateway_id |
+| MCP 服务器 | POST /api/servers/publish | ✅ 已完成 | 新增 accesskey_header 参数；新增 publish_domain 参数，从运营设置「发布域名」列表中选择，写入路由 host/hosts，并记录到服务器的 publish_domain；发布成功后自动标记 status=published 并记录 auth_enabled（Kong 恒 false）；支持 provider=kong 时仅发布上游/Service/路由（不下发插件）；accesskey_verify 与 audit_log 插件支持下发多个后端 gRPC 地址（grpc_addrs），按连接数负载均衡；新增 gateway_id 参数，可将服务器发布到指定网关，并记录到服务器的 gateway_id；认证与审计 gRPC 地址改为从所选网关实例读取（auth_grpc_addrs / audit_grpc_addrs），不再使用全局 audit_log 设置 |
 | MCP 服务器 | POST /api/servers/maintenance | ✅ 已完成 | 设置/取消维护状态；APISIX 用 mocking 插件（response_status=503，旧版回退 mock/response_code）返回 503，Kong 用 request-termination 插件；取消维护恢复发布时保存的原始路由（GatewayRoute）；进入维护置 status=maintenance，取消恢复 published；按服务器记录的 gateway_id 定位网关（为空回退默认网关），支持同批服务器分属不同网关 |
 | MCP 服务器 | GET /api/servers | ✅ 已完成 | 新增 description、status、auth_enabled 字段 |
 | MCP 服务器 | POST /api/servers | ✅ 已完成 | 新增 description 字段 |
 | MCP 服务器 | PUT /api/servers/:id | ✅ 已完成 | 新增 description 字段 |
 | MCP 服务器 | DELETE /api/servers/:id | ✅ 已完成 | |
 | MCP 服务器 | POST /api/servers/fetch-tools | ✅ 已完成 | 前端已接入，返回 `[{name, description}]` 格式 |
-| 网关服务器 | GET /api/gateway-servers | ✅ 已完成 | 列表返回网关实例；并发探测各网关 Admin API 连通性（3 秒超时，online/offline + 耗时），默认网关排在最前 |
-| 网关服务器 | POST /api/gateway-servers | ✅ 已完成 | 新增网关实例；首个网关自动设为默认；APISIX 需 Admin Key，Kong 可留空 |
+| 网关服务器 | GET /api/gateway-servers | ✅ 已完成 | 列表返回网关实例（含独立的 auth_grpc_addrs / audit_grpc_addrs）；并发探测各网关 Admin API 连通性（3 秒超时，online/offline + 耗时），默认网关排在最前 |
+| 网关服务器 | POST /api/gateway-servers | ✅ 已完成 | 新增网关实例；首个网关自动设为默认；APISIX 需 Admin Key，Kong 可留空；支持配置该网关独立的认证与审计 gRPC 地址 |
 | 网关服务器 | PUT /api/gateway-servers/:id | ✅ 已完成 | 更新网关实例；admin_key 留空表示保留原 Key |
 | 网关服务器 | DELETE /api/gateway-servers/:id | ✅ 已完成 | 删除网关实例；删除默认网关时自动将最早的剩余网关设为默认 |
 | 网关服务器 | POST /api/gateway-servers/:id/default | ✅ 已完成 | 设为默认网关（发布/维护/快速接入统一使用默认网关） |
 | 网关服务器 | POST /api/gateway-servers/:id/test | ✅ 已完成 | 测试已保存网关的连通性（5 秒超时） |
 | 网关服务器 | POST /api/gateway-servers/check | ✅ 已完成 | 测试未保存的表单配置；编辑时可传 id 复用已保存的 Admin Key |
-| 网关服务器 | 旧配置迁移 | ✅ 已完成 | 服务启动时将旧 settings.api_gateway 迁移为默认网关记录并删除旧设置项 |
+| 网关服务器 | 旧配置迁移 | ✅ 已完成 | 服务启动时将旧 settings.api_gateway 迁移为默认网关记录并删除旧设置项；旧 settings.audit_log 的 gRPC 地址回填到各网关实例的 audit_grpc_addrs 后删除旧设置项 |
 | RBAC | GET /api/roles | ✅ 已完成 | |
 | RBAC | POST /api/roles | ✅ 已完成 | |
 | RBAC | PUT /api/roles/:id | ✅ 已完成 | |
@@ -51,7 +51,7 @@
 | 平台概况 | GET /api/overview/stats | ✅ 已完成 | 统计卡片已接入（用户/服务器/工具/当天调用数） |
 | 平台概况 | GET /api/overview/call-trend | ✅ 已完成 | AI 调用历史趋势已接入（近 7/30 天，audit_logs 按天分组统计）；含服务器调用量占比、用户组用户数占比饼图数据，及按天×服务器堆叠柱状图数据（Top 8 + 其他） |
 | 系统设置 | GET /api/settings | ✅ 已完成 | 前端已接入 |
-| 系统设置 | PUT /api/settings/:key | ✅ 已完成 | key: log / smtp / auth / user_ops / platform / publish_domain / network_security / audit_log / quick_access；API 网关配置已从设置项移除，改由 /api/gateway-servers 管理 |
+| 系统设置 | PUT /api/settings/:key | ✅ 已完成 | key: log / smtp / auth / user_ops / platform / publish_domain / network_security / quick_access；API 网关配置与审计 gRPC 地址已从设置项移除，改由 /api/gateway-servers 管理 |
 | 系统设置 | PUT /api/settings/user_ops | ✅ 已完成 | 新用户角色自动分配改为全局单一过滤属性 filterAttribute + 按角色配置正则规则（roleRules：roleId + pattern），登录时按属性依次匹配，命中即分配，均不匹配则暂不分配等待管理员手动处理；移除原 defaultRoleId |
 | 系统设置 | PUT /api/settings/log | ✅ 已完成 | 保存后热生效；未启用 Syslog 时日志输出到标准输出 + 本地文件（默认 ./logs/mcp_plat.log），支持大小/数量/天数轮转与 gzip 压缩；启用 Syslog 后二者失效 |
 | 系统设置 | GET /api/settings/:key | ✅ 已完成 | 仅需登录 |

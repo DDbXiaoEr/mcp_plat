@@ -22,21 +22,21 @@
 | Usage history | GET /api/history | ✅ Done | audit-log storage is configurable (relational DB / ClickHouse); AccessKey stored by ID to reduce volume |
 | Usage history | GET /api/audit-logs | ✅ Done | audit-log list query |
 | Usage history | client_ip recording | ✅ Done | the APISIX audit_log plugin collects the source IP (r.SrcIP) and sends it to audit_logs.client_ip via the gRPC LogAccessRequest; history/audit lists return client_ip; the ClickHouse table includes this column and backfills it idempotently on legacy tables, AutoMigrate adds the column on relational DBs |
-| MCP server | POST /api/servers/publish | ✅ Done | new accesskey_header param; new publish_domain param selected from the operation-settings publish-domain list, written into the route host/hosts and recorded on the server's publish_domain; on success marks status=published and records auth_enabled (always false for Kong); supports provider=kong (upstream/Service/routes only, no plugins); accesskey_verify and audit_log plugins accept multiple backend gRPC addresses (grpc_addrs) with least-connection load balancing |
+| MCP server | POST /api/servers/publish | ✅ Done | new accesskey_header param; new publish_domain param selected from the operation-settings publish-domain list, written into the route host/hosts and recorded on the server's publish_domain; on success marks status=published and records auth_enabled (always false for Kong); supports provider=kong (upstream/Service/routes only, no plugins); accesskey_verify and audit_log plugins accept multiple backend gRPC addresses (grpc_addrs) with least-connection load balancing; adds a gateway_id parameter to publish to a specific gateway and records it, and auth/audit gRPC addresses now come from the selected gateway (auth_grpc_addrs / audit_grpc_addrs) instead of the global audit_log setting |
 | MCP server | POST /api/servers/maintenance | ✅ Done | set/cancel maintenance; APISIX returns 503 via the mocking plugin (response_status=503, legacy fallback mock/response_code), Kong uses request-termination; leaving maintenance restores the original route saved at publish (GatewayRoute); entering sets status=maintenance, restoring sets published; uses each server's recorded gateway_id to locate the gateway (falling back to the default gateway), so one batch may span multiple gateways |
 | MCP server | GET /api/servers | ✅ Done | added description, status, auth_enabled fields |
 | MCP server | POST /api/servers | ✅ Done | added description field |
 | MCP server | PUT /api/servers/:id | ✅ Done | added description field |
 | MCP server | DELETE /api/servers/:id | ✅ Done | |
 | MCP server | POST /api/servers/fetch-tools | ✅ Done | frontend connected; returns `[{name, description}]` |
-| Gateway server | GET /api/gateway-servers | ✅ Done | lists gateway instances; probes each gateway Admin API concurrently (3s timeout, online/offline + latency); the default gateway comes first |
-| Gateway server | POST /api/gateway-servers | ✅ Done | creates a gateway instance; the first one becomes default automatically; APISIX needs an Admin Key, Kong may leave it empty |
+| Gateway server | GET /api/gateway-servers | ✅ Done | lists gateway instances (with per-gateway auth_grpc_addrs / audit_grpc_addrs); probes each gateway Admin API concurrently (3s timeout, online/offline + latency); the default gateway comes first |
+| Gateway server | POST /api/gateway-servers | ✅ Done | creates a gateway instance; the first one becomes default automatically; APISIX needs an Admin Key, Kong may leave it empty; supports per-gateway auth and audit gRPC addresses |
 | Gateway server | PUT /api/gateway-servers/:id | ✅ Done | updates a gateway instance; an empty admin_key keeps the existing key |
 | Gateway server | DELETE /api/gateway-servers/:id | ✅ Done | deletes a gateway instance; deleting the default promotes the oldest remaining gateway |
 | Gateway server | POST /api/gateway-servers/:id/default | ✅ Done | sets the default gateway (publish/maintenance/quick access all use it) |
 | Gateway server | POST /api/gateway-servers/:id/test | ✅ Done | tests the connectivity of a saved gateway (5s timeout) |
 | Gateway server | POST /api/gateway-servers/check | ✅ Done | tests unsaved form values; pass id when editing to reuse the saved Admin Key |
-| Gateway server | legacy config migration | ✅ Done | at startup the old settings.api_gateway is migrated into a default gateway record and the old setting is deleted |
+| Gateway server | legacy config migration | ✅ Done | at startup the old settings.api_gateway is migrated into a default gateway record and the old setting is deleted; the gRPC addresses from the old settings.audit_log are backfilled into each gateway's audit_grpc_addrs before that setting is deleted |
 | RBAC | GET /api/roles | ✅ Done | |
 | RBAC | POST /api/roles | ✅ Done | |
 | RBAC | PUT /api/roles/:id | ✅ Done | |
@@ -51,7 +51,7 @@
 | Platform overview | GET /api/overview/stats | ✅ Done | stat cards connected (users/servers/tools/daily calls) |
 | Platform overview | GET /api/overview/call-trend | ✅ Done | AI call-trend chart connected (last 7/30 days, audit_logs grouped by day); includes per-server call share and per-user-group pie data, plus per-day × per-server stacked-bar data (Top 8 + Other) |
 | System settings | GET /api/settings | ✅ Done | frontend connected |
-| System settings | PUT /api/settings/:key | ✅ Done | key: log / smtp / auth / user_ops / platform / publish_domain / network_security / audit_log / quick_access; API gateway configuration moved out of settings to /api/gateway-servers |
+| System settings | PUT /api/settings/:key | ✅ Done | key: log / smtp / auth / user_ops / platform / publish_domain / network_security / quick_access; API gateway configuration and audit gRPC addresses moved out of settings to /api/gateway-servers |
 | System settings | PUT /api/settings/user_ops | ✅ Done | new-user auto role assignment switched to a single global filter attribute filterAttribute + per-role regex rules (roleRules: roleId + pattern), matched in order by attribute at login; first match assigns, none match → unassigned until admin handles it; removed the old defaultRoleId |
 | System settings | PUT /api/settings/log | ✅ Done | hot reload after save; with Syslog disabled logs go to stdout + local file (default ./logs/mcp_plat.log) with size/count/days rotation and gzip compression; both disabled when Syslog is enabled |
 | System settings | GET /api/settings/:key | ✅ Done | login only |
