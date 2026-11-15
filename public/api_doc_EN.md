@@ -1356,7 +1356,7 @@ GET /api/gateway-servers
 | id | string | gateway instance ID |
 | name | string | gateway name |
 | provider | string | gateway type: `apisix` / `kong` |
-| admin_url | string | Admin API base URL (no `/apisix/admin` and similar paths) |
+| admin_url | string | Admin API base URL; `http://` may be omitted, and a stray `/apisix/admin` or `/apisix` suffix (APISIX) or `/status` suffix (Kong) is stripped automatically |
 | accesskey_header | string | HTTP header name carrying the Access Key |
 | auth_grpc_addrs | []string | Access-Key auth gRPC addresses (accesskey-auth-server) |
 | audit_grpc_addrs | []string | audit-log gRPC addresses (audit-log-server) |

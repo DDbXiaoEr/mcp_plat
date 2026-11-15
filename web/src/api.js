@@ -28,11 +28,11 @@ async function request(path, options = {}) {
     ...options.headers
   }
   const res = await fetch(`${BASE}${path}`, { ...options, headers, credentials: 'include' })
+  const text = await res.text()
   let json
   try {
-    json = await res.json()
+    json = JSON.parse(text)
   } catch {
-    const text = await res.text()
     throw new Error(
       `${i18n.global.t('common.requestFailedStatus', { status: res.status })}${text ? `: ${text}` : ''}`
     )

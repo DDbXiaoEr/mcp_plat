@@ -1356,7 +1356,7 @@ GET /api/gateway-servers
 | id | string | 网关实例 ID |
 | name | string | 网关名称 |
 | provider | string | 网关类型，`apisix` / `kong` |
-| admin_url | string | Admin API 基础地址（不含 `/apisix/admin` 等路径） |
+| admin_url | string | Admin API 基础地址；可省略 `http://`，误带 `/apisix/admin`、`/apisix`（APISIX）或 `/status`（Kong）后缀时会自动去除 |
 | accesskey_header | string | Access Key 的 HTTP Header 名称 |
 | auth_grpc_addrs | []string | Access Key 认证 gRPC 地址列表（accesskey-auth-server） |
 | audit_grpc_addrs | []string | 审计日志 gRPC 地址列表（audit-log-server） |

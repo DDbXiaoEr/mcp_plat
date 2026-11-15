@@ -85,10 +85,45 @@ func normalizeGatewayProvider(provider string) (string, error) {
 	return "", errors.New("不支持的网关类型")
 }
 
+func normalizeGatewayAdminURL(provider, raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", errors.New("API 网关 Admin API 地址未配置")
+	}
+	if !strings.Contains(raw, "://") {
+		raw = "http://" + raw
+	}
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return "", errors.New("API 网关 Admin API 地址格式错误")
+	}
+
+	path := strings.TrimRight(u.Path, "/")
+	if provider == "kong" {
+		path = strings.TrimSuffix(path, "/status")
+	} else {
+		if strings.HasSuffix(path, "/apisix/admin") {
+			path = strings.TrimSuffix(path, "/apisix/admin")
+		} else if strings.HasSuffix(path, "/apisix") {
+			path = strings.TrimSuffix(path, "/apisix")
+		}
+	}
+	u.Path = path
+	u.RawQuery = ""
+	u.Fragment = ""
+	return u.String(), nil
+}
+
+func canonicalGatewayAdminURL(provider, raw string) string {
+	if normalized, err := normalizeGatewayAdminURL(provider, raw); err == nil {
+		return normalized
+	}
+	return strings.TrimRight(strings.TrimSpace(raw), "/")
+}
+
 func normalizeGatewayInput(input *GatewayServerInput) error {
 	input.Name = strings.TrimSpace(input.Name)
 	input.Provider = strings.ToLower(strings.TrimSpace(input.Provider))
-	input.AdminURL = strings.TrimRight(strings.TrimSpace(input.AdminURL), "/")
 	input.AdminKey = strings.TrimSpace(input.AdminKey)
 	input.AccesskeyHeader = strings.TrimSpace(input.AccesskeyHeader)
 	input.Description = strings.TrimSpace(input.Description)
@@ -106,10 +141,11 @@ func normalizeGatewayInput(input *GatewayServerInput) error {
 	if input.AdminURL == "" {
 		return errors.New("API 网关 Admin API 地址未配置")
 	}
-	u, err := url.Parse(input.AdminURL)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return errors.New("API 网关 Admin API 地址格式错误")
+	adminURL, err := normalizeGatewayAdminURL(input.Provider, input.AdminURL)
+	if err != nil {
+		return err
 	}
+	input.AdminURL = adminURL
 
 	addrs := cleanGatewayAddrs(input.AuthGrpcAddrs)
 	input.AuthGrpcAddrs = addrs
@@ -147,7 +183,7 @@ func gatewayServerView(gw model.GatewayServer) GatewayServerView {
 		ID:              gw.ID,
 		Name:            gw.Name,
 		Provider:        gw.Provider,
-		AdminURL:        gw.AdminURL,
+		AdminURL:        canonicalGatewayAdminURL(gw.Provider, gw.AdminURL),
 		AccesskeyHeader: gw.AccesskeyHeader,
 		AuthGrpcAddrs:   parseGatewayAddrs(gw.AuthGrpcAddrs),
 		AuditGrpcAddrs:  parseGatewayAddrs(gw.AuditGrpcAddrs),
@@ -164,9 +200,9 @@ func CheckGatewayConnectivity(provider, adminURL, adminKey string, timeout time.
 	if err != nil {
 		return GatewayCheckResult{Message: err.Error()}
 	}
-	adminURL = strings.TrimRight(strings.TrimSpace(adminURL), "/")
-	if adminURL == "" {
-		return GatewayCheckResult{Message: "API 网关 Admin API 地址未配置"}
+	adminURL, err = normalizeGatewayAdminURL(provider, adminURL)
+	if err != nil {
+		return GatewayCheckResult{Message: err.Error()}
 	}
 
 	var reqURL, headerName string
@@ -394,6 +430,7 @@ func resolveGateway(id string) (model.GatewayServer, error) {
 	if gw.AdminURL == "" {
 		return gw, errors.New("API 网关 Admin API 地址未配置")
 	}
+	gw.AdminURL = canonicalGatewayAdminURL(gw.Provider, gw.AdminURL)
 	if gw.Provider != "kong" && gw.AdminKey == "" {
 		return gw, errors.New("API 网关 Admin API Key 未配置")
 	}
@@ -403,7 +440,7 @@ func resolveGateway(id string) (model.GatewayServer, error) {
 func gatewaySettingOf(gw model.GatewayServer) ApiGatewaySetting {
 	return ApiGatewaySetting{
 		Provider:        gw.Provider,
-		AdminURL:        gw.AdminURL,
+		AdminURL:        canonicalGatewayAdminURL(gw.Provider, gw.AdminURL),
 		AdminKey:        gw.AdminKey,
 		AuthGrpcAddrs:   parseGatewayAddrs(gw.AuthGrpcAddrs),
 		AuditGrpcAddrs:  parseGatewayAddrs(gw.AuditGrpcAddrs),
@@ -480,11 +517,13 @@ func MigrateLegacyGatewaySetting() {
 	}
 	addrsJSON, _ := json.Marshal(addrs)
 
+	adminURL := canonicalGatewayAdminURL(provider, legacy.AdminURL)
+
 	gw := model.GatewayServer{
 		ID:              uuid.NewString(),
 		Name:            "默认网关",
 		Provider:        provider,
-		AdminURL:        strings.TrimRight(strings.TrimSpace(legacy.AdminURL), "/"),
+		AdminURL:        adminURL,
 		AdminKey:        legacy.AdminKey,
 		AccesskeyHeader: legacy.AccesskeyHeader,
 		AuthGrpcAddrs:   string(addrsJSON),
